@@ -1,0 +1,26 @@
+{
+  "app_version": "1.0.0",
+  "school_name": "那覇市立天久小学校",
+  "school_type": "elementary",
+  "template_dir": "./テンプレート",
+  "output_dir": "./出力",
+  "default_font": "IPAmj明朝",
+  "fiscal_year": 2025,
+  "graduation_cert_start_number": 1,
+  "homeroom_teachers": {},
+  "update": {
+    "version_file_id": "",
+    "check_on_startup": true,
+    "current_app_version": "1.0.0",
+    "current_template_version": "1.0.0"
+  },
+  "column_mappings": {
+    "last_used": {}
+  },
+  "manual_columns": {
+    "last_file_hash": "",
+    "mandatory": {},
+    "optional": {}
+  },
+  "recent_files": []
+}
