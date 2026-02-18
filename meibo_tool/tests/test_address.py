@@ -1,10 +1,6 @@
 """utils/address.py のユニットテスト"""
 
-import pytest
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-from utils.address import build_address, build_guardian_address
+from utils.address import build_address
 
 
 class TestBuildAddress:

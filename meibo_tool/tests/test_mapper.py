@@ -1,11 +1,8 @@
 """core/mapper.py のユニットテスト"""
 
-import pytest
 import pandas as pd
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.mapper import normalize_header, map_columns, EXACT_MAP
+from core.mapper import EXACT_MAP, map_columns, normalize_header
 
 
 class TestNormalizeHeader:
@@ -29,7 +26,7 @@ class TestMapColumns:
         df = pd.DataFrame(columns=list(EXACT_MAP.keys()))
         df_mapped, unmapped = map_columns(df)
         assert len(unmapped) == 0
-        for original, logical in EXACT_MAP.items():
+        for _original, logical in EXACT_MAP.items():
             assert logical in df_mapped.columns
 
     def test_guardian_zenkaku_space(self):

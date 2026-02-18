@@ -72,7 +72,6 @@ def map_columns(df):
         df_mapped: リネーム済み DataFrame
         unmapped:  マッピングできなかった元のカラム名リスト
     """
-    import pandas as pd
 
     renamed: dict[str, str] = {}
     unmapped: list[str] = []

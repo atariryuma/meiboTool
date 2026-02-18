@@ -181,7 +181,7 @@ class GridGenerator(BaseGenerator):
             _fill_numbered(ws, i, row_dict, self.options)
 
     def _get_template_meta(self) -> dict:
-        for name, meta in TEMPLATES.items():
+        for _name, meta in TEMPLATES.items():
             if meta['file'] == os.path.basename(self.template_path):
                 return meta
         return {}
@@ -244,7 +244,7 @@ class ListGenerator(BaseGenerator):
         fill_placeholders(ws, first_row, self.options)
 
     def _get_template_meta(self) -> dict:
-        for name, meta in TEMPLATES.items():
+        for _name, meta in TEMPLATES.items():
             if meta['file'] == os.path.basename(self.template_path):
                 return meta
         return {}
@@ -253,16 +253,15 @@ class ListGenerator(BaseGenerator):
         """{{氏名}} または {{表示氏名}} を含む最初の行番号を返す。"""
         for row in ws.iter_rows():
             for cell in row:
-                if cell.value and isinstance(cell.value, str):
-                    if '{{氏名}}' in cell.value or '{{表示氏名}}' in cell.value:
-                        return cell.row
+                if (cell.value and isinstance(cell.value, str)
+                        and ('{{氏名}}' in cell.value or '{{表示氏名}}' in cell.value)):
+                    return cell.row
         return None
 
     def _expand_rows(self, ws, template_row: int) -> None:
         """テンプレート行を児童数分コピーして展開する。"""
-        from openpyxl.utils import get_column_letter
         from copy import copy as cp
-        from openpyxl.styles import Font, Alignment, Border, PatternFill
+
 
         n = len(self.data)
         if n == 0:
@@ -334,7 +333,7 @@ class IndividualGenerator(BaseGenerator):
             setup_print(ws, orientation=orientation)
 
     def _get_template_meta(self) -> dict:
-        for name, meta in TEMPLATES.items():
+        for _name, meta in TEMPLATES.items():
             if meta['file'] == os.path.basename(self.template_path):
                 return meta
         return {}

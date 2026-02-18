@@ -5,9 +5,8 @@ openpyxl のスタイルはイミュータブルなので、
 cell.font.bold = True は AttributeError になる。
 """
 
-from openpyxl.styles import Font
 from openpyxl.cell.cell import MergedCell
-
+from openpyxl.styles import Font
 
 DEFAULT_FONT = 'IPAmj明朝'
 

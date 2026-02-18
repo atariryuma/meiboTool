@@ -14,21 +14,24 @@ C4th（EDUCOM 校務支援システム）の Excel エクスポートを読み�
 ```bash
 # 仮想環境セットアップ（初回のみ）
 python -m venv venv
-venv\Scripts\activate
+venv/Scripts/activate      # Windows Git Bash / Mac: source venv/bin/activate
 pip install -r requirements.txt
 
-# アプリ起動（meibo_tool/ ディレクトリから実行）
-cd meibo_tool
-python main.py
+# アプリ起動（プロジェクトルートから実行）
+cd meibo_tool && python main.py
 
-# テスト全実行
-pytest meibo_tool/tests/
+# テスト全実行（プロジェクトルートから。pyproject.toml で testpaths 設定済み）
+venv/Scripts/python.exe -m pytest
 
 # 単一テストファイル実行
-pytest meibo_tool/tests/test_wareki.py -v
+venv/Scripts/python.exe -m pytest meibo_tool/tests/test_wareki.py -v
+
+# リント（ゼロエラーになってからコミット）
+venv/Scripts/python.exe -m ruff check meibo_tool/
+venv/Scripts/python.exe -m ruff check meibo_tool/ --fix   # 自動修正
 
 # テンプレート Excel 生成（初回および更新時）
-python -m templates.generators.generate_all
+cd meibo_tool && python -m templates.generators.generate_all
 
 # exe ビルド（build.spec が存在する場合）
 pyinstaller build.spec
@@ -66,6 +69,16 @@ C4th Excel
 
 `App.mandatory_ok` フラグが `False` の間、テンプレート選択・生成ボタンは `state='disabled'`。
 `MandatoryInputPanel` で「組」選択＋「自動連番」クリック後に「確定して進む」を押すと `True` になる。
+
+## コーディング規約
+
+- **リンター**: ruff。コード変更後は必ず `ruff check meibo_tool/` でゼロエラーを確認してからコミット
+- **import 順序**: 標準ライブラリ → サードパーティ → 社内モジュール（ruff の I001 で自動チェック）
+- **未使用ループ変数**: `_name` のようにアンダースコアプレフィックスを付ける
+- **型注釈**: 関数シグネチャには型注釈を付ける（`def func(x: str) -> int:`）
+- **テスト**: 新機能は同時に `tests/test_<モジュール名>.py` に追加
+- **sys.path ハック禁止**: テストファイルに `sys.path.insert` を書かない（`pyproject.toml` の `pythonpath` で解決済み）
+- **共通フィクスチャ**: `meibo_tool/tests/conftest.py` に追加（`dummy_df`・`default_options`・`default_config`）
 
 ## 絶対守るべきルール
 

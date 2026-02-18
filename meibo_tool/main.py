@@ -1,7 +1,7 @@
 """名簿帳票ツール — エントリーポイント"""
 
-import sys
 import os
+import sys
 
 # PyInstaller frozen 対応
 if getattr(sys, 'frozen', False):

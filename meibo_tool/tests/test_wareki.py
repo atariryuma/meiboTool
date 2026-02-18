@@ -1,10 +1,6 @@
 """utils/wareki.py のユニットテスト"""
 
-import pytest
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-from utils.wareki import to_wareki, to_wareki_full, fiscal_year_to_wareki
+from utils.wareki import fiscal_year_to_wareki, to_wareki, to_wareki_full
 
 
 class TestToWareki:
