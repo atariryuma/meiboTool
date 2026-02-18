@@ -101,14 +101,22 @@ def setup_print(ws, orientation: str = 'portrait', paper_size: int = 9) -> None:
     印刷設定を適用する。
     paper_size: 9=A4
     orientation: 'portrait' or 'landscape'
+
+    落とし穴: ws.page_setup.fitToPage = True は sheet_properties.pageSetUpPr が
+    None のとき AttributeError になる。PageSetupProperties で初期化してから設定する。
     """
     from openpyxl.worksheet.page import PageMargins
+    from openpyxl.worksheet.properties import PageSetupProperties
 
     ws.page_setup.paperSize = paper_size
     ws.page_setup.orientation = orientation
-    ws.page_setup.fitToPage = True
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
+
+    # fitToPage は sheet_properties 経由で設定しないと AttributeError になる
+    if ws.sheet_properties.pageSetUpPr is None:
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties()
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
 
     ws.page_margins = PageMargins(
         left=0.39, right=0.39,
@@ -174,11 +182,15 @@ class GridGenerator(BaseGenerator):
         orientation = meta.get('orientation', 'portrait')
         setup_print(ws, orientation=orientation)
 
-        # プレースホルダーを全児童分で順番に置換（テンプレート内に {{氏名_1}} 等の番号付き形式）
+        # 番号付きプレースホルダー {{氏名_1}} 等を全児童分置換
         for i, (_, row) in enumerate(self.data.iterrows(), 1):
             row_dict = row.to_dict()
-            # 番号付きプレースホルダーに変換して置換
             _fill_numbered(ws, i, row_dict, self.options)
+
+        # ヘッダー行の非番号プレースホルダー（{{学年}} {{組}} {{担任名}} 等）を置換
+        if len(self.data) > 0:
+            first_row = self.data.iloc[0].to_dict()
+            fill_placeholders(ws, first_row, self.options)
 
     def _get_template_meta(self) -> dict:
         for _name, meta in TEMPLATES.items():

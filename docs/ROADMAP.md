@@ -1,6 +1,6 @@
 # 名簿帳票ツール 開発ロードマップ
 
-> **最終更新**: 2026-02-19
+> **最終更新**: 2026-02-19（gen_meireihyo + test_generator 完了）
 > このファイルは作業完了のたびに更新する。CLAUDE.md の「現在地」セクションも合わせて更新すること。
 
 ---
@@ -46,16 +46,20 @@
 - [x] `core/generator.py` — BaseGenerator / GridGenerator / ListGenerator / IndividualGenerator 骨格
 - [x] `templates/template_registry.py` — テンプレート9種メタデータ
 - [x] `tests/generate_dummy.py` — ダミーC4th Excel生成スクリプト
+- [x] **`templates/generators/gen_meireihyo.py`**
+  - A4縦・2列（左:No.1〜20、右:No.21〜40）・薄ピンク背景
+  - GridGenerator 向け番号付きプレースホルダー `{{氏名_1}}〜{{氏名_40}}`
+  - タイプ `list` → `grid` に変更（ROADMAP記載の非番号形式は設計変更）
+- [x] `templates/generators/generate_all.py` — 一括生成エントリー
+- [x] `テンプレート/掲示用名列表.xlsx` — 生成・コミット済み
+- [x] `tests/test_generator.py` — 28ケース（テンプレート構造検証 + GridGenerator 統合テスト）
+- [x] `tests/fixtures/dummy_c4th.xlsx` 生成済み（35名）
+- [x] `core/config.py` `_get_config_path()` バグ修正（project root を正しく解決）
+- [x] `core/generator.py` `setup_print()` `fitToPage` バグ修正（PageSetupProperties 経由）
+- [x] `core/generator.py` `GridGenerator._populate()` にヘッダープレースホルダー置換追加
 
 ### 残り作業 ❌
 
-- [ ] **`templates/generators/gen_meireihyo.py`** ← **今すぐ着手**
-  - `テンプレート/掲示用名列表.xlsx` を openpyxl でプログラム生成
-  - 仕様: SPEC.md §4.4
-  - A4縦・2列（左:No.1〜20、右:No.21〜40）・タイトル・薄ピンク背景
-  - プレースホルダー: `{{出席番号}}` `{{氏名}}` `{{氏名かな}}` `{{学年}}` `{{組}}` `{{担任名}}`
-- [ ] `tests/test_generator.py` — ListGenerator で名列表を出力し行数・シート名・値を検証
-- [ ] `tests/fixtures/dummy_c4th.xlsx` 生成（`python meibo_tool/tests/generate_dummy.py`）
 - [ ] **`gui/app.py`** — CustomTkinter メインウィンドウ（2カラムレイアウト）
   - 仕様: SPEC.md §3.1〜§3.4
 - [ ] **`gui/frames/import_frame.py`** — ファイル選択・読込件数表示

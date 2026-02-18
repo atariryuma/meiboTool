@@ -95,7 +95,8 @@ C4th Excel
 | テンプレートファイル名 | タイプ | use_formal_name |
 | ---------------------- | ------ | --------------- |
 | 名札_通常.xlsx / 名札_装飾あり.xlsx / 名札_1年生用.xlsx | grid | false |
-| 掲示用名列表.xlsx / 調べ表.xlsx | list | false |
+| 掲示用名列表.xlsx | grid（番号付きプレースホルダー {{氏名_1}}〜{{氏名_40}}） | false |
+| 調べ表.xlsx | list | false |
 | 修了台帳.xlsx / 卒業台帳.xlsx | list | true |
 | 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | true |
 
@@ -138,31 +139,37 @@ C4th Excel
 | `utils/wareki.py` | 西暦→和暦変換 | ✅ 10ケース |
 | `utils/address.py` | 住所4フィールド結合 | ✅ 5ケース |
 | `utils/font_helper.py` | IPAmj明朝フォント適用 | — |
-| `core/config.py` | config.json 読み書き | — |
+| `core/config.py` | config.json 読み書き（パス解決バグ修正済み） | — |
 | `core/mapper.py` | C4th カラム名マッピング（全50列） | ✅ 6ケース |
 | `core/importer.py` | ヘッダー自動検出付き Excel 読込 | — |
-| `core/generator.py` | Grid/List/Individual ジェネレーター骨格 | — |
+| `core/generator.py` | Grid/List/Individual ジェネレーター + setup_print バグ修正 | ✅ 12ケース |
 | `templates/template_registry.py` | テンプレート 9 種メタデータ | — |
+| `templates/generators/gen_meireihyo.py` | 掲示用名列表テンプレート生成（A4縦・2列・40名） | ✅ 10ケース |
+| `templates/generators/generate_all.py` | 全テンプレート一括生成エントリー | — |
+| `テンプレート/掲示用名列表.xlsx` | 生成済みテンプレートファイル | — |
 | `tests/conftest.py` | 共通フィクスチャ（dummy_df 等） | — |
 
 ### 未実装 ❌（次に着手する順）
 
-1. **`templates/generators/gen_meireihyo.py`** ← **次のタスク**
-   - 掲示用名列表テンプレート Excel を openpyxl でプログラム生成
-   - `テンプレート/掲示用名列表.xlsx` が出力される
-2. `tests/test_generator.py` — ListGenerator × 名列表の統合テスト
-3. `gui/app.py` + `gui/frames/` — CustomTkinter GUI
-4. 名札テンプレート 3 種 (`gen_nafuda_*.py`)
-5. 台帳テンプレート 2 種 + 調べ表 (`gen_*_daicho.py`, `gen_shirabehyo.py`)
-6. 個票テンプレート 2 種 (`gen_katei_*.py`, `gen_gakkyuu_*.py`)
-7. `core/updater.py` — Google Drive 自動更新
-8. `build.spec` + PyInstaller ビルド
+1. **`gui/app.py`** ← **次のタスク**
+   - CustomTkinter メインウィンドウ（2カラムレイアウト）
+   - 仕様: SPEC.md §3.1〜§3.4
+2. `gui/frames/import_frame.py` — ファイル選択・読込件数表示
+3. `gui/frames/mandatory_panel.py` — 組ドロップダウン・自動連番・確定ボタン
+4. `gui/frames/select_frame.py` — テンプレート選択ラジオボタン
+5. `gui/frames/output_frame.py` — 生成ボタン・進捗バー
+6. 統合確認: ダミーデータ読込 → 組設定 → 名列表.xlsx 出力まで一気通貫
+7. 名札テンプレート 3 種 (`gen_nafuda_*.py`)
+8. 台帳テンプレート 2 種 + 調べ表
+9. 個票テンプレート 2 種
+10. `core/updater.py` — Google Drive 自動更新
+11. `build.spec` + PyInstaller ビルド
 
 ### 開発環境の状態
 
-- テスト: 21件 全パス（`venv/Scripts/python.exe -m pytest`）
+- テスト: **49件 全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
-- Git: 3コミット済み（master ブランチ）
+- Git: 4コミット済み（master ブランチ）
 
 ## 実装順序（依存関係順）
 

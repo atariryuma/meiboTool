@@ -46,7 +46,7 @@ TEMPLATES: dict[str, dict] = {
     # ── List 型（名列表・台帳）──────────────────────────────────────────
     '掲示用名列表': {
         'file': '掲示用名列表.xlsx',
-        'type': 'list',
+        'type': 'grid',          # 番号付きプレースホルダー {{氏名_1}}〜{{氏名_40}}
         'orientation': 'portrait',
         'use_formal_name': False,
         'required_columns': ['氏名', '氏名かな'],

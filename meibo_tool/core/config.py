@@ -11,8 +11,9 @@ def _get_config_path() -> str:
     if getattr(sys, 'frozen', False):
         base = os.path.dirname(sys.executable)
     else:
-        # meibo_tool/ の一つ上（プロジェクトルート）に config.json を置く
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # config.py は meibo_tool/core/ にある。
+        # meibo_tool/core/config.py → core → meibo_tool → project_root
+        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     return os.path.join(base, 'config.json')
 
 
