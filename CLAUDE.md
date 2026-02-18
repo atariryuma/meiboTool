@@ -127,6 +127,43 @@ C4th Excel
 - バッチファイルには `chcp 65001` 必須（日本語パスの文字化け対策）
 - ネットワーク失敗時はサイレントにスキップし、通常起動する
 
+## 現在地（セッション開始時に必ず確認）
+
+> 詳細なフェーズ計画は `docs/ROADMAP.md` を参照。
+
+### 実装済み ✅
+
+| ファイル | 内容 | テスト |
+| -------- | ---- | ------ |
+| `utils/wareki.py` | 西暦→和暦変換 | ✅ 10ケース |
+| `utils/address.py` | 住所4フィールド結合 | ✅ 5ケース |
+| `utils/font_helper.py` | IPAmj明朝フォント適用 | — |
+| `core/config.py` | config.json 読み書き | — |
+| `core/mapper.py` | C4th カラム名マッピング（全50列） | ✅ 6ケース |
+| `core/importer.py` | ヘッダー自動検出付き Excel 読込 | — |
+| `core/generator.py` | Grid/List/Individual ジェネレーター骨格 | — |
+| `templates/template_registry.py` | テンプレート 9 種メタデータ | — |
+| `tests/conftest.py` | 共通フィクスチャ（dummy_df 等） | — |
+
+### 未実装 ❌（次に着手する順）
+
+1. **`templates/generators/gen_meireihyo.py`** ← **次のタスク**
+   - 掲示用名列表テンプレート Excel を openpyxl でプログラム生成
+   - `テンプレート/掲示用名列表.xlsx` が出力される
+2. `tests/test_generator.py` — ListGenerator × 名列表の統合テスト
+3. `gui/app.py` + `gui/frames/` — CustomTkinter GUI
+4. 名札テンプレート 3 種 (`gen_nafuda_*.py`)
+5. 台帳テンプレート 2 種 + 調べ表 (`gen_*_daicho.py`, `gen_shirabehyo.py`)
+6. 個票テンプレート 2 種 (`gen_katei_*.py`, `gen_gakkyuu_*.py`)
+7. `core/updater.py` — Google Drive 自動更新
+8. `build.spec` + PyInstaller ビルド
+
+### 開発環境の状態
+
+- テスト: 21件 全パス（`venv/Scripts/python.exe -m pytest`）
+- リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
+- Git: 3コミット済み（master ブランチ）
+
 ## 実装順序（依存関係順）
 
 1. `utils/wareki.py` → `utils/address.py` → `utils/font_helper.py`
