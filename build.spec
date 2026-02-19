@@ -30,7 +30,30 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        # ── テスト・開発ツール ──
+        'pytest', '_pytest', 'ruff',
+        'unittest', 'doctest', 'pydoc',
+        # ── 未使用ネットワーク ──
+        'ftplib', 'smtplib', 'poplib', 'imaplib', 'telnetlib',
+        'xmlrpc', 'http.server',
+        # ── 未使用データベース ──
+        'sqlite3', 'dbm',
+        # ── 未使用 stdlib ──
+        'curses', 'lib2to3', 'ensurepip', 'venv',
+        'tkinter.test', 'test',
+        # ── pandas 未使用サブモジュール ──
+        'pandas.plotting', 'pandas.io.sql', 'pandas.io.stata',
+        'pandas.io.sas', 'pandas.io.spss', 'pandas.io.html',
+        'pandas.io.feather', 'pandas.io.parquet', 'pandas.io.orc',
+        'pandas.io.gbq',
+        # ── PIL 未使用サブモジュール ──
+        'PIL.ImageFilter', 'PIL.ImageEnhance', 'PIL.ImageOps',
+        'PIL.ImageSequence', 'PIL.ImageCms', 'PIL.ImageMorph',
+        'PIL.ImageGrab', 'PIL.PSDraw',
+        # ── その他未使用 ──
+        'scipy', 'matplotlib', 'IPython', 'notebook',
+    ],
     noarchive=False,
 )
 
