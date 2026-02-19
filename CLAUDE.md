@@ -153,7 +153,8 @@ App (CTk) — 2カラムレイアウト
 | -------- | ---- | ------ |
 | `utils/wareki.py` | 西暦→和暦変換 | ✅ 10 |
 | `utils/address.py` | 住所4フィールド結合 | ✅ 5 |
-| `utils/font_helper.py` | IPAmj明朝フォント適用 | — |
+| `utils/date_fmt.py` | 日付フォーマット（YY/MM/DD・Excelシリアル値対応） | ✅ 19 |
+| `utils/font_helper.py` | IPAmj明朝フォント適用 | ✅ 11 |
 | `core/config.py` | config.json 読み書き・deep_merge・パス解決 | ✅ 13 |
 | `core/mapper.py` | C4th カラム名マッピング + resolve_name_fields | ✅ 12 |
 | `core/importer.py` | ヘッダー自動検出付き Excel 読込 | ✅ 11 |
@@ -161,12 +162,12 @@ App (CTk) — 2カラムレイアウト
 | `core/crypto.py` | AES-256-GCM 暗号化/復号 + DPAPI パスワード保護 | ✅ 17 |
 | `core/data_sync.py` | 名簿データ自動同期（LAN/GDrive/手動） | ✅ 15 |
 | `core/updater.py` | GitHub Releases ベースのアプリ更新 | ✅ 20 |
-| `templates/template_registry.py` | テンプレート 15 種メタデータ + カテゴリ別表示 | — |
+| `templates/template_registry.py` | テンプレート 15 種メタデータ + カテゴリ別表示 | ✅ 30 |
 | `templates/template_scanner.py` | テンプレート自動検出（.xlsx スキャン → メタデータ推定） | ✅ 13 |
-| `templates/generators/gen_meireihyo.py` | 掲示用名列表テンプレート生成 | — |
-| `templates/generators/gen_nafuda.py` | 名札3種テンプレート生成 | — |
-| `templates/generators/gen_daicho.py` | 台帳2種テンプレート生成 | — |
-| `templates/generators/gen_shirabehyo.py` | 調べ表テンプレート生成 | — |
+| `templates/generators/gen_meireihyo.py` | 掲示用名列表テンプレート生成 | ✅ 12 |
+| `templates/generators/gen_nafuda.py` | 名札3種テンプレート生成 | ✅ 16 |
+| `templates/generators/gen_daicho.py` | 台帳2種テンプレート生成 | ✅ 14 |
+| `templates/generators/gen_shirabehyo.py` | 調べ表テンプレート生成 | ✅ 12 |
 | `templates/generators/gen_katei_chousahyo.py` | 家庭調査票テンプレート生成 | ✅ 19 |
 | `templates/generators/gen_gakkyuu_kojihyo.py` | 学級編成用個票テンプレート生成 | ✅ 19 |
 | `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
@@ -189,7 +190,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **284 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **398 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 
