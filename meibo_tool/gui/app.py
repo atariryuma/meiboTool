@@ -213,6 +213,11 @@ class App(ctk.CTk):
         # ClassSelectPanel にデータをセット（自動でクラス選択・コールバックが走る）
         self.class_select.set_data(df_mapped)
 
+        # 特別支援学級がある場合はオプションを表示
+        self.select_frame.set_special_needs_visible(
+            self.class_select.has_special_needs()
+        )
+
         # プレビュー更新
         self._right.show_data(df_mapped)
 
@@ -231,8 +236,13 @@ class App(ctk.CTk):
         self.select_frame.set_enabled(True)
         self.output_frame.set_enabled(True)
 
-        # プレビューをフィルタリングして更新
-        df_preview = self._filter_df(g, k)
+        # プレビューをフィルタリングして更新（特支オプション考慮）
+        opts = self.select_frame.get_options()
+        df_preview = self._filter_df(
+            g, k,
+            include_special_needs=opts.get('include_special_needs', False),
+            special_needs_placement=opts.get('special_needs_placement', 'appended'),
+        )
         self._right.show_data(df_preview)
 
         # 帳票プレビューも更新
@@ -286,9 +296,16 @@ class App(ctk.CTk):
 
         from core.generator import create_generator
 
+        sn_include = options.get('include_special_needs', False)
+        sn_placement = options.get('special_needs_placement', 'appended')
+
         if k is not None:
             # 単一クラス
-            df_filtered = self._filter_df(g, k)
+            df_filtered = self._filter_df(
+                g, k,
+                include_special_needs=sn_include,
+                special_needs_placement=sn_placement,
+            )
             _validate_required_columns(meta, df_filtered)
             suffix = f'{g}年{k}組'
             out_file = meta['file'].replace('.xlsx', f'_{suffix}.xlsx')
@@ -302,7 +319,11 @@ class App(ctk.CTk):
         generators = []
         homeroom = self.config.get('homeroom_teachers', {})
         for (gakunen, kumi) in classes:
-            df_filtered = self._filter_df(gakunen, kumi)
+            df_filtered = self._filter_df(
+                gakunen, kumi,
+                include_special_needs=sn_include,
+                special_needs_placement=sn_placement,
+            )
             opts = dict(options)
             # クラスごとの担任名を config から上書き（登録済みの場合）
             saved_teacher = homeroom.get(f'{gakunen}-{kumi}', '')
@@ -319,19 +340,54 @@ class App(ctk.CTk):
     # ヘルパー
     # ────────────────────────────────────────────────────────────────────────
 
-    def _filter_df(self, 学年: str | None, 組: str | None) -> pd.DataFrame:
-        """df_mapped を学年・組でフィルタリングし、出席番号順にソートして返す。"""
+    def _filter_df(
+        self,
+        学年: str | None,
+        組: str | None,
+        include_special_needs: bool = False,
+        special_needs_placement: str = 'appended',
+    ) -> pd.DataFrame:
+        """df_mapped を学年・組でフィルタリングし、出席番号順にソートして返す。
+
+        include_special_needs=True の場合、同学年の特別支援学級児童も含める。
+        """
+        from core.special_needs import (
+            detect_regular_students,
+            detect_special_needs_students,
+            merge_special_needs_students,
+        )
+
         df = self.df_mapped.copy()
         if 学年 and '学年' in df.columns:
             df = df[df['学年'] == 学年]
+
         if 組 and '組' in df.columns:
-            df = df[df['組'] == 組]
-        # 出席番号で数値ソート（テンプレートのスロット順と一致させる）
-        if '出席番号' in df.columns:
-            df['_sort_key'] = pd.to_numeric(df['出席番号'], errors='coerce').fillna(0)
-            df = df.sort_values('_sort_key').drop(columns='_sort_key')
-            df = df.reset_index(drop=True)
-        return df
+            # 通常学級でフィルタ
+            df_regular = df[df['組'] == 組].copy()
+        else:
+            # 学年全体/全校の場合は通常学級のみ
+            df_regular = detect_regular_students(df)
+
+        # 出席番号で数値ソート
+        if '出席番号' in df_regular.columns:
+            df_regular['_sort_key'] = pd.to_numeric(
+                df_regular['出席番号'], errors='coerce',
+            ).fillna(0)
+            df_regular = df_regular.sort_values('_sort_key').drop(columns='_sort_key')
+            df_regular = df_regular.reset_index(drop=True)
+
+        if include_special_needs and 学年:
+            # 同学年の特別支援学級児童を取得
+            df_grade = self.df_mapped.copy()
+            if '学年' in df_grade.columns:
+                df_grade = df_grade[df_grade['学年'] == 学年]
+            special_df = detect_special_needs_students(df_grade)
+            if not special_df.empty:
+                return merge_special_needs_students(
+                    df_regular, special_df, placement=special_needs_placement,
+                )
+
+        return df_regular
 
     # ────────────────────────────────────────────────────────────────────────
     # バックグラウンド更新チェック
@@ -436,9 +492,13 @@ class App(ctk.CTk):
             )
             return
 
-        # フィルタリング: 現在の学年・組から先頭 N 名
+        # フィルタリング: 現在の学年・組から先頭 N 名（特支オプション考慮）
         f = self.class_select.get_filter()
-        df_filtered = self._filter_df(f.get('学年'), f.get('組'))
+        df_filtered = self._filter_df(
+            f.get('学年'), f.get('組'),
+            include_special_needs=options.get('include_special_needs', False),
+            special_needs_placement=options.get('special_needs_placement', 'appended'),
+        )
         if df_filtered.empty:
             self._right.show_preview_error('表示するデータがありません')
             return

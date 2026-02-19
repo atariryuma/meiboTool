@@ -115,13 +115,14 @@ App (CTk) — 2カラムレイアウト
 | 名札・ラベル | ラベル_大2.xlsx / ラベル_小.xlsx / ラベル_特大.xlsx | grid | ✅ |
 | 名簿・出欠表 | 掲示用名列表.xlsx / 調べ表.xlsx | grid | ✅ |
 | 名簿・出欠表 | 横名簿.xlsx / 縦一週間.xlsx | grid | ✅ |
-| 名簿・出欠表 | 男女一覧.xlsx | grid | ❌ enabled=False |
+| 名簿・出欠表 | 男女一覧.xlsx | grid | ✅ sort_by=性別 |
 | 台帳 | 修了台帳.xlsx / 卒業台帳.xlsx | list | ✅ |
 | 個票 | 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | ✅ |
 
 ## C4th データの重要な仕様
 
 - **「組」「出席番号」は C4th に含まれない** — ファイル読込後にクラス選択パネルで教員が選択する（将来 C4th から出力予定）
+- **特別支援学級** — C4th の「組」列に非数字の値（「なかよし」「ひまわり」等）が入る。`is_special_needs_class()` で判定。交流学級への統合は UI オプションで制御
 - **全カラム `dtype=str` で読み込む** — 生年月日等の型変換は後工程で行う
 - **ヘッダー行自動検出** — ファイル先頭にメタ情報行がある可能性があるため、文字列セル 5 個以上の行を検索する
 
@@ -158,7 +159,7 @@ App (CTk) — 2カラムレイアウト
 | `core/config.py` | config.json 読み書き・deep_merge・パス解決 | ✅ 13 |
 | `core/mapper.py` | C4th カラム名マッピング + resolve_name_fields | ✅ 12 |
 | `core/importer.py` | ヘッダー自動検出付き Excel 読込 | ✅ 11 |
-| `core/generator.py` | Grid/List/Individual ジェネレーター | ✅ 50 |
+| `core/generator.py` | Grid/List/Individual ジェネレーター + 性別ソート + 画像警告抑制 | ✅ 52 |
 | `core/crypto.py` | AES-256-GCM 暗号化/復号 + DPAPI パスワード保護 | ✅ 17 |
 | `core/data_sync.py` | 名簿データ自動同期（LAN/GDrive/手動） | ✅ 15 |
 | `core/updater.py` | GitHub Releases ベースのアプリ更新 | ✅ 20 |
@@ -172,11 +173,12 @@ App (CTk) — 2カラムレイアウト
 | `templates/generators/gen_gakkyuu_kojihyo.py` | 学級編成用個票テンプレート生成 | ✅ 19 |
 | `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
 | `templates/generators/generate_all.py` | 全テンプレート一括生成 | — |
-| `gui/app.py` | メインウィンドウ（2カラム + CTkTabview プレビュー） | — |
+| `core/special_needs.py` | 特別支援学級判定・検出・統合ロジック | ✅ 22 |
+| `gui/app.py` | メインウィンドウ（2カラム + CTkTabview プレビュー + 特支統合） | ✅ 23 |
 | `gui/preview_renderer.py` | openpyxl Worksheet → PIL Image レンダラー（IPAmj明朝・画像・垂直揃え対応） | ✅ 22 |
 | `gui/frames/import_frame.py` | ファイル選択・同期ステータス表示 | — |
-| `gui/frames/class_select_panel.py` | 学年・組選択 | — |
-| `gui/frames/select_frame.py` | テンプレート選択（カテゴリ別グループ表示）・担任名・学校名 | — |
+| `gui/frames/class_select_panel.py` | 学年・組選択 + 特別支援学級表示 | — |
+| `gui/frames/select_frame.py` | テンプレート選択（カテゴリ別）・担任名・学校名・特支オプション | — |
 | `gui/frames/output_frame.py` | 生成ボタン・進捗バー | — |
 | `gui/dialogs/mapping_dialog.py` | カラムマッピング手動調整ダイアログ | ✅ 13 |
 | `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
@@ -190,7 +192,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **398 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **447 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 

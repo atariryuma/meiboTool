@@ -6,6 +6,7 @@
                          学年全体の場合 {'学年': '3', '組': None}
                          学校全体の場合 {'学年': None, '組': None}
   get_available_classes(学年) : バッチ生成用 (学年, 組) タプルのリストを返す
+  has_special_needs()  : 特別支援学級が存在するかどうかを返す
 """
 
 from __future__ import annotations
@@ -14,6 +15,8 @@ from collections.abc import Callable
 
 import customtkinter as ctk
 import pandas as pd
+
+from core.special_needs import is_special_needs_class
 
 
 class ClassSelectPanel(ctk.CTkFrame):
@@ -29,6 +32,7 @@ class ClassSelectPanel(ctk.CTkFrame):
         self._var = ctk.StringVar(value='')
         self._classes: dict[str, tuple[str | None, str | None, int]] = {}
         self._radio_frame: ctk.CTkFrame | None = None
+        self._has_special_needs = False
 
         self.grid_columnconfigure(0, weight=1)
 
@@ -56,6 +60,7 @@ class ClassSelectPanel(ctk.CTkFrame):
             self._radio_frame = None
         self._classes.clear()
         self._var.set('')
+        self._has_special_needs = False
 
         if '学年' not in df.columns or '組' not in df.columns:
             self._placeholder.grid()
@@ -73,12 +78,19 @@ class ClassSelectPanel(ctk.CTkFrame):
             .reset_index(name='count')
         )
 
-        grade_dict: dict[str, list[tuple[str, int]]] = {}
+        # 通常学級と特別支援学級を分離
+        regular_dict: dict[str, list[tuple[str, int]]] = {}
+        special_dict: dict[str, list[tuple[str, int]]] = {}
         for _, row in groups.iterrows():
             g = str(row['学年'])
             k = str(row['組'])
             c = int(row['count'])
-            grade_dict.setdefault(g, []).append((k, c))
+            if is_special_needs_class(k):
+                special_dict.setdefault(g, []).append((k, c))
+            else:
+                regular_dict.setdefault(g, []).append((k, c))
+
+        self._has_special_needs = bool(special_dict)
 
         row_num = 0
         total = len(df)
@@ -101,8 +113,9 @@ class ClassSelectPanel(ctk.CTkFrame):
             except ValueError:
                 return 0
 
-        for grade in sorted(grade_dict.keys(), key=_int_key):
-            class_list = grade_dict[grade]
+        # 通常学級を表示
+        for grade in sorted(regular_dict.keys(), key=_int_key):
+            class_list = regular_dict[grade]
             grade_total = sum(c for _, c in class_list)
             grade_key = f'{grade}-'
 
@@ -132,7 +145,27 @@ class ClassSelectPanel(ctk.CTkFrame):
                 if first_class_val is None:
                     first_class_val = val
 
-        # 最初の個別クラスを自動選択
+        # 特別支援学級がある場合はラベルで表示（情報のみ）
+        if special_dict:
+            ctk.CTkLabel(
+                self._radio_frame,
+                text='── 特別支援学級 ──',
+                font=ctk.CTkFont(size=11, weight='bold'),
+                text_color='gray40',
+            ).grid(row=row_num, column=0, padx=10, pady=(8, 2), sticky='w')
+            row_num += 1
+
+            for grade in sorted(special_dict.keys(), key=_int_key):
+                for (kumi, count) in sorted(special_dict[grade]):
+                    ctk.CTkLabel(
+                        self._radio_frame,
+                        text=f'　{grade}年 {kumi}（{count}名）',
+                        text_color='gray50',
+                        font=ctk.CTkFont(size=11),
+                    ).grid(row=row_num, column=0, padx=(20, 10), pady=1, sticky='w')
+                    row_num += 1
+
+        # 最初の通常クラスを自動選択
         if first_class_val:
             self._var.set(first_class_val)
             self._on_change()
@@ -152,16 +185,22 @@ class ClassSelectPanel(ctk.CTkFrame):
         self, 学年: str | None = None
     ) -> list[tuple[str, str]]:
         """
-        バッチ生成用: フィルタに該当する全クラスの (学年, 組) リストを返す。
-        学年=None の場合は全クラスを返す。
+        バッチ生成用: フィルタに該当する全通常クラスの (学年, 組) リストを返す。
+        学年=None の場合は全通常クラスを返す。特別支援学級は含まない。
         """
         result = []
         for _val, (g, k, _) in self._classes.items():
             if g is None or k is None:
                 continue
+            if is_special_needs_class(k):
+                continue
             if 学年 is None or g == 学年:
                 result.append((g, k))
         return sorted(result)
+
+    def has_special_needs(self) -> bool:
+        """データ内に特別支援学級が存在するかどうかを返す。"""
+        return self._has_special_needs
 
     # ── 内部 ─────────────────────────────────────────────────────────────
 

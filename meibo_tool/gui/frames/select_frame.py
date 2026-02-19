@@ -170,6 +170,57 @@ class SelectFrame(ctk.CTkFrame):
         )
         self._save_btn.grid(row=0, column=1, padx=(4, 0))
 
+        # ── 特別支援学級オプション（初期状態は非表示）──────────────────────
+        self._sn_separator = ctk.CTkFrame(self, height=1, fg_color='gray80')
+        self._sn_separator.grid(row=row, column=0, sticky='ew', padx=10, pady=6)
+        row += 1
+
+        self._sn_header = ctk.CTkLabel(
+            self,
+            text='特別支援学級',
+            font=ctk.CTkFont(size=11, weight='bold'),
+            text_color='gray40',
+        )
+        self._sn_header.grid(row=row, column=0, sticky='w', padx=14, pady=(2, 2))
+        row += 1
+
+        self._sn_include_var = ctk.BooleanVar(value=False)
+        self._sn_checkbox = ctk.CTkCheckBox(
+            self,
+            text='特別支援学級の児童を含める',
+            variable=self._sn_include_var,
+            command=self._on_sn_toggle,
+        )
+        self._sn_checkbox.grid(row=row, column=0, padx=(20, 10), pady=2, sticky='w')
+        row += 1
+
+        self._sn_placement_var = ctk.StringVar(value='appended')
+        self._sn_placement_widgets: list[ctk.CTkRadioButton] = []
+        for val, label in (
+            ('integrated', '出席番号順に統合'),
+            ('appended', '末尾に追加'),
+        ):
+            rb = ctk.CTkRadioButton(
+                self, text=label, value=val,
+                variable=self._sn_placement_var,
+                state='disabled',
+            )
+            rb.grid(row=row, column=0, padx=(40, 10), pady=1, sticky='w')
+            self._sn_placement_widgets.append(rb)
+            row += 1
+
+        # 特支オプション全ウィジェット（表示/非表示切り替え用）
+        self._sn_widgets_all: list[ctk.CTkBaseClass] = [
+            self._sn_separator, self._sn_header,
+            self._sn_checkbox, *self._sn_placement_widgets,
+        ]
+        for w in self._sn_widgets_all:
+            w.grid_remove()
+
+        # 特支チェック変更時もプレビューを更新
+        self._sn_include_var.trace_add('write', self._fire_template_change)
+        self._sn_placement_var.trace_add('write', self._fire_template_change)
+
         self._all_widgets = self._radio_widgets + self._mode_widgets + [
             self._school_entry,
             self._school_save_btn,
@@ -208,9 +259,27 @@ class SelectFrame(ctk.CTkFrame):
             'teacher_name': self._teacher_var.get(),
             'school_name': self._school_var.get(),
             'name_display': self._mode_var.get(),
+            'include_special_needs': self._sn_include_var.get(),
+            'special_needs_placement': self._sn_placement_var.get(),
         }
 
+    def set_special_needs_visible(self, visible: bool) -> None:
+        """特別支援学級オプションの表示/非表示を切り替える。"""
+        for w in self._sn_widgets_all:
+            if visible:
+                w.grid()
+            else:
+                w.grid_remove()
+        if not visible:
+            self._sn_include_var.set(False)
+
     # ── 内部 ─────────────────────────────────────────────────────────────
+
+    def _on_sn_toggle(self) -> None:
+        """特支インクルードチェックの変更時、配置ラジオの有効/無効を切り替える。"""
+        state = 'normal' if self._sn_include_var.get() else 'disabled'
+        for rb in self._sn_placement_widgets:
+            rb.configure(state=state)
 
     def _fire_template_change(self, *_args) -> None:
         """テンプレートまたは名前表示モード変更時にコールバックを発火する。"""

@@ -400,3 +400,98 @@ class TestSetupPrint:
         setup_print(ws)
         assert ws.sheet_properties.pageSetUpPr.fitToPage is True
         assert ws.page_setup.fitToWidth == 1
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# GridGenerator: 性別ソートテスト（男女一覧テンプレート用）
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestGridGeneratorGenderSort:
+    """sort_by='性別' メタデータによるソート機能のテスト。"""
+
+    @pytest.fixture
+    def mixed_gender_df(self) -> pd.DataFrame:
+        """男女混合の 6 名データ（出席番号順: 女,男,女,男,女,男）。"""
+        return pd.DataFrame([
+            {'出席番号': '1', '氏名': '佐藤 花子', '氏名かな': 'さとう はなこ',
+             '性別': '女', '学年': '3', '組': '1'},
+            {'出席番号': '2', '氏名': '田中 太郎', '氏名かな': 'たなか たろう',
+             '性別': '男', '学年': '3', '組': '1'},
+            {'出席番号': '3', '氏名': '鈴木 美穂', '氏名かな': 'すずき みほ',
+             '性別': '女', '学年': '3', '組': '1'},
+            {'出席番号': '4', '氏名': '高橋 健太', '氏名かな': 'たかはし けんた',
+             '性別': '男', '学年': '3', '組': '1'},
+            {'出席番号': '5', '氏名': '山田 凛', '氏名かな': 'やまだ りん',
+             '性別': '女', '学年': '3', '組': '1'},
+            {'出席番号': '6', '氏名': '伊藤 翔', '氏名かな': 'いとう しょう',
+             '性別': '男', '学年': '3', '組': '1'},
+        ])
+
+    @pytest.fixture
+    def danjo_tmpl(self, tmp_path) -> str:
+        """男女一覧テンプレート相当のダミー xlsx を生成。"""
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = '男女一覧'
+        # 6 スロットのグリッド
+        for i in range(1, 7):
+            ws.cell(row=i, column=1, value=f'{{{{出席番号_{i}}}}}')
+            ws.cell(row=i, column=2, value=f'{{{{氏名_{i}}}}}')
+            ws.cell(row=i, column=3, value=f'{{{{性別_{i}}}}}')
+        wb.save(str(tmp_path / '男女一覧.xlsx'))
+        wb.close()
+        return str(tmp_path / '男女一覧.xlsx')
+
+    def test_gender_sort_men_first(self, danjo_tmpl, mixed_gender_df, tmp_path):
+        """sort_by='性別' で男→女の順にソートされる。"""
+        output = str(tmp_path / 'output.xlsx')
+        import shutil
+        shutil.copy2(danjo_tmpl, output)
+
+        options = {
+            'template_dir': str(tmp_path),
+            'fiscal_year': 2025,
+            'school_name': 'テスト小',
+            'teacher_name': 'テスト先生',
+            'name_display': 'furigana',
+        }
+        gen = GridGenerator(danjo_tmpl, output, mixed_gender_df, options)
+        gen.generate()
+
+        wb = load_workbook(output)
+        ws = wb.active
+        # 男が先: 出席番号 2, 4, 6 → 女: 1, 3, 5
+        assert ws.cell(row=1, column=2).value == '田中 太郎'   # 男・出席番号2
+        assert ws.cell(row=2, column=2).value == '高橋 健太'   # 男・出席番号4
+        assert ws.cell(row=3, column=2).value == '伊藤 翔'     # 男・出席番号6
+        assert ws.cell(row=4, column=2).value == '佐藤 花子'   # 女・出席番号1
+        assert ws.cell(row=5, column=2).value == '鈴木 美穂'   # 女・出席番号3
+        assert ws.cell(row=6, column=2).value == '山田 凛'     # 女・出席番号5
+        wb.close()
+
+    def test_no_sort_without_sort_by(self, tmpl_meireihyo, tmp_path):
+        """sort_by がないテンプレートではソートしない（出席番号順のまま）。"""
+        df = pd.DataFrame([
+            {'出席番号': '1', '氏名': '佐藤 花子', '氏名かな': 'さとう はなこ',
+             '性別': '女', '学年': '3', '組': '1'},
+            {'出席番号': '2', '氏名': '田中 太郎', '氏名かな': 'たなか たろう',
+             '性別': '男', '学年': '3', '組': '1'},
+        ])
+        output = str(tmp_path / 'output_meireihyo.xlsx')
+
+        options = {
+            'template_dir': str(tmp_path),
+            'fiscal_year': 2025,
+            'school_name': 'テスト小',
+            'teacher_name': 'テスト先生',
+            'name_display': 'furigana',
+        }
+        gen = GridGenerator(tmpl_meireihyo, output, df, options)
+        gen.generate()
+
+        wb = load_workbook(output)
+        ws = wb.active
+        # B4 = {{氏名_1}} が佐藤 花子（出席番号1）のまま
+        assert ws.cell(row=4, column=2).value == '佐藤 花子'
+        wb.close()

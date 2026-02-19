@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import warnings
 from abc import ABC, abstractmethod
 from copy import copy
 from io import BytesIO
@@ -224,7 +225,14 @@ class BaseGenerator(ABC):
         """テンプレートにデータを差込み、output_path に保存して返す。"""
         # テンプレートをコピーしてから開く（元ファイル保護＋画像消失防止）
         shutil.copy2(self.template_path, self.output_path)
-        self.wb = load_workbook(self.output_path)
+        with warnings.catch_warnings():
+            # openpyxl が画像読込に失敗した際の UserWarning を抑制
+            # （掲示用名列表.xlsx 等に埋め込まれた PNG が exe 環境で読めない場合がある）
+            warnings.filterwarnings(
+                'ignore', message='.*image.*',
+                category=UserWarning, module='openpyxl',
+            )
+            self.wb = load_workbook(self.output_path)
         try:
             self._populate()
             self._apply_font_all()
@@ -272,6 +280,27 @@ class GridGenerator(BaseGenerator):
     def _populate(self) -> None:
         template_ws = self.wb.active
         meta = self._get_template_meta()
+
+        # sort_by がある場合はデータをソート（男女一覧の性別ソート等）
+        sort_col = meta.get('sort_by')
+        if sort_col and sort_col in self.data.columns:
+            order_map = meta.get('sort_order', {})
+            self.data = self.data.copy()
+            self.data['_sort_key'] = self.data[sort_col].map(
+                lambda v, _m=order_map: _m.get(v, 999)
+            )
+            sort_keys = ['_sort_key']
+            if '出席番号' in self.data.columns:
+                self.data['_num_key'] = pd.to_numeric(
+                    self.data['出席番号'], errors='coerce',
+                ).fillna(999)
+                sort_keys.append('_num_key')
+            self.data = (
+                self.data
+                .sort_values(sort_keys)
+                .drop(columns=[c for c in ('_sort_key', '_num_key') if c in self.data.columns])
+                .reset_index(drop=True)
+            )
 
         n = len(self.data)
         if n == 0:

@@ -58,10 +58,10 @@ class TestTemplatesDict:
         files = [meta['file'] for meta in TEMPLATES.values()]
         assert len(files) == len(set(files)), 'ファイル名に重複がある'
 
-    def test_enabled_false_only_on_expected(self):
-        """enabled=False は明示的に設定されたもののみ。"""
+    def test_no_disabled_templates(self):
+        """現在 enabled=False のテンプレートはない。"""
         disabled = [n for n, m in TEMPLATES.items() if m.get('enabled') is False]
-        assert '男女一覧' in disabled
+        assert disabled == []
 
     def test_grid_templates_count(self):
         grids = [n for n, m in TEMPLATES.items() if m['type'] == 'grid']
@@ -131,11 +131,12 @@ class TestGetAllTemplates:
             if meta.get('enabled') is not False:
                 assert name not in result, f'{name} はファイルがないのに含まれている'
 
-    def test_enabled_false_always_included(self, tmp_path):
-        """enabled=False は常に含まれる。"""
+    def test_sort_by_metadata_present(self, tmp_path):
+        """sort_by メタデータがあるテンプレートが正しく返される。"""
+        _create_template_xlsx(str(tmp_path), '男女一覧.xlsx')
         result = get_all_templates(str(tmp_path))
         assert '男女一覧' in result
-        assert result['男女一覧'].get('enabled') is False
+        assert result['男女一覧']['sort_by'] == '性別'
 
     def test_scan_only_templates_added(self, tmp_path):
         """TEMPLATES にないがフォルダにある → スキャン結果で追加。"""
@@ -184,14 +185,14 @@ class TestGetDisplayGroups:
         indices = [order.get(c, 999) for c in cat_names]
         assert indices == sorted(indices)
 
-    def test_enabled_false_excluded(self):
-        """enabled=False のテンプレートは表示グループに含まれない。"""
+    def test_danjo_ichiran_included(self):
+        """男女一覧が表示グループに含まれる（enabled=True）。"""
         groups = get_display_groups()
         all_keys = []
         for _cat, items in groups:
             for _display, key, _icon, _desc in items:
                 all_keys.append(key)
-        assert '男女一覧' not in all_keys
+        assert '男女一覧' in all_keys
 
     def test_all_enabled_templates_present(self):
         """enabled なテンプレートは全て表示グループに含まれる。"""
