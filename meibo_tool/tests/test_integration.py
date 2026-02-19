@@ -15,7 +15,7 @@ from openpyxl import load_workbook
 
 from core.generator import create_generator
 from core.importer import import_c4th_excel
-from templates.template_registry import TEMPLATES
+from templates.template_registry import TEMPLATES, get_all_templates
 from tests.generate_dummy import generate_multi_class
 
 # ── enabled テンプレート一覧 ──────────────────────────────────────────────────
@@ -97,7 +97,8 @@ class TestAllTemplateGeneration:
     def test_generate_succeeds(self, template_name, imported_data, template_dir, tmp_path):
         """テンプレートごとに生成が成功し、出力ファイルが存在する。"""
         data = imported_data[imported_data['組'] == '1'].copy()
-        meta = TEMPLATES[template_name]
+        all_templates = get_all_templates(template_dir)
+        meta = all_templates[template_name]
         out_path = str(tmp_path / f'{template_name}_output.xlsx')
         options = _make_options(template_dir)
 
@@ -113,7 +114,8 @@ class TestAllTemplateGeneration:
     def test_output_has_data(self, template_name, imported_data, template_dir, tmp_path):
         """出力ファイルにデータが含まれている（空ファイルではない）。"""
         data = imported_data[imported_data['組'] == '1'].copy()
-        meta = TEMPLATES[template_name]
+        all_templates = get_all_templates(template_dir)
+        meta = all_templates[template_name]
         out_path = str(tmp_path / f'{template_name}_data.xlsx')
         options = _make_options(template_dir)
 
@@ -138,7 +140,8 @@ class TestPlaceholderResolution:
     ):
         """list / individual 型テンプレートでプレースホルダーが残っていないこと。"""
         data = imported_data[imported_data['組'] == '1'].copy()
-        meta = TEMPLATES[template_name]
+        all_templates = get_all_templates(template_dir)
+        meta = all_templates[template_name]
         out_path = str(tmp_path / f'{template_name}_ph.xlsx')
         options = _make_options(template_dir)
 

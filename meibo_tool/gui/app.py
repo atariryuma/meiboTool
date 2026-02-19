@@ -128,6 +128,7 @@ class App(ctk.CTk):
         self.select_frame = SelectFrame(
             self._left,
             config=self.config,
+            template_dir=get_template_dir(self.config),
             on_teacher_save=self._on_teacher_save,
             on_school_name_save=self._on_school_name_save,
             on_template_change=self._request_preview,
@@ -270,12 +271,13 @@ class App(ctk.CTk):
         options = self.select_frame.get_options()
         options['template_dir'] = get_template_dir(self.config)
 
-        from templates.template_registry import TEMPLATES
+        from templates.template_registry import get_all_templates
+        all_templates = get_all_templates(options['template_dir'])
         actual = template_key
-        if actual not in TEMPLATES:
+        if actual not in all_templates:
             return None
 
-        meta = TEMPLATES[actual]
+        meta = all_templates[actual]
         output_dir = get_output_dir(self.config)
 
         f = self.class_select.get_filter()
@@ -416,13 +418,15 @@ class App(ctk.CTk):
         if not template_key:
             return
 
-        from templates.template_registry import TEMPLATES
-        if template_key not in TEMPLATES:
-            return
-
-        meta = TEMPLATES[template_key]
         options = self.select_frame.get_options()
         options['template_dir'] = get_template_dir(self.config)
+
+        from templates.template_registry import get_all_templates
+        all_templates = get_all_templates(options['template_dir'])
+        if template_key not in all_templates:
+            return
+
+        meta = all_templates[template_key]
 
         # テンプレートファイル存在確認
         tmpl_file = os.path.join(options['template_dir'], meta['file'])

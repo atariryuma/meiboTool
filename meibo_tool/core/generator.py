@@ -18,7 +18,7 @@ from openpyxl import load_workbook
 from openpyxl.cell.cell import MergedCell
 from openpyxl.drawing.image import Image
 
-from templates.template_registry import TEMPLATES
+from templates.template_registry import get_all_templates
 from utils.address import build_address
 from utils.date_fmt import DATE_KEYS, format_date
 from utils.font_helper import apply_font
@@ -238,9 +238,12 @@ class BaseGenerator(ABC):
             apply_font(ws)
 
     def _get_template_meta(self) -> dict:
-        """TEMPLATES レジストリからテンプレートファイル名でメタデータを検索する。"""
-        for _name, meta in TEMPLATES.items():
-            if meta['file'] == os.path.basename(self.template_path):
+        """テンプレートレジストリからファイル名でメタデータを検索する。"""
+        template_dir = self.options.get('template_dir', '')
+        all_templates = get_all_templates(template_dir)
+        basename = os.path.basename(self.template_path)
+        for _name, meta in all_templates.items():
+            if meta['file'] == basename:
                 return meta
         return {}
 
@@ -269,8 +272,6 @@ class GridGenerator(BaseGenerator):
     def _populate(self) -> None:
         template_ws = self.wb.active
         meta = self._get_template_meta()
-        orientation = meta.get('orientation', 'portrait')
-        setup_print(template_ws, orientation=orientation)
 
         n = len(self.data)
         if n == 0:
@@ -287,11 +288,11 @@ class GridGenerator(BaseGenerator):
         else:
             # ── 複数ページモード（名札など）───────────────────────────────────
             # Step 1: 追加シートを先に複製（fill 前に行う）
+            # copy_worksheet はシートの印刷設定も複製するため setup_print 不要
             num_pages = (n + cards_per_page - 1) // cards_per_page
             pages = [template_ws]
             for _ in range(1, num_pages):
                 new_ws = self.wb.copy_worksheet(template_ws)
-                setup_print(new_ws, orientation=orientation)
                 pages.append(new_ws)
 
             # Step 2: 各シートに対応する児童範囲をfill
@@ -342,9 +343,6 @@ class ListGenerator(BaseGenerator):
 
     def _populate(self) -> None:
         ws = self.wb.active
-        meta = self._get_template_meta()
-        orientation = meta.get('orientation', 'portrait')
-        setup_print(ws, orientation=orientation)
 
         # ヘッダー行・フッター行を特定してデータ行を展開
         template_row = self._find_template_row(ws)
@@ -420,13 +418,12 @@ class IndividualGenerator(BaseGenerator):
 
     def _populate(self) -> None:
         template_ws = self.wb.active
-        meta = self._get_template_meta()
-        orientation = meta.get('orientation', 'portrait')
 
         if len(self.data) == 0:
             return
 
         # Step 1: 先に全シートを複製（fill 前に行う — 置換済みデータの混入防止）
+        # copy_sheet_with_images はシートの印刷設定も複製するため setup_print 不要
         sheets = []
         for i, (_, row) in enumerate(self.data.iterrows()):
             row_dict = row.to_dict()
@@ -444,7 +441,6 @@ class IndividualGenerator(BaseGenerator):
         # Step 2: 各シートにデータを差し込み
         for ws, row_dict in sheets:
             fill_placeholders(ws, row_dict, self.options)
-            setup_print(ws, orientation=orientation)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -466,10 +462,11 @@ def create_generator(
         school_name   : 学校名
         teacher_name  : 担任名（省略可）
     """
-    if template_name not in TEMPLATES:
+    all_templates = get_all_templates(options.get('template_dir', ''))
+    if template_name not in all_templates:
         raise ValueError(f'未定義のテンプレート: {template_name}')
 
-    meta = TEMPLATES[template_name]
+    meta = all_templates[template_name]
     template_path = os.path.join(options['template_dir'], meta['file'])
 
     if not os.path.exists(template_path):

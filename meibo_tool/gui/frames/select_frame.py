@@ -19,6 +19,7 @@ class SelectFrame(ctk.CTkFrame):
         self,
         master,
         config: dict,
+        template_dir: str = '',
         on_teacher_save: Callable | None = None,
         on_school_name_save: Callable | None = None,
         on_template_change: Callable | None = None,
@@ -43,7 +44,7 @@ class SelectFrame(ctk.CTkFrame):
         self._tmpl_var = ctk.StringVar(value='')
         self._radio_widgets: list[ctk.CTkRadioButton] = []
 
-        for display_name, key, icon, _desc in get_display_groups():
+        for display_name, key, icon, _desc in get_display_groups(template_dir):
             rb = ctk.CTkRadioButton(
                 self,
                 text=f'{icon} {display_name}',
