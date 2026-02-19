@@ -63,16 +63,31 @@ jobs:
             ForEach-Object { "Total size: {0:N2} MB" -f ($_.Sum / 1MB) }
         shell: pwsh
 
+      - name: Generate file manifest
+        run: python installer/generate_manifest.py "dist/名簿帳票ツール" ${{ github.ref_name }}
+
       - name: Create release archive
         run: |
           cd dist
           Compress-Archive -Path "名簿帳票ツール" -DestinationPath "meibo-tool-${{ github.ref_name }}.zip"
         shell: pwsh
 
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+        shell: cmd
+
+      - name: Build installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=${{ github.ref_name }} installer\setup.iss
+        shell: pwsh
+
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/meibo-tool-${{ github.ref_name }}.zip
+          files: |
+            dist/meibo-tool-${{ github.ref_name }}.zip
+            dist/MeiboToolSetup-${{ github.ref_name }}.exe
+            dist/manifest.json
           generate_release_notes: true
           draft: false
           prerelease: false

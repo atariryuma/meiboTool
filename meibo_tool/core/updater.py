@@ -7,13 +7,14 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import logging
 import os
 import subprocess
 import sys
 import zipfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -25,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 _API_BASE = 'https://api.github.com/repos'
 _REQUEST_TIMEOUT = 5  # seconds
+
+# 差分アップデート時にスキップするファイル（ユーザー編集可能）
+_SKIP_FILES: frozenset[str] = frozenset({'config.json'})
 
 
 # ── データクラス ─────────────────────────────────────────────────────────────
@@ -39,6 +43,7 @@ class UpdateInfo:
     asset_name: str
     asset_size: int
     published_at: str
+    manifest_url: str | None = field(default=None)
 
 
 # ── バージョン比較 ───────────────────────────────────────────────────────────
@@ -98,13 +103,16 @@ def check_for_update(config: dict[str, Any]) -> UpdateInfo | None:
     if skip and tag == skip:
         return None
 
-    # zip アセットを探す
+    # zip / manifest アセットを探す
     assets = data.get('assets', [])
     zip_asset = None
+    manifest_asset = None
     for asset in assets:
-        if asset.get('name', '').endswith('.zip'):
+        name = asset.get('name', '')
+        if name.endswith('.zip'):
             zip_asset = asset
-            break
+        elif name == 'manifest.json':
+            manifest_asset = asset
 
     if not zip_asset:
         logger.warning('Release %s に zip アセットが見つかりません', tag)
@@ -124,6 +132,10 @@ def check_for_update(config: dict[str, Any]) -> UpdateInfo | None:
         asset_name=zip_asset['name'],
         asset_size=zip_asset.get('size', 0),
         published_at=data.get('published_at', ''),
+        manifest_url=(
+            manifest_asset['browser_download_url']
+            if manifest_asset else None
+        ),
     )
 
 
@@ -160,22 +172,200 @@ def download_release_asset(
     return dest_path
 
 
+# ── 差分アップデート ─────────────────────────────────────────────────────────
+
+def download_manifest(url: str) -> dict[str, Any]:
+    """manifest.json をダウンロードして dict で返す。"""
+    resp = requests.get(url, timeout=_REQUEST_TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def compute_local_manifest(app_dir: str) -> dict[str, dict[str, Any]]:
+    """ローカルファイルの SHA-256 ハッシュマニフェストを計算する。
+
+    config.json 等のユーザー編集ファイルはスキップする。
+
+    Returns:
+        {"相対パス": {"sha256": "...", "size": N}, ...}
+    """
+    result: dict[str, dict[str, Any]] = {}
+    for root, _dirs, files in os.walk(app_dir):
+        for fname in files:
+            full = os.path.join(root, fname)
+            rel = os.path.relpath(full, app_dir).replace('\\', '/')
+            if rel in _SKIP_FILES:
+                continue
+            sha = hashlib.sha256()
+            with open(full, 'rb') as f:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk:
+                        break
+                    sha.update(chunk)
+            result[rel] = {
+                'sha256': sha.hexdigest(),
+                'size': os.path.getsize(full),
+            }
+    return result
+
+
+def diff_manifests(
+    remote: dict[str, dict[str, Any]],
+    local: dict[str, dict[str, Any]],
+) -> list[str]:
+    """リモートとローカルのマニフェストを比較し、変更・追加ファイルのリストを返す。
+
+    Returns:
+        変更が必要なファイルの相対パスリスト
+    """
+    changed: list[str] = []
+    for rel_path, remote_info in remote.items():
+        if rel_path in _SKIP_FILES:
+            continue
+        local_info = local.get(rel_path)
+        if local_info is None or local_info['sha256'] != remote_info['sha256']:
+            changed.append(rel_path)
+    return changed
+
+
+def extract_changed_files(
+    zip_path: str,
+    staging_dir: str,
+    changed_files: list[str],
+) -> None:
+    """zip から変更ファイルのみをステージングディレクトリに展開する。
+
+    zip 内のトップレベルフォルダを除去してフラットに展開する。
+    """
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        # トップレベルフォルダ名を検出
+        names = zf.namelist()
+        top_prefix = ''
+        if names:
+            first = names[0]
+            if '/' in first:
+                top_prefix = first.split('/')[0] + '/'
+
+        changed_set = set(changed_files)
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            # トップレベルフォルダを除去した相対パス
+            inner_path = info.filename
+            if top_prefix and inner_path.startswith(top_prefix):
+                inner_path = inner_path[len(top_prefix):]
+            if not inner_path:
+                continue
+            if inner_path in changed_set:
+                dest = os.path.join(staging_dir, inner_path.replace('/', os.sep))
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                with zf.open(info) as src, open(dest, 'wb') as dst:
+                    while True:
+                        chunk = src.read(65536)
+                        if not chunk:
+                            break
+                        dst.write(chunk)
+
+
 # ── バッチファイル生成（--onedir 対応） ──────────────────────────────────────
 
-def generate_update_batch(zip_path: str, current_dir: str) -> None:
+def generate_update_batch(
+    zip_path: str,
+    current_dir: str,
+    changed_files: list[str] | None = None,
+    staging_dir: str | None = None,
+) -> None:
     """自己更新バッチを生成して実行し、アプリを終了する。
 
-    手順:
-      1. zip を一時フォルダに展開
-      2. バッチファイル生成（旧フォルダリネーム → 新フォルダリネーム → config 復元）
-      3. バッチ実行
-      4. sys.exit(0)
+    差分モード (changed_files + staging_dir 指定時):
+      ステージングから変更ファイルのみ上書きコピーする軽量バッチ。
+
+    フル置換モード (changed_files=None):
+      zip 全展開 → フォルダ全体を置換する既存方式。
 
     Args:
         zip_path: ダウンロードした Release zip のパス
-        current_dir: 現在のアプリフォルダ（例: dist/名簿帳票ツール）
+        current_dir: 現在のアプリフォルダ
+        changed_files: 差分更新対象の相対パスリスト
+        staging_dir: 変更ファイルが展開されたステージングディレクトリ
     """
     parent = os.path.dirname(current_dir)
+    exe_name = os.path.basename(sys.executable) if getattr(sys, 'frozen', False) else ''
+
+    if changed_files is not None and staging_dir is not None:
+        # ── 差分モード ──
+        bat_content = _generate_diff_batch(
+            current_dir, parent, staging_dir, changed_files, exe_name,
+        )
+    else:
+        # ── フル置換モード（後方互換） ──
+        bat_content = _generate_full_batch(
+            zip_path, current_dir, parent, exe_name,
+        )
+
+    bat_path = os.path.join(parent, '_update.bat')
+    with open(bat_path, 'w', encoding='utf-8') as f:
+        f.write(bat_content)
+
+    # バッチ実行
+    subprocess.Popen(
+        ['cmd', '/c', bat_path],
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+    )
+
+    sys.exit(0)
+
+
+def _generate_diff_batch(
+    current_dir: str,
+    parent: str,
+    staging_dir: str,
+    changed_files: list[str],
+    exe_name: str,
+) -> str:
+    """差分コピーバッチスクリプトを生成する。"""
+    # xcopy コマンドのリストを生成
+    copy_cmds: list[str] = []
+    for rel in changed_files:
+        src = os.path.join(staging_dir, rel.replace('/', os.sep))
+        dst = os.path.join(current_dir, rel.replace('/', os.sep))
+        dst_dir = os.path.dirname(dst)
+        copy_cmds.append(f'if not exist "{dst_dir}" mkdir "{dst_dir}"')
+        copy_cmds.append(f'copy /Y "{src}" "{dst}" > nul')
+
+    copy_block = '\n'.join(copy_cmds)
+
+    return f'''@echo off
+chcp 65001 > nul
+echo 名簿帳票ツールを更新しています（差分更新: {len(changed_files)} ファイル）...
+timeout /t 3 /nobreak > nul
+taskkill /IM "{exe_name}" /F > nul 2>&1
+timeout /t 2 /nobreak > nul
+
+rem 変更ファイルを上書きコピー
+{copy_block}
+
+rem ステージングをクリーンアップ
+rmdir /s /q "{staging_dir}" > nul 2>&1
+
+rem 再起動
+if "{exe_name}" NEQ "" (
+    start "" "{os.path.join(current_dir, exe_name)}"
+)
+
+rem 自己削除
+del "%~f0"
+'''
+
+
+def _generate_full_batch(
+    zip_path: str,
+    current_dir: str,
+    parent: str,
+    exe_name: str,
+) -> str:
+    """フル置換バッチスクリプトを生成する。"""
     folder_name = os.path.basename(current_dir)
     temp_dir = os.path.join(parent, '_update_temp')
 
@@ -183,21 +373,18 @@ def generate_update_batch(zip_path: str, current_dir: str) -> None:
     with zipfile.ZipFile(zip_path, 'r') as zf:
         zf.extractall(temp_dir)
 
-    # 展開されたフォルダ名を取得（zip 内のトップレベルフォルダ）
+    # 展開されたフォルダ名を取得
     extracted_items = os.listdir(temp_dir)
     if len(extracted_items) == 1 and os.path.isdir(os.path.join(temp_dir, extracted_items[0])):
         extracted_name = extracted_items[0]
     else:
-        extracted_name = ''  # フォルダ構造がない場合は直接使う
-
-    exe_name = os.path.basename(sys.executable) if getattr(sys, 'frozen', False) else ''
+        extracted_name = ''
 
     config_src = os.path.join(current_dir, 'config.json')
     config_backup = os.path.join(parent, '_config_backup.json')
-
     new_dir = os.path.join(temp_dir, extracted_name) if extracted_name else temp_dir
 
-    bat_content = f'''@echo off
+    return f'''@echo off
 chcp 65001 > nul
 echo 名簿帳票ツールを更新しています...
 timeout /t 3 /nobreak > nul
@@ -231,15 +418,3 @@ if "{exe_name}" NEQ "" (
 rem 自己削除
 del "%~f0"
 '''
-
-    bat_path = os.path.join(parent, '_update.bat')
-    with open(bat_path, 'w', encoding='utf-8') as f:
-        f.write(bat_content)
-
-    # バッチ実行
-    subprocess.Popen(
-        ['cmd', '/c', bat_path],
-        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-    )
-
-    sys.exit(0)

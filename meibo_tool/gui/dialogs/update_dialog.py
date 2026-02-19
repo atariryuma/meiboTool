@@ -16,7 +16,15 @@ from typing import Any
 import customtkinter as ctk
 
 from core.config import save_config
-from core.updater import UpdateInfo, download_release_asset, generate_update_batch
+from core.updater import (
+    UpdateInfo,
+    compute_local_manifest,
+    diff_manifests,
+    download_manifest,
+    download_release_asset,
+    extract_changed_files,
+    generate_update_batch,
+)
 
 
 class UpdateDialog(ctk.CTkToplevel):
@@ -102,26 +110,66 @@ class UpdateDialog(ctk.CTkToplevel):
         threading.Thread(target=self._download_task, daemon=True).start()
 
     def _download_task(self) -> None:
-        """バックグラウンドスレッドでダウンロードを実行する。"""
+        """バックグラウンドスレッドでダウンロードを実行する。
+
+        2 フェーズ方式:
+          1. manifest.json でローカルと比較 → 変更なしなら終了
+          2. 変更ありなら zip DL → 変更分のみ展開 → バッチ実行
+        manifest がないリリースではフル置換にフォールバックする。
+        """
         try:
             if getattr(sys, 'frozen', False):
                 current_dir = os.path.dirname(sys.executable)
             else:
-                # 開発環境ではダウンロードのみ実施
                 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-            dest = os.path.join(
-                os.path.dirname(current_dir),
-                self._info.asset_name,
-            )
+            parent_dir = os.path.dirname(current_dir)
+            changed_files: list[str] | None = None
+            staging_dir: str | None = None
+
+            # ── フェーズ 1: マニフェスト比較 ──
+            if self._info.manifest_url:
+                self.after(0, lambda: self._progress_label.configure(
+                    text='変更内容を確認中…',
+                ))
+                try:
+                    remote_manifest = download_manifest(self._info.manifest_url)
+                    remote_files = remote_manifest.get('files', {})
+                    local_files = compute_local_manifest(current_dir)
+                    changed_files = diff_manifests(remote_files, local_files)
+
+                    if not changed_files:
+                        self.after(0, self._no_changes_found)
+                        return
+
+                    n = len(changed_files)
+                    self.after(0, lambda: self._progress_label.configure(
+                        text=f'{n} ファイルが変更されました。ダウンロード中…',
+                    ))
+                except Exception:
+                    # manifest 取得/比較に失敗 → フル置換にフォールバック
+                    changed_files = None
+                    self.after(0, lambda: self._progress_label.configure(
+                        text='ダウンロード中…',
+                    ))
+
+            # ── フェーズ 2: zip ダウンロード → 展開 ──
+            dest = os.path.join(parent_dir, self._info.asset_name)
 
             def _progress_cb(fraction: float) -> None:
                 self.after(0, lambda: self._update_progress(fraction))
 
             download_release_asset(self._info.asset_url, dest, _progress_cb)
 
+            # 差分展開
+            if changed_files is not None:
+                staging_dir = os.path.join(parent_dir, '_update_staging')
+                extract_changed_files(dest, staging_dir, changed_files)
+
             if getattr(sys, 'frozen', False):
-                self.after(0, lambda: self._apply_update(dest, current_dir))
+                self.after(0, lambda: self._apply_update(
+                    dest, current_dir, changed_files, staging_dir,
+                ))
             else:
                 self.after(0, lambda: self._download_complete_dev(dest))
 
@@ -135,14 +183,34 @@ class UpdateDialog(ctk.CTkToplevel):
         pct = int(fraction * 100)
         self._progress_label.configure(text=f'{pct}%')
 
-    def _apply_update(self, zip_path: str, current_dir: str) -> None:
-        """ダウンロード完了後、バッチファイルで更新を適用する。"""
-        if mb.askyesno(
-            '更新の適用',
-            'ダウンロードが完了しました。\nアプリを再起動して更新を適用しますか？',
+    def _no_changes_found(self) -> None:
+        """マニフェスト比較で変更なし。"""
+        mb.showinfo(
+            '更新チェック',
+            'すべてのファイルが最新です。更新の必要はありません。',
             parent=self,
-        ):
-            generate_update_batch(zip_path, current_dir)
+        )
+        self.destroy()
+
+    def _apply_update(
+        self,
+        zip_path: str,
+        current_dir: str,
+        changed_files: list[str] | None = None,
+        staging_dir: str | None = None,
+    ) -> None:
+        """ダウンロード完了後、バッチファイルで更新を適用する。"""
+        if changed_files is not None:
+            msg = f'ダウンロードが完了しました（{len(changed_files)} ファイル更新）。\nアプリを再起動して更新を適用しますか？'
+        else:
+            msg = 'ダウンロードが完了しました。\nアプリを再起動して更新を適用しますか？'
+
+        if mb.askyesno('更新の適用', msg, parent=self):
+            generate_update_batch(
+                zip_path, current_dir,
+                changed_files=changed_files,
+                staging_dir=staging_dir,
+            )
             # generate_update_batch が sys.exit(0) を呼ぶ
 
     def _download_complete_dev(self, zip_path: str) -> None:
