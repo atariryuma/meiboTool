@@ -177,6 +177,7 @@ App (CTk) — 2カラムレイアウト
 | `gui/frames/class_select_panel.py` | 学年・組選択 | — |
 | `gui/frames/select_frame.py` | テンプレート選択・担任名・学校名（変更コールバック付き） | — |
 | `gui/frames/output_frame.py` | 生成ボタン・進捗バー | — |
+| `gui/dialogs/mapping_dialog.py` | カラムマッピング手動調整ダイアログ | ✅ 13 |
 | `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
 | `gui/dialogs/update_dialog.py` | 更新確認ダイアログ | — |
 | `.github/workflows/build-release.yml` | CI/CD（テスト→ビルド→Release） | — |
@@ -184,12 +185,11 @@ App (CTk) — 2カラムレイアウト
 
 ### 未実装 ❌
 
-1. `gui/dialogs/mapping_dialog.py` — カラムマッピング手動調整画面
-2. 別 PC（Python なし環境）での起動確認
+1. 別 PC（Python なし環境）での exe 起動確認
 
 ### 開発環境の状態
 
-- テスト: **229 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **242 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 

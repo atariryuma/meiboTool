@@ -149,6 +149,35 @@ class App(ctk.CTk):
         self, df_mapped: pd.DataFrame, unmapped: list[str], source_path: str
     ) -> None:
         """ファイル読込完了後に呼ばれる。"""
+        # 未マップ列がある場合はマッピングダイアログを表示
+        if unmapped:
+            self._show_mapping_dialog(df_mapped, unmapped, source_path)
+            return
+
+        self._finalize_import(df_mapped, source_path)
+
+    def _show_mapping_dialog(
+        self,
+        df_mapped: pd.DataFrame,
+        unmapped: list[str],
+        source_path: str,
+    ) -> None:
+        """マッピングダイアログを表示し、確定後に _finalize_import を呼ぶ。"""
+        from gui.dialogs.mapping_dialog import MappingDialog
+
+        existing = set(df_mapped.columns)
+
+        def _on_confirm(mapping: dict[str, str]) -> None:
+            if mapping:
+                df_mapped.rename(columns=mapping, inplace=True)
+            self._finalize_import(df_mapped, source_path)
+
+        MappingDialog(self, unmapped, existing, _on_confirm)
+
+    def _finalize_import(
+        self, df_mapped: pd.DataFrame, source_path: str,
+    ) -> None:
+        """マッピング完了後のインポート処理。"""
         # 組・出席番号の存在チェック
         missing = [col for col in ('組', '出席番号') if col not in df_mapped.columns]
         if missing:
