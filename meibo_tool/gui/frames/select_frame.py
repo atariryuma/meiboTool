@@ -44,16 +44,26 @@ class SelectFrame(ctk.CTkFrame):
         self._tmpl_var = ctk.StringVar(value='')
         self._radio_widgets: list[ctk.CTkRadioButton] = []
 
-        for display_name, key, icon, _desc in get_display_groups(template_dir):
-            rb = ctk.CTkRadioButton(
+        for cat_name, items in get_display_groups(template_dir):
+            # カテゴリヘッダー
+            ctk.CTkLabel(
                 self,
-                text=f'{icon} {display_name}',
-                value=key,
-                variable=self._tmpl_var,
-            )
-            rb.grid(row=row, column=0, padx=(20, 10), pady=2, sticky='w')
-            self._radio_widgets.append(rb)
+                text=cat_name,
+                font=ctk.CTkFont(size=11, weight='bold'),
+                text_color='gray40',
+            ).grid(row=row, column=0, sticky='w', padx=(14, 10), pady=(6, 1))
             row += 1
+
+            for display_name, key, icon, _desc in items:
+                rb = ctk.CTkRadioButton(
+                    self,
+                    text=f'{icon} {display_name}',
+                    value=key,
+                    variable=self._tmpl_var,
+                )
+                rb.grid(row=row, column=0, padx=(24, 10), pady=1, sticky='w')
+                self._radio_widgets.append(rb)
+                row += 1
 
         # ── 名前の表示方法 ────────────────────────────────────────────────
         ctk.CTkFrame(self, height=1, fg_color='gray80').grid(

@@ -15,11 +15,21 @@ from __future__ import annotations
 import os
 from typing import Any
 
+# カテゴリ表示順序
+CATEGORY_ORDER: list[str] = [
+    '名札・ラベル',
+    '名簿・出欠表',
+    '台帳',
+    '個票',
+    'その他',
+]
+
 TEMPLATES: dict[str, dict] = {
     # ── Grid 型（名札・ラベル各種）────────────────────────────────────────
     '名札_通常': {
         'file': '名札_通常.xlsx',
         'type': 'grid',
+        'category': '名札・ラベル',
         'cards_per_page': 20,    # 1ページ20人（両面同一生徒印刷）
         'orientation': 'portrait',
         'use_formal_name': False,
@@ -31,6 +41,7 @@ TEMPLATES: dict[str, dict] = {
     '名札_装飾あり': {
         'file': '名札_装飾あり.xlsx',
         'type': 'grid',
+        'category': '名札・ラベル',
         'cards_per_page': 40,    # 1ページ40人（青1-20・赤21-40の2-upラベル）
         'orientation': 'portrait',
         'use_formal_name': False,
@@ -42,6 +53,7 @@ TEMPLATES: dict[str, dict] = {
     'ラベル_大2': {
         'file': 'ラベル_大2.xlsx',
         'type': 'grid',
+        'category': '名札・ラベル',
         'cards_per_page': 40,
         'orientation': 'portrait',
         'use_formal_name': False,
@@ -53,6 +65,7 @@ TEMPLATES: dict[str, dict] = {
     'ラベル_小': {
         'file': 'ラベル_小.xlsx',
         'type': 'grid',
+        'category': '名札・ラベル',
         'cards_per_page': 40,
         'orientation': 'portrait',
         'use_formal_name': False,
@@ -64,6 +77,7 @@ TEMPLATES: dict[str, dict] = {
     'ラベル_特大': {
         'file': 'ラベル_特大.xlsx',
         'type': 'grid',
+        'category': '名札・ラベル',
         'cards_per_page': 40,
         'orientation': 'portrait',
         'use_formal_name': False,
@@ -75,6 +89,7 @@ TEMPLATES: dict[str, dict] = {
     '名札_1年生用': {
         'file': '名札_1年生用.xlsx',
         'type': 'grid',
+        'category': '名札・ラベル',
         'cards_per_page': 8,
         'grid_cols': 8,
         'grid_rows': 1,
@@ -91,6 +106,7 @@ TEMPLATES: dict[str, dict] = {
     '掲示用名列表': {
         'file': '掲示用名列表.xlsx',
         'type': 'grid',          # 番号付きプレースホルダー（GridGenerator）
+        'category': '名簿・出欠表',
         'orientation': 'portrait',
         'use_formal_name': False,
         'required_columns': ['氏名', '氏名かな'],
@@ -103,6 +119,7 @@ TEMPLATES: dict[str, dict] = {
     '調べ表': {
         'file': '調べ表.xlsx',
         'type': 'grid',           # 5列×8行=40スロット、番号付きプレースホルダー
+        'category': '名簿・出欠表',
         'cards_per_page': 40,
         'orientation': 'portrait',
         'use_formal_name': False,
@@ -116,6 +133,7 @@ TEMPLATES: dict[str, dict] = {
     '横名簿': {
         'file': '横名簿.xlsx',
         'type': 'grid',
+        'category': '名簿・出欠表',
         'cards_per_page': 40,
         'orientation': 'landscape',
         'use_formal_name': False,
@@ -127,6 +145,7 @@ TEMPLATES: dict[str, dict] = {
     '縦一週間': {
         'file': '縦一週間.xlsx',
         'type': 'grid',
+        'category': '名簿・出欠表',
         'orientation': 'portrait',
         'use_formal_name': False,
         'required_columns': ['氏名'],
@@ -139,6 +158,7 @@ TEMPLATES: dict[str, dict] = {
         'enabled': False,       # 性別ソート機能が未実装。Phase 3 で実装予定。
         'file': '男女一覧.xlsx',
         'type': 'grid',
+        'category': '名簿・出欠表',
         'orientation': 'landscape',
         'use_formal_name': False,
         'required_columns': ['氏名', '性別'],
@@ -151,6 +171,7 @@ TEMPLATES: dict[str, dict] = {
     '修了台帳': {
         'file': '修了台帳.xlsx',
         'type': 'list',
+        'category': '台帳',
         'orientation': 'landscape',
         'use_formal_name': True,
         'required_columns': ['正式氏名', '正式氏名かな', '性別', '生年月日'],
@@ -162,6 +183,7 @@ TEMPLATES: dict[str, dict] = {
     '卒業台帳': {
         'file': '卒業台帳.xlsx',
         'type': 'list',
+        'category': '台帳',
         'orientation': 'landscape',
         'use_formal_name': True,
         'required_columns': ['正式氏名', '生年月日'],
@@ -175,6 +197,7 @@ TEMPLATES: dict[str, dict] = {
     '家庭調査票': {
         'file': '家庭調査票.xlsx',
         'type': 'individual',
+        'category': '個票',
         'orientation': 'portrait',
         'use_formal_name': True,
         'required_columns': ['正式氏名', '正式氏名かな', '生年月日', '性別'],
@@ -189,6 +212,7 @@ TEMPLATES: dict[str, dict] = {
     '学級編成用個票': {
         'file': '学級編成用個票.xlsx',
         'type': 'individual',
+        'category': '個票',
         'orientation': 'portrait',
         'use_formal_name': True,
         'required_columns': ['正式氏名', '正式氏名かな', '性別', '生年月日'],
@@ -257,20 +281,29 @@ def get_all_templates(template_dir: str) -> dict[str, dict[str, Any]]:
 
 def get_display_groups(
     template_dir: str = '',
-) -> list[tuple[str, str, str, str]]:
+) -> list[tuple[str, list[tuple[str, str, str, str]]]]:
     """
-    GUI テンプレート選択リスト用の一覧を返す。
+    GUI テンプレート選択リスト用の **カテゴリ別** 一覧を返す。
     `enabled=False` のテンプレートは除外する。
 
     template_dir が指定された場合はフォルダスキャンも含めた全テンプレートを返す。
     空文字の場合は TEMPLATES のみを使用する（後方互換）。
 
-    戻り値: [(display_name, template_key, icon, description), ...]
+    戻り値: [(category_name, [(display_name, key, icon, description), ...]), ...]
+    カテゴリ順序は CATEGORY_ORDER に従う。未分類は「その他」に入る。
     """
     templates = get_all_templates(template_dir) if template_dir else TEMPLATES
 
-    return [
-        (name, name, meta.get('icon', '📋'), meta.get('description', name))
-        for name, meta in templates.items()
-        if meta.get('enabled', True)
-    ]
+    # カテゴリごとにグルーピング
+    groups: dict[str, list[tuple[str, str, str, str]]] = {}
+    for name, meta in templates.items():
+        if not meta.get('enabled', True):
+            continue
+        cat = meta.get('category', 'その他')
+        groups.setdefault(cat, []).append(
+            (name, name, meta.get('icon', '📋'), meta.get('description', name))
+        )
+
+    # CATEGORY_ORDER 順でソート、未知のカテゴリは末尾
+    order = {cat: i for i, cat in enumerate(CATEGORY_ORDER)}
+    return sorted(groups.items(), key=lambda x: order.get(x[0], 999))

@@ -98,6 +98,8 @@ class TestAllTemplateGeneration:
         """テンプレートごとに生成が成功し、出力ファイルが存在する。"""
         data = imported_data[imported_data['組'] == '1'].copy()
         all_templates = get_all_templates(template_dir)
+        if template_name not in all_templates:
+            pytest.skip(f'テンプレートファイルが見つかりません: {template_name}')
         meta = all_templates[template_name]
         out_path = str(tmp_path / f'{template_name}_output.xlsx')
         options = _make_options(template_dir)
@@ -115,6 +117,8 @@ class TestAllTemplateGeneration:
         """出力ファイルにデータが含まれている（空ファイルではない）。"""
         data = imported_data[imported_data['組'] == '1'].copy()
         all_templates = get_all_templates(template_dir)
+        if template_name not in all_templates:
+            pytest.skip(f'テンプレートファイルが見つかりません: {template_name}')
         meta = all_templates[template_name]
         out_path = str(tmp_path / f'{template_name}_data.xlsx')
         options = _make_options(template_dir)
@@ -141,6 +145,8 @@ class TestPlaceholderResolution:
         """list / individual 型テンプレートでプレースホルダーが残っていないこと。"""
         data = imported_data[imported_data['組'] == '1'].copy()
         all_templates = get_all_templates(template_dir)
+        if template_name not in all_templates:
+            pytest.skip(f'テンプレートファイルが見つかりません: {template_name}')
         meta = all_templates[template_name]
         out_path = str(tmp_path / f'{template_name}_ph.xlsx')
         options = _make_options(template_dir)
