@@ -1,6 +1,6 @@
 {
   "app_version": "1.0.0",
-  "school_name": "那覇市立天久小学校",
+  "school_name": "",
   "school_type": "elementary",
   "template_dir": "./テンプレート",
   "output_dir": "./出力",
