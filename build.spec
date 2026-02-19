@@ -23,7 +23,7 @@ datas += [('config.json', '.')]
 
 a = Analysis(
     ['meibo_tool/main.py'],
-    pathex=[],
+    pathex=['meibo_tool'],
     binaries=[],
     datas=datas,
     hiddenimports=['openpyxl', 'customtkinter'],
@@ -42,11 +42,6 @@ a = Analysis(
         # ── 未使用 stdlib ──
         'curses', 'lib2to3', 'ensurepip', 'venv',
         'tkinter.test', 'test',
-        # ── pandas 未使用サブモジュール ──
-        'pandas.plotting', 'pandas.io.sql', 'pandas.io.stata',
-        'pandas.io.sas', 'pandas.io.spss', 'pandas.io.html',
-        'pandas.io.feather', 'pandas.io.parquet', 'pandas.io.orc',
-        'pandas.io.gbq',
         # ── PIL 未使用サブモジュール ──
         'PIL.ImageFilter', 'PIL.ImageEnhance', 'PIL.ImageOps',
         'PIL.ImageSequence', 'PIL.ImageCms', 'PIL.ImageMorph',
