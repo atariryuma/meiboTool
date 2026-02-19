@@ -15,10 +15,12 @@ from io import BytesIO
 
 import pandas as pd
 from openpyxl import load_workbook
+from openpyxl.cell.cell import MergedCell
 from openpyxl.drawing.image import Image
 
 from templates.template_registry import TEMPLATES
 from utils.address import build_address
+from utils.date_fmt import DATE_KEYS, format_date
 from utils.font_helper import apply_font
 from utils.wareki import to_wareki
 
@@ -35,6 +37,35 @@ _KANJI_TO_KANA: dict[str, str] = {
     '氏名': '氏名かな',
     '正式氏名': '正式氏名かな',
 }
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# 共通値解決
+# ────────────────────────────────────────────────────────────────────────────
+
+def _resolve_value(key: str, data_row: dict, mode: str) -> str:
+    """name_display モードを考慮してデータ行からフィールド値を取得する。
+
+    fill_placeholders / _fill_numbered 共通のロジック。
+    """
+    original_key = key
+    if mode == 'kanji' and key in _NAME_KANA_KEYS:
+        return ''
+    if mode == 'kana':
+        if key in _NAME_KANA_KEYS:
+            return ''  # かな行セルを空白化
+        if key in _NAME_KANJI_KEYS:
+            key = _KANJI_TO_KANA[key]  # 漢字フィールドにかな値を転写
+    v = data_row.get(key, '')
+    if v is None:
+        return ''
+    s = str(v).strip()
+    if s.lower() == 'nan':
+        return ''
+    # 日付型フィールドは YY/MM/DD にフォーマット
+    if original_key in DATE_KEYS:
+        return format_date(s)
+    return s
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -61,19 +92,34 @@ def fill_placeholders(ws, data_row: dict | pd.Series, options: dict | None = Non
     options = options or {}
     mode = options.get('name_display', 'furigana')
 
-    def _val(key: str) -> str:
-        if mode == 'kanji' and key in _NAME_KANA_KEYS:
-            return ''
-        if mode == 'kana':
-            if key in _NAME_KANA_KEYS:
-                return ''  # かな行セルを空白化
-            if key in _NAME_KANJI_KEYS:
-                key = _KANJI_TO_KANA[key]  # 漢字フィールドにかな値を転写
-        v = data_row.get(key, '')
-        if v is None:
-            return ''
-        s = str(v).strip()
-        return '' if s.lower() == 'nan' else s
+    def replacer(match: re.Match) -> str:
+        key = match.group(1)
+        if key == '年度':
+            return str(options.get('fiscal_year', ''))
+        if key == '年度和暦':
+            fy = options.get('fiscal_year', 2025)
+            return to_wareki(fy, 4, 1).replace('年', '年度')
+        if key == '学校名':
+            return options.get('school_name', '')
+        if key == '担任名':
+            return options.get('teacher_name', '')
+        if key == '住所':
+            return build_address(data_row)
+        return _resolve_value(key, data_row, mode)
+
+    for row in ws.iter_rows():
+        for cell in row:
+            if isinstance(cell, MergedCell):
+                continue
+            if cell.value and isinstance(cell.value, str) and '{{' in cell.value:
+                cell.value = PLACEHOLDER_RE.sub(replacer, cell.value)
+
+
+def _fill_row_placeholders(
+    ws, row_num: int, data_row: dict, options: dict,
+) -> None:
+    """特定の 1 行のみプレースホルダーを置換する（ListGenerator 用）。"""
+    mode = options.get('name_display', 'furigana')
 
     def replacer(match: re.Match) -> str:
         key = match.group(1)
@@ -88,15 +134,13 @@ def fill_placeholders(ws, data_row: dict | pd.Series, options: dict | None = Non
             return options.get('teacher_name', '')
         if key == '住所':
             return build_address(data_row)
-        return _val(key)
+        return _resolve_value(key, data_row, mode)
 
-    from openpyxl.cell.cell import MergedCell
-    for row in ws.iter_rows():
-        for cell in row:
-            if isinstance(cell, MergedCell):
-                continue
-            if cell.value and isinstance(cell.value, str) and '{{' in cell.value:
-                cell.value = PLACEHOLDER_RE.sub(replacer, cell.value)
+    for cell in ws[row_num]:
+        if isinstance(cell, MergedCell):
+            continue
+        if cell.value and isinstance(cell.value, str) and '{{' in cell.value:
+            cell.value = PLACEHOLDER_RE.sub(replacer, cell.value)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -258,44 +302,30 @@ class GridGenerator(BaseGenerator):
                     _fill_numbered(page_ws, slot, row.to_dict(), self.options)
                 fill_placeholders(page_ws, page_data.iloc[0].to_dict(), self.options)
 
+
 def _fill_numbered(ws, idx: int, data_row: dict, options: dict) -> None:
     """{{氏名_1}}, {{氏名_2}} ... 形式の番号付きプレースホルダーを置換する。
 
     name_display モード（options['name_display']）に応じて
     氏名系フィールドを選択的に空白化する（fill_placeholders と同一仕様）。
     """
-    from openpyxl.cell.cell import MergedCell
-
     mode = options.get('name_display', 'furigana')
-
-    def _val(key: str) -> str:
-        if mode == 'kanji' and key in _NAME_KANA_KEYS:
-            return ''
-        if mode == 'kana':
-            if key in _NAME_KANA_KEYS:
-                return ''
-            if key in _NAME_KANJI_KEYS:
-                key = _KANJI_TO_KANA[key]
-        v = data_row.get(key, '')
-        if v is None:
-            return ''
-        s = str(v).strip()
-        return '' if s.lower() == 'nan' else s
-
     suffix = f'_{idx}'
+
+    def replacer(match: re.Match) -> str:
+        key = match.group(1)
+        if key.endswith(suffix):
+            base_key = key[: -len(suffix)]
+            if base_key == '住所':
+                return build_address(data_row)
+            return _resolve_value(base_key, data_row, mode)
+        return match.group(0)  # 他のインデックスは変更しない
+
     for row in ws.iter_rows():
         for cell in row:
             if isinstance(cell, MergedCell):
                 continue
             if cell.value and isinstance(cell.value, str) and '{{' in cell.value:
-                def replacer(match: re.Match) -> str:
-                    key = match.group(1)
-                    if key.endswith(suffix):
-                        base_key = key[: -len(suffix)]
-                        if base_key == '住所':
-                            return build_address(data_row)
-                        return _val(base_key)
-                    return match.group(0)  # 他のインデックスは変更しない
                 cell.value = PLACEHOLDER_RE.sub(replacer, cell.value)
 
 
@@ -329,18 +359,15 @@ class ListGenerator(BaseGenerator):
 
     def _find_template_row(self, ws) -> int | None:
         """氏名系プレースホルダーを含む最初の行番号を返す。"""
-        _NAME_PATS = ('{{氏名}}', '{{正式氏名}}', '{{氏名かな}}', '{{正式氏名かな}}')
+        name_pats = ('{{氏名}}', '{{正式氏名}}', '{{氏名かな}}', '{{正式氏名かな}}')
         for row in ws.iter_rows():
             for cell in row:
-                if cell.value and isinstance(cell.value, str) and any(p in cell.value for p in _NAME_PATS):
+                if cell.value and isinstance(cell.value, str) and any(p in cell.value for p in name_pats):
                     return cell.row
         return None
 
     def _expand_rows(self, ws, template_row: int) -> None:
         """テンプレート行を児童数分コピーして展開する。"""
-        from copy import copy as cp
-
-
         n = len(self.data)
         if n == 0:
             return
@@ -350,10 +377,10 @@ class ListGenerator(BaseGenerator):
         for cell in ws[template_row]:
             tmpl_cells.append({
                 'value': cell.value,
-                'font': cp(cell.font),
-                'alignment': cp(cell.alignment),
-                'border': cp(cell.border),
-                'fill': cp(cell.fill),
+                'font': copy(cell.font),
+                'alignment': copy(cell.alignment),
+                'border': copy(cell.border),
+                'fill': copy(cell.fill),
                 'number_format': cell.number_format,
             })
 
@@ -376,8 +403,9 @@ class ListGenerator(BaseGenerator):
 
             ws.row_dimensions[row_num].height = row_height
 
+            # 当該行のみプレースホルダーを置換（全行スキャンを回避）
             row_dict = data_row.to_dict()
-            fill_placeholders(ws, row_dict, self.options)
+            _fill_row_placeholders(ws, row_num, row_dict, self.options)
 
 
 # ────────────────────────────────────────────────────────────────────────────

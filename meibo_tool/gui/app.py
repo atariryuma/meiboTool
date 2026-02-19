@@ -5,6 +5,7 @@ SPEC.md §3.1〜§3.5 参照。
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import tempfile
@@ -17,10 +18,12 @@ import pandas as pd
 from PIL import Image as PILImage
 
 from core.config import get_output_dir, get_template_dir, load_config, save_config
+from core.mapper import ensure_fallback_columns
 from gui.frames.class_select_panel import ClassSelectPanel
 from gui.frames.import_frame import ImportFrame
 from gui.frames.output_frame import OutputFrame
 from gui.frames.select_frame import SelectFrame
+from utils.date_fmt import DATE_KEYS, format_date
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +31,23 @@ logger = logging.getLogger(__name__)
 def _validate_required_columns(meta: dict, df: pd.DataFrame) -> None:
     """
     テンプレートの required_columns が df に揃っているか検証する。
-    不足している場合は ValueError を raise する（OutputFrame がキャッチして表示）。
+    不足列がある場合でも生成は続行する（空欄で出力される）。
+    mandatory_columns（組・出席番号）が不足している場合のみ ValueError。
     """
+    mandatory = meta.get('mandatory_columns', [])
+    missing_mandatory = [c for c in mandatory if c not in df.columns]
+    if missing_mandatory:
+        raise ValueError(
+            f'必須カラムが見つかりません: 「{"」「".join(missing_mandatory)}」\n'
+            'ファイルを確認して再選択してください。'
+        )
+
     required = meta.get('required_columns', [])
     missing = [c for c in required if c not in df.columns]
     if missing:
-        raise ValueError(
-            f'必須カラムが見つかりません: 「{"」「".join(missing)}」\n'
-            'テンプレートに必要な列がファイルに含まれているか確認してください。'
+        logger.warning(
+            'テンプレート「%s」の推奨カラムが不足: %s（空欄で出力されます）',
+            meta.get('file', '?'), missing,
         )
 
 
@@ -188,6 +200,9 @@ class App(ctk.CTk):
             )
             return
 
+        # 正式氏名 ↔ 氏名 等のフォールバック列を自動補完
+        ensure_fallback_columns(df_mapped)
+
         self.df_mapped = df_mapped
 
         # パスを config に保存
@@ -303,12 +318,17 @@ class App(ctk.CTk):
     # ────────────────────────────────────────────────────────────────────────
 
     def _filter_df(self, 学年: str | None, 組: str | None) -> pd.DataFrame:
-        """df_mapped を学年・組でフィルタリングして返す。"""
+        """df_mapped を学年・組でフィルタリングし、出席番号順にソートして返す。"""
         df = self.df_mapped.copy()
         if 学年 and '学年' in df.columns:
             df = df[df['学年'] == 学年]
         if 組 and '組' in df.columns:
             df = df[df['組'] == 組]
+        # 出席番号で数値ソート（テンプレートのスロット順と一致させる）
+        if '出席番号' in df.columns:
+            df['_sort_key'] = pd.to_numeric(df['出席番号'], errors='coerce').fillna(0)
+            df = df.sort_values('_sort_key').drop(columns='_sort_key')
+            df = df.reset_index(drop=True)
         return df
 
     # ────────────────────────────────────────────────────────────────────────
@@ -351,7 +371,6 @@ class App(ctk.CTk):
         if result.config_updates:
             ds = self.config.setdefault('data_source', {})
             ds.update(result.config_updates)
-            import contextlib
             with contextlib.suppress(OSError):
                 save_config(self.config)
 
@@ -456,8 +475,11 @@ class App(ctk.CTk):
             # openpyxl で読み戻してレンダリング
             from openpyxl import load_workbook
             wb = load_workbook(tmp_path)
-            ws = wb.active
-            img = render_worksheet(ws, max_rows=60, max_cols=15, scale=1.5)
+            try:
+                ws = wb.active
+                img = render_worksheet(ws, max_rows=60, max_cols=15, scale=1.5)
+            finally:
+                wb.close()
 
             # メインスレッドで表示（ウィンドウ破棄済みなら無視）
             if self.winfo_exists():
@@ -474,7 +496,6 @@ class App(ctk.CTk):
                 )
         finally:
             if tmp_path:
-                import contextlib
                 with contextlib.suppress(OSError):
                     os.unlink(tmp_path)
 
@@ -482,6 +503,16 @@ class App(ctk.CTk):
 # ────────────────────────────────────────────────────────────────────────────
 # 右パネル — データプレビュー
 # ────────────────────────────────────────────────────────────────────────────
+
+def _fmt_cell(col: str, value) -> str:
+    """データプレビュー用のセル値フォーマッター。"""
+    s = str(value) if value is not None else ''
+    if s.lower() == 'nan' or s == '':
+        return ''
+    if col in DATE_KEYS:
+        return format_date(s)
+    return s
+
 
 class _PreviewPanel(ctk.CTkFrame):
     """右パネル: データ一覧 + 帳票プレビュー（CTkTabview）。"""
@@ -576,7 +607,9 @@ class _PreviewPanel(ctk.CTkFrame):
             tree.column(col, width=w, minwidth=50, anchor='center')
 
         for _, row in df.iterrows():
-            tree.insert('', 'end', values=[str(row.get(c, '')) for c in show_cols])
+            tree.insert('', 'end', values=[
+                _fmt_cell(c, row.get(c, '')) for c in show_cols
+            ])
 
         vsb = ttk.Scrollbar(container, orient='vertical', command=tree.yview)
         hsb = ttk.Scrollbar(container, orient='horizontal', command=tree.xview)

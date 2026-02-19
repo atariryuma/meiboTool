@@ -95,6 +95,28 @@ def map_columns(df):
     return df_mapped, unmapped
 
 
+# 正式名前系 → 通常名前系へのフォールバックマッピング
+_FALLBACK_COLUMNS: list[tuple[str, str]] = [
+    ('正式氏名', '氏名'),
+    ('正式氏名かな', '氏名かな'),
+    ('保護者正式名', '保護者名'),
+    ('保護者正式名かな', '保護者名かな'),
+]
+
+
+def ensure_fallback_columns(df) -> None:
+    """不足している論理列をフォールバック元からコピーして補完する（in-place）。
+
+    例: '正式氏名' がなく '氏名' がある場合、'氏名' の値を '正式氏名' にコピー。
+    逆方向（'氏名' がなく '正式氏名' がある場合）も補完する。
+    """
+    for formal, casual in _FALLBACK_COLUMNS:
+        if formal not in df.columns and casual in df.columns:
+            df[formal] = df[casual]
+        elif casual not in df.columns and formal in df.columns:
+            df[casual] = df[formal]
+
+
 def resolve_name_fields(data_row: dict, use_formal: bool) -> dict[str, str]:
     """
     use_formal_name フラグに基づき表示用氏名フィールドを選択する。
