@@ -21,11 +21,13 @@ class SelectFrame(ctk.CTkFrame):
         config: dict,
         on_teacher_save: Callable | None = None,
         on_school_name_save: Callable | None = None,
+        on_template_change: Callable | None = None,
     ) -> None:
         super().__init__(master, corner_radius=6)
         self._config = config
         self._on_teacher_save = on_teacher_save
         self._on_school_name_save = on_school_name_save
+        self._on_template_change = on_template_change
         self.grid_columnconfigure(0, weight=1)
 
         row = 0
@@ -78,6 +80,10 @@ class SelectFrame(ctk.CTkFrame):
             rb.grid(row=row, column=0, padx=(30, 10), pady=1, sticky='w')
             self._mode_widgets.append(rb)
             row += 1
+
+        # テンプレート / 名前表示変更コールバック
+        self._tmpl_var.trace_add('write', self._fire_template_change)
+        self._mode_var.trace_add('write', self._fire_template_change)
 
         # ── ④ 出力オプション ──────────────────────────────────────────────
         ctk.CTkFrame(self, height=1, fg_color='gray80').grid(
@@ -191,6 +197,11 @@ class SelectFrame(ctk.CTkFrame):
         }
 
     # ── 内部 ─────────────────────────────────────────────────────────────
+
+    def _fire_template_change(self, *_args) -> None:
+        """テンプレートまたは名前表示モード変更時にコールバックを発火する。"""
+        if self._on_template_change:
+            self._on_template_change()
 
     def _on_school_save_click(self) -> None:
         if self._on_school_name_save:

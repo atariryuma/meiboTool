@@ -1,23 +1,28 @@
 """名簿帳票ツール — メインウィンドウ
 
-SPEC.md §3.1〜§3.4 参照。
+SPEC.md §3.1〜§3.5 参照。
 """
 
 from __future__ import annotations
 
+import logging
 import os
+import tempfile
 import threading
 import tkinter.messagebox as mb
 import tkinter.ttk as ttk
 
 import customtkinter as ctk
 import pandas as pd
+from PIL import Image as PILImage
 
 from core.config import get_output_dir, get_template_dir, load_config, save_config
 from gui.frames.class_select_panel import ClassSelectPanel
 from gui.frames.import_frame import ImportFrame
 from gui.frames.output_frame import OutputFrame
 from gui.frames.select_frame import SelectFrame
+
+logger = logging.getLogger(__name__)
 
 
 def _validate_required_columns(meta: dict, df: pd.DataFrame) -> None:
@@ -113,6 +118,7 @@ class App(ctk.CTk):
             config=self.config,
             on_teacher_save=self._on_teacher_save,
             on_school_name_save=self._on_school_name_save,
+            on_template_change=self._request_preview,
         )
         self.select_frame.grid(row=2, column=0, sticky='ew', padx=5, pady=3)
         self.select_frame.set_enabled(False)
@@ -183,6 +189,9 @@ class App(ctk.CTk):
         # プレビューをフィルタリングして更新
         df_preview = self._filter_df(g, k)
         self._right.show_data(df_preview)
+
+        # 帳票プレビューも更新
+        self._request_preview()
 
     def _on_teacher_save(self, name: str) -> None:
         """SelectFrame の「保存」ボタン押下時に呼ばれる。"""
@@ -335,50 +344,186 @@ class App(ctk.CTk):
         from gui.dialogs.settings_dialog import SettingsDialog
         SettingsDialog(self, self.config)
 
+    # ────────────────────────────────────────────────────────────────────────
+    # 帳票プレビュー
+    # ────────────────────────────────────────────────────────────────────────
+
+    _PREVIEW_MAX_STUDENTS = 5
+    _PREVIEW_DEBOUNCE_MS = 300
+
+    def _request_preview(self) -> None:
+        """プレビュー要求（デバウンス付き）。テンプレート/モード変更時に呼ばれる。"""
+        if hasattr(self, '_preview_debounce_id'):
+            self.after_cancel(self._preview_debounce_id)
+        self._preview_debounce_id = self.after(
+            self._PREVIEW_DEBOUNCE_MS, self._generate_preview,
+        )
+
+    def _generate_preview(self) -> None:
+        """メインスレッドで UI 状態を収集し、バックグラウンドでプレビューを生成する。"""
+        if self.df_mapped is None:
+            return
+
+        template_key = self.select_frame.get_selected_template()
+        if not template_key:
+            return
+
+        from templates.template_registry import TEMPLATES
+        if template_key not in TEMPLATES:
+            return
+
+        meta = TEMPLATES[template_key]
+        options = self.select_frame.get_options()
+        options['template_dir'] = get_template_dir(self.config)
+
+        # テンプレートファイル存在確認
+        tmpl_file = os.path.join(options['template_dir'], meta['file'])
+        if not os.path.exists(tmpl_file):
+            self._right.show_preview_error(
+                f'テンプレートが見つかりません:\n{meta["file"]}'
+            )
+            return
+
+        # フィルタリング: 現在の学年・組から先頭 N 名
+        f = self.class_select.get_filter()
+        df_filtered = self._filter_df(f.get('学年'), f.get('組'))
+        if df_filtered.empty:
+            self._right.show_preview_error('表示するデータがありません')
+            return
+
+        df_sample = df_filtered.head(self._PREVIEW_MAX_STUDENTS).copy()
+
+        # ローディング表示
+        self._right.show_preview_loading()
+
+        # バックグラウンドスレッドで生成
+        threading.Thread(
+            target=self._preview_worker,
+            args=(template_key, df_sample, options),
+            daemon=True,
+        ).start()
+
+    def _preview_worker(
+        self,
+        template_key: str,
+        df_sample: pd.DataFrame,
+        options: dict,
+    ) -> None:
+        """バックグラウンドでテンプレート生成 → レンダリングを行う。"""
+        tmp_path = None
+        try:
+            from core.generator import create_generator
+            from gui.preview_renderer import render_worksheet
+
+            # 一時ファイルに生成
+            with tempfile.NamedTemporaryFile(
+                suffix='.xlsx', delete=False,
+            ) as tmp:
+                tmp_path = tmp.name
+
+            gen = create_generator(template_key, tmp_path, df_sample, options)
+            gen.generate()
+
+            # openpyxl で読み戻してレンダリング
+            from openpyxl import load_workbook
+            wb = load_workbook(tmp_path)
+            ws = wb.active
+            img = render_worksheet(ws, max_rows=60, max_cols=15, scale=1.5)
+
+            # メインスレッドで表示
+            self.after(0, lambda: self._right.show_preview_image(img))
+
+        except Exception:
+            logger.exception('プレビュー生成中にエラーが発生しました')
+            self.after(
+                0,
+                lambda: self._right.show_preview_error(
+                    'プレビューの生成中にエラーが発生しました'
+                ),
+            )
+        finally:
+            if tmp_path:
+                import contextlib
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)
+
 
 # ────────────────────────────────────────────────────────────────────────────
 # 右パネル — データプレビュー
 # ────────────────────────────────────────────────────────────────────────────
 
 class _PreviewPanel(ctk.CTkFrame):
-    """右パネル: 読込データを ttk.Treeview で表示する。"""
+    """右パネル: データ一覧 + 帳票プレビュー（CTkTabview）。"""
 
     _PRIORITY_COLS = ('出席番号', '組', '学年', '氏名', '氏名かな', '性別', '生年月日')
 
     def __init__(self, master) -> None:
         super().__init__(master, corner_radius=6)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
+        # タブビュー
+        self._tabview = ctk.CTkTabview(self, corner_radius=6)
+        self._tabview.grid(row=0, column=0, sticky='nsew', padx=4, pady=4)
+
+        self._tab_data = self._tabview.add('データ')
+        self._tab_preview = self._tabview.add('プレビュー')
+
+        # ── データタブ ─────────────────────────────────────────────────────
+        self._tab_data.grid_rowconfigure(1, weight=1)
+        self._tab_data.grid_columnconfigure(0, weight=1)
+
         self._header = ctk.CTkLabel(
-            self,
+            self._tab_data,
             text='データプレビュー',
             font=ctk.CTkFont(size=13, weight='bold'),
         )
-        self._header.grid(row=0, column=0, sticky='w', padx=10, pady=(8, 4))
+        self._header.grid(row=0, column=0, sticky='w', padx=6, pady=(4, 2))
 
-        self._placeholder = ctk.CTkLabel(
-            self,
+        self._data_placeholder = ctk.CTkLabel(
+            self._tab_data,
             text='名簿ファイルを読み込むと\nここにプレビューが表示されます',
             text_color='gray',
         )
-        self._placeholder.grid(row=1, column=0, padx=20, pady=40)
+        self._data_placeholder.grid(row=1, column=0, padx=20, pady=40)
 
         self._tree_container: ctk.CTkFrame | None = None
+
+        # ── プレビュータブ ─────────────────────────────────────────────────
+        self._tab_preview.grid_rowconfigure(0, weight=1)
+        self._tab_preview.grid_columnconfigure(0, weight=1)
+
+        self._preview_scroll = ctk.CTkScrollableFrame(
+            self._tab_preview, fg_color='transparent',
+        )
+        self._preview_scroll.grid(row=0, column=0, sticky='nsew')
+        self._preview_scroll.grid_columnconfigure(0, weight=1)
+
+        self._preview_label = ctk.CTkLabel(
+            self._preview_scroll,
+            text='テンプレートを選択すると\n帳票プレビューが表示されます',
+            text_color='gray',
+        )
+        self._preview_label.grid(row=0, column=0, padx=20, pady=40)
+
+        # CTkImage の GC 防止用リファレンス
+        self._preview_image_ref: ctk.CTkImage | None = None
+
+    # ── データタブ API ─────────────────────────────────────────────────────
 
     def show_data(self, df: pd.DataFrame) -> None:
         """DataFrame を Treeview に表示する。"""
         if self._tree_container:
             self._tree_container.destroy()
             self._tree_container = None
-        self._placeholder.grid_remove()
+        self._data_placeholder.grid_remove()
 
         show_cols = [c for c in self._PRIORITY_COLS if c in df.columns]
         if not show_cols:
             show_cols = list(df.columns[:10])
 
-        container = ctk.CTkFrame(self, corner_radius=0, fg_color='transparent')
-        container.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
+        container = ctk.CTkFrame(self._tab_data, corner_radius=0, fg_color='transparent')
+        container.grid(row=1, column=0, sticky='nsew', padx=2, pady=2)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
         self._tree_container = container
@@ -411,3 +556,33 @@ class _PreviewPanel(ctk.CTkFrame):
         hsb.grid(row=1, column=0, sticky='ew')
 
         self._header.configure(text=f'データプレビュー — {len(df)} 名')
+
+    # ── プレビュータブ API ─────────────────────────────────────────────────
+
+    def show_preview_loading(self) -> None:
+        """プレビュー生成中のローディング表示。"""
+        self._preview_image_ref = None
+        self._preview_label.configure(
+            text='プレビューを生成中…', text_color='gray', image=None,
+        )
+        self._preview_label.grid(row=0, column=0, padx=20, pady=40)
+
+    def show_preview_image(self, pil_image: PILImage.Image) -> None:
+        """PIL Image をプレビュータブに表示する。"""
+        ctk_img = ctk.CTkImage(
+            light_image=pil_image,
+            size=(pil_image.width, pil_image.height),
+        )
+        self._preview_image_ref = ctk_img  # GC 防止
+        self._preview_label.configure(text='', image=ctk_img, text_color='gray')
+        self._preview_label.grid(row=0, column=0, padx=4, pady=4)
+        # プレビュータブに自動切替
+        self._tabview.set('プレビュー')
+
+    def show_preview_error(self, msg: str) -> None:
+        """プレビューエラーメッセージを表示する。"""
+        self._preview_image_ref = None
+        self._preview_label.configure(
+            text=msg, text_color='#CC4444', image=None,
+        )
+        self._preview_label.grid(row=0, column=0, padx=20, pady=40)

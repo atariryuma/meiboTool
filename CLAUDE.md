@@ -73,9 +73,11 @@ App (CTk) — 2カラムレイアウト
 ├── 左パネル（CTkScrollableFrame）
 │   ├── ImportFrame      — ファイル選択・読込件数・同期ステータス
 │   ├── ClassSelectPanel — 学年・組の選択
-│   ├── SelectFrame      — テンプレート選択・担任名・学校名
+│   ├── SelectFrame      — テンプレート選択・担任名・学校名（on_template_change コールバック）
 │   └── OutputFrame      — 生成ボタン・進捗バー
-└── 右パネル（_PreviewPanel）— データプレビュー Treeview
+└── 右パネル（_PreviewPanel — CTkTabview）
+    ├── 「データ」タブ   — Treeview でデータ一覧表示
+    └── 「プレビュー」タブ — PIL レンダリング画像で帳票プレビュー表示
 ```
 
 ### 自動更新
@@ -116,7 +118,7 @@ App (CTk) — 2カラムレイアウト
 | 横名簿.xlsx / 縦一週間.xlsx | grid | ✅ |
 | 男女一覧.xlsx | grid | ❌ enabled=False |
 | 修了台帳.xlsx / 卒業台帳.xlsx | list | ✅ |
-| 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | ❌ enabled=False（テンプレ未生成） |
+| 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | ✅ |
 
 ## C4th データの重要な仕様
 
@@ -165,12 +167,15 @@ App (CTk) — 2カラムレイアウト
 | `templates/generators/gen_nafuda.py` | 名札3種テンプレート生成 | — |
 | `templates/generators/gen_daicho.py` | 台帳2種テンプレート生成 | — |
 | `templates/generators/gen_shirabehyo.py` | 調べ表テンプレート生成 | — |
+| `templates/generators/gen_katei_chousahyo.py` | 家庭調査票テンプレート生成 | ✅ 19 |
+| `templates/generators/gen_gakkyuu_kojihyo.py` | 学級編成用個票テンプレート生成 | ✅ 19 |
 | `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
 | `templates/generators/generate_all.py` | 全テンプレート一括生成 | — |
-| `gui/app.py` | メインウィンドウ（2カラムレイアウト）| — |
+| `gui/app.py` | メインウィンドウ（2カラム + CTkTabview プレビュー） | — |
+| `gui/preview_renderer.py` | openpyxl Worksheet → PIL Image レンダラー | ✅ 22 |
 | `gui/frames/import_frame.py` | ファイル選択・同期ステータス表示 | — |
 | `gui/frames/class_select_panel.py` | 学年・組選択 | — |
-| `gui/frames/select_frame.py` | テンプレート選択・担任名・学校名 | — |
+| `gui/frames/select_frame.py` | テンプレート選択・担任名・学校名（変更コールバック付き） | — |
 | `gui/frames/output_frame.py` | 生成ボタン・進捗バー | — |
 | `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
 | `gui/dialogs/update_dialog.py` | 更新確認ダイアログ | — |
@@ -179,15 +184,12 @@ App (CTk) — 2カラムレイアウト
 
 ### 未実装 ❌
 
-1. `gen_katei_chousahyo.py` — 家庭調査票テンプレート生成（Individual 型）
-2. `gen_gakkyuu_kojihyo.py` — 学級編成用個票テンプレート生成（Individual 型）
-3. `gui/dialogs/mapping_dialog.py` — カラムマッピング手動調整画面
-4. 統合確認: ダミーデータ読込 → クラス選択 → 全テンプレート出力まで一気通貫
-5. 別 PC（Python なし環境）での起動確認
+1. `gui/dialogs/mapping_dialog.py` — カラムマッピング手動調整画面
+2. 別 PC（Python なし環境）での起動確認
 
 ### 開発環境の状態
 
-- テスト: **153 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **229 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 
