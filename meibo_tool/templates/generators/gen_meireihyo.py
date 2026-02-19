@@ -1,16 +1,21 @@
 """掲示用名列表テンプレート生成スクリプト
 
 SPEC.md §4.4 参照。
-A4縦・2列（左:No.1〜20、右:No.21〜40）・タイトル・薄ピンク背景。
+A4縦・2列（左:No.1〜20、右:No.21〜40）・タイトル・白背景。
 
-テンプレート内のプレースホルダー形式:
-  ヘッダー: {{学年}} {{組}} {{担任名}}
-  データ:   {{出席番号_1}} 〜 {{出席番号_40}}
-            {{氏名かな_1}} 〜 {{氏名かな_40}}
-            {{氏名_1}}     〜 {{氏名_40}}
+1ファイル（掲示用名列表.xlsx）ですべての name_display モードに対応する。
+  furigana : 上段かな（小）+ 下段漢字（大）を両方表示
+  kanji    : 上段かな行を空白のまま（11pt の細い空間）、下段漢字を表示
+  kana     : 上段かな行を空白のまま（11pt の細い空間）、下段にかな値を表示
 
-このファイルが生成する xlsx を GridGenerator が読み込み、_fill_numbered() で
-番号付きプレースホルダーを実データに置換する。
+ふりがな行 (11pt) は常に存在するが、furigana 以外のモードでは空白になるため
+視覚的な邪魔にならない細いラインとして機能する。
+
+テンプレート内のプレースホルダー形式（GridGenerator が _fill_numbered() で展開）:
+  ヘッダー : {{学年}} {{組}} {{担任名}}
+  データ   : {{出席番号_1}}〜{{出席番号_40}}
+             {{氏名かな_1}}〜{{氏名かな_40}}  ← かな行（11pt）
+             {{氏名_1}}〜{{氏名_40}}          ← 名前行（25pt）
 """
 
 from __future__ import annotations
@@ -21,27 +26,27 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.page import PageMargins
+from openpyxl.worksheet.properties import PageSetupProperties
 
 # ────────────────────────────────────────────────────────────────────────────
-# スタイル定数（SPEC §4.0.2 参照）
+# スタイル定数（SPEC §4.0.2）
 # ────────────────────────────────────────────────────────────────────────────
 
-FONT_FAMILY = 'IPAmj明朝'
+FONT_FAMILY  = 'IPAmj明朝'
+_HEADER_BG   = 'F0F0F0'   # 列ヘッダーのみ薄グレー（データ行は白/塗りなし）
 
-_PINK_BG     = 'FFE0E0'  # 薄ピンク（データセル）
-_HEADER_BG   = 'FFCCCC'  # やや濃いピンク（ヘッダー行）
-_WHITE_BG    = 'FFFFFF'
-
-FILL_PINK   = PatternFill(fill_type='solid', fgColor=_PINK_BG)
-FILL_HEADER = PatternFill(fill_type='solid', fgColor=_HEADER_BG)
+FILL_HEADER  = PatternFill(fill_type='solid', fgColor=_HEADER_BG)
 
 _THIN   = Side(style='thin',   color='000000')
-_MEDIUM = Side(style='medium', color='000000')
+_DOTTED = Side(style='hair',   color='AAAAAA')
 
-BORDER_DATA = Border(top=_THIN, bottom=_THIN, left=_THIN, right=_THIN)
+BORDER_FULL     = Border(top=_THIN,   bottom=_THIN,   left=_THIN, right=_THIN)
+BORDER_KANA_TOP = Border(top=_THIN,   bottom=_DOTTED, left=_THIN, right=_THIN)
+BORDER_NAME_BOT = Border(top=_DOTTED, bottom=_THIN,   left=_THIN, right=_THIN)
+BORDER_NO_FULL  = Border(top=_THIN,   bottom=_THIN,   left=_THIN, right=_THIN)
 
 ALIGN_CENTER = Alignment(horizontal='center', vertical='center', wrap_text=True)
-ALIGN_RIGHT  = Alignment(horizontal='right',  vertical='center', wrap_text=True)
+ALIGN_KANA   = Alignment(horizontal='center', vertical='bottom', wrap_text=True)
 
 FONT_TITLE  = Font(name=FONT_FAMILY, size=18, bold=True)
 FONT_HEADER = Font(name=FONT_FAMILY, size=9,  bold=True)
@@ -50,7 +55,13 @@ FONT_NAME   = Font(name=FONT_FAMILY, size=14, bold=True)
 FONT_KANA   = Font(name=FONT_FAMILY, size=9,  bold=False)
 
 MAX_PER_COL = 20   # 1列あたりの最大人数
-TOTAL_SLOTS = MAX_PER_COL * 2  # 40名分
+
+# 行高（pt）
+# かな行を 11pt にすることで 9pt フォントが収まる（フォントサイズ × 1.3 程度）。
+# furigana 以外のモードでは空白ラインとして自然な細い区切りになる。
+# 合計: タイトル(42) + ヘッダー(18) + 20組×(11+25) = 780pt → A4(842pt) に収まる
+KANA_HEIGHT = 11   # pt  ← 全モード共通
+NAME_HEIGHT = 25   # pt
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -58,13 +69,11 @@ TOTAL_SLOTS = MAX_PER_COL * 2  # 40名分
 # ────────────────────────────────────────────────────────────────────────────
 
 def _ph(base: str, n: int) -> str:
-    """番号付きプレースホルダー文字列を返す。例: _ph('氏名', 1) → '{{氏名_1}}'"""
     return '{{' + base + '_' + str(n) + '}}'
 
 
 def _cell(ws, row: int, col: int, *,
           value=None, font=None, fill=None, border=None, alignment=None):
-    """セルに値とスタイルを一括設定する。"""
     c = ws.cell(row=row, column=col)
     if value is not None:
         c.value = value
@@ -79,116 +88,118 @@ def _cell(ws, row: int, col: int, *,
     return c
 
 
+def _apply_print_settings(ws) -> None:
+    ws.page_setup.paperSize   = 9
+    ws.page_setup.orientation = 'portrait'
+    ws.page_setup.fitToWidth  = 1
+    ws.page_setup.fitToHeight = 0
+    if ws.sheet_properties.pageSetUpPr is None:
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties()
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_margins = PageMargins(
+        left=0.20, right=0.20,
+        top=0.20,  bottom=0.20,
+        header=0.10, footer=0.10,
+    )
+    ws.print_options.horizontalCentered = True
+
+
 # ────────────────────────────────────────────────────────────────────────────
-# テンプレート生成
+# テンプレートレイアウト生成（1種のみ）
 # ────────────────────────────────────────────────────────────────────────────
 
-def generate(output_path: str) -> None:
-    """掲示用名列表テンプレートを output_path に保存する。
-
-    生成されるシート構成:
-      Row 1      : タイトル ({{学年}}年{{組}}組 名列表 担任:{{担任名}})
-      Row 2      : 列ヘッダー (番号 / ふりがな / 氏名 / ─ / 番号 / ふりがな / 氏名)
-      Row 3〜22  : データ行 × 20（左列 No.1〜20、右列 No.21〜40）
-
-    列レイアウト (A〜G):
-      A: 番号（左）  B: ふりがな（左）  C: 氏名（左）
-      D: 区切り
-      E: 番号（右）  F: ふりがな（右）  G: 氏名（右）
+def _build(ws) -> None:
     """
-    wb = Workbook()
-    ws = wb.active
-    ws.title = '名列表'
+    2行/人レイアウト（上段: かな 11pt / 下段: 氏名 25pt）。
 
-    # ── 列幅 ──────────────────────────────────────────────────────────────
-    col_widths = {
-        'A': 5.0,   # 番号（左）
-        'B': 11.0,  # ふりがな（左）
-        'C': 16.0,  # 氏名（左）
-        'D': 2.0,   # 区切り
-        'E': 5.0,   # 番号（右）
-        'F': 11.0,  # ふりがな（右）
-        'G': 16.0,  # 氏名（右）
-    }
-    for letter, width in col_widths.items():
-        ws.column_dimensions[letter].width = width
+    列構成（5列）:
+      A: 番号（左）2行分マージ 幅 5
+      B: 氏名テキスト（左）上=かな / 下=氏名 幅 27
+      C: 区切り 幅 2
+      D: 番号（右）2行分マージ 幅 5
+      E: 氏名テキスト（右）上=かな / 下=氏名 幅 27
 
-    # ── Row 1: タイトル ───────────────────────────────────────────────────
-    ws.merge_cells('A1:G1')
+    furigana モード: かな行=かな値、氏名行=漢字値
+    kanji    モード: かな行=空白（細い線）、氏名行=漢字値
+    kana     モード: かな行=空白（細い線）、氏名行=かな値
+                   （generator._fill_numbered が kana モードで氏名→かな値に転写）
+    """
+    for col, width in zip('ABCDE', [5.0, 27.0, 2.0, 5.0, 27.0], strict=True):
+        ws.column_dimensions[col].width = width
+
+    # タイトル行
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=5)
     _cell(ws, 1, 1,
           value='{{学年}}年{{組}}組　名列表　　担任：{{担任名}}',
           font=FONT_TITLE,
           alignment=ALIGN_CENTER)
     ws.row_dimensions[1].height = 42
 
-    # ── Row 2: 列ヘッダー ─────────────────────────────────────────────────
-    header_labels = [
-        (1, '番号'), (2, 'ふりがな'), (3, '氏名'),   # 左列
-        (4, ''),                                       # 区切り
-        (5, '番号'), (6, 'ふりがな'), (7, '氏名'),   # 右列
-    ]
-    for col, label in header_labels:
-        kwargs: dict = dict(value=label, font=FONT_HEADER, alignment=ALIGN_CENTER)
-        if col != 4:
-            kwargs['fill'] = FILL_HEADER
-            kwargs['border'] = BORDER_DATA
-        _cell(ws, 2, col, **kwargs)
+    # ヘッダー行（列ラベルのみ薄グレー）
+    for col, label in [(1, '番号'), (2, '氏名'), (4, '番号'), (5, '氏名')]:
+        _cell(ws, 2, col,
+              value=label, font=FONT_HEADER,
+              fill=FILL_HEADER, border=BORDER_FULL, alignment=ALIGN_CENTER)
     ws.row_dimensions[2].height = 18
 
-    # ── Rows 3〜22: データ行 ──────────────────────────────────────────────
     for i in range(MAX_PER_COL):
-        row  = 3 + i
-        ln   = i + 1          # 左列インデックス (1〜20)
-        rn   = i + 21         # 右列インデックス (21〜40)
+        kana_row = 3 + i * 2
+        name_row = 3 + i * 2 + 1
+        ln = i + 1    # 左 No. (1–20)
+        rn = i + 21   # 右 No. (21–40)
 
-        # 左列
-        _cell(ws, row, 1,
+        # ── 番号列（A / D）: 2行マージ ──────────────────────────────────────
+        ws.merge_cells(start_row=kana_row, start_column=1,
+                       end_row=name_row,  end_column=1)
+        _cell(ws, kana_row, 1,
               value=_ph('出席番号', ln), font=FONT_NO,
-              fill=FILL_PINK, border=BORDER_DATA, alignment=ALIGN_CENTER)
-        _cell(ws, row, 2,
-              value=_ph('氏名かな', ln), font=FONT_KANA,
-              fill=FILL_PINK, border=BORDER_DATA, alignment=ALIGN_RIGHT)
-        _cell(ws, row, 3,
-              value=_ph('氏名', ln), font=FONT_NAME,
-              fill=FILL_PINK, border=BORDER_DATA, alignment=ALIGN_CENTER)
+              border=BORDER_NO_FULL, alignment=ALIGN_CENTER)
 
-        # 区切り列（スタイルなし）
-        _cell(ws, row, 4)
-
-        # 右列
-        _cell(ws, row, 5,
+        ws.merge_cells(start_row=kana_row, start_column=4,
+                       end_row=name_row,  end_column=4)
+        _cell(ws, kana_row, 4,
               value=_ph('出席番号', rn), font=FONT_NO,
-              fill=FILL_PINK, border=BORDER_DATA, alignment=ALIGN_CENTER)
-        _cell(ws, row, 6,
+              border=BORDER_NO_FULL, alignment=ALIGN_CENTER)
+
+        # ── かな行（上段・11pt）──────────────────────────────────────────────
+        _cell(ws, kana_row, 2,
+              value=_ph('氏名かな', ln), font=FONT_KANA,
+              border=BORDER_KANA_TOP, alignment=ALIGN_KANA)
+        _cell(ws, kana_row, 5,
               value=_ph('氏名かな', rn), font=FONT_KANA,
-              fill=FILL_PINK, border=BORDER_DATA, alignment=ALIGN_RIGHT)
-        _cell(ws, row, 7,
+              border=BORDER_KANA_TOP, alignment=ALIGN_KANA)
+        _cell(ws, kana_row, 3)  # 区切り
+
+        # ── 氏名行（下段・25pt）──────────────────────────────────────────────
+        _cell(ws, name_row, 2,
+              value=_ph('氏名', ln), font=FONT_NAME,
+              border=BORDER_NAME_BOT, alignment=ALIGN_CENTER)
+        _cell(ws, name_row, 5,
               value=_ph('氏名', rn), font=FONT_NAME,
-              fill=FILL_PINK, border=BORDER_DATA, alignment=ALIGN_CENTER)
+              border=BORDER_NAME_BOT, alignment=ALIGN_CENTER)
+        _cell(ws, name_row, 3)  # 区切り
 
-        ws.row_dimensions[row].height = 30
+        ws.row_dimensions[kana_row].height = KANA_HEIGHT
+        ws.row_dimensions[name_row].height = NAME_HEIGHT
 
-    # ── 印刷設定（SPEC §5.4）─────────────────────────────────────────────
-    from openpyxl.worksheet.properties import PageSetupProperties
 
-    ws.page_setup.paperSize   = 9          # A4
-    ws.page_setup.orientation = 'portrait'
-    ws.page_setup.fitToWidth  = 1
-    ws.page_setup.fitToHeight = 0          # 高さは自動
+# ────────────────────────────────────────────────────────────────────────────
+# 公開 API
+# ────────────────────────────────────────────────────────────────────────────
 
-    # fitToPage は sheet_properties 経由で設定しないと AttributeError になる
-    if ws.sheet_properties.pageSetUpPr is None:
-        ws.sheet_properties.pageSetUpPr = PageSetupProperties()
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
+def generate(output_path: str) -> None:
+    """掲示用名列表テンプレートを生成して output_path に保存する。
 
-    ws.page_margins = PageMargins(
-        left=0.39, right=0.39,
-        top=0.39,  bottom=0.39,
-        header=0.2, footer=0.2,
-    )
-    ws.print_options.horizontalCentered = True
+    name_display モード（furigana / kanji / kana）は GridGenerator が
+    データ差込時に _fill_numbered を通じて適用する。テンプレートは1種のみ。
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '名列表'
 
-    # ── 保存 ─────────────────────────────────────────────────────────────
+    _build(ws)
+    _apply_print_settings(ws)
+
     out_dir = os.path.dirname(output_path)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
@@ -201,7 +212,5 @@ def generate(output_path: str) -> None:
 # ────────────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    # gen_meireihyo.py → generators/ → templates/ → meibo_tool/ → project_root
     _project_root = Path(__file__).resolve().parents[3]
-    _out = _project_root / 'テンプレート' / '掲示用名列表.xlsx'
-    generate(str(_out))
+    generate(str(_project_root / 'テンプレート' / '掲示用名列表.xlsx'))

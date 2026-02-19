@@ -11,6 +11,7 @@ import re
 import shutil
 from abc import ABC, abstractmethod
 from copy import copy
+from io import BytesIO
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -22,6 +23,18 @@ from utils.font_helper import apply_font
 from utils.wareki import to_wareki
 
 PLACEHOLDER_RE = re.compile(r'\{\{(.+?)\}\}')
+
+# name_display モードで使用するフィールドキーセット
+# kanji モード: かな系フィールドを空白化
+# kana   モード: かな値を漢字フィールドに転写し、かなフィールドは空白化
+_NAME_KANJI_KEYS: frozenset[str] = frozenset({'氏名', '正式氏名'})
+_NAME_KANA_KEYS:  frozenset[str] = frozenset({'氏名かな', '正式氏名かな'})
+
+# kana モード: 漢字キー → 対応するかなキーへのマッピング
+_KANJI_TO_KANA: dict[str, str] = {
+    '氏名': '氏名かな',
+    '正式氏名': '正式氏名かな',
+}
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -38,10 +51,24 @@ def fill_placeholders(ws, data_row: dict | pd.Series, options: dict | None = Non
         {{学校名}}     → options['school_name']
         {{担任名}}     → options['teacher_name']
         {{住所}}       → 都道府県+市区町村+町番地+建物名 の結合
+
+    name_display オプション（options['name_display']）:
+        'furigana' (デフォルト) → {{氏名}} と {{氏名かな}} の両方を展開
+        'kanji'                 → {{氏名かな}} / {{正式氏名かな}} を空白化
+        'kana'                  → {{氏名}} に氏名かな値を転写、{{氏名かな}} を空白化
+                                   （小さいかな行は空白、大きい名前行にかなを表示）
     """
     options = options or {}
+    mode = options.get('name_display', 'furigana')
 
     def _val(key: str) -> str:
+        if mode == 'kanji' and key in _NAME_KANA_KEYS:
+            return ''
+        if mode == 'kana':
+            if key in _NAME_KANA_KEYS:
+                return ''  # かな行セルを空白化
+            if key in _NAME_KANJI_KEYS:
+                key = _KANJI_TO_KANA[key]  # 漢字フィールドにかな値を転写
         v = data_row.get(key, '')
         if v is None:
             return ''
@@ -80,11 +107,16 @@ def copy_sheet_with_images(wb, source_ws, new_title: str):
     """
     画像も含めてワークシートを複製する。
     openpyxl の copy_worksheet は画像をコピーしないため手動で再挿入する。
+
+    落とし穴: Image(img.ref) は動作しない（ref は内部参照であり
+    ファイルパスではない）。_data() でバイナリを取得し BytesIO 経由で
+    新しい Image を生成する。
     """
     target_ws = wb.copy_worksheet(source_ws)
     target_ws.title = new_title
     for img in source_ws._images:
-        new_img = Image(img.ref)
+        img_data = BytesIO(img._data())
+        new_img = Image(img_data)
         new_img.anchor = copy(img.anchor)
         new_img.width = img.width
         new_img.height = img.height
@@ -170,27 +202,52 @@ class BaseGenerator(ABC):
 
 class GridGenerator(BaseGenerator):
     """
-    テンプレートの 1 枚目シートに「1 カード分」のレイアウトが定義されており、
-    それを児童数分コピーして複数ページに配置する。
-    実際の配置ロジックはテンプレート生成スクリプト側で行う方式のため、
-    ここでは fill_placeholders のみ適用する簡易実装。
+    番号付きプレースホルダー（{{氏名_1}} 等）で構成されたグリッドテンプレートを処理する。
+
+    cards_per_page が設定されている場合はページネーションを行う:
+      - cards_per_page 以下の人数 → 1 ページで完結（名列表系）
+      - cards_per_page を超える人数 → テンプレートシートを複製してページ追加（名札系）
+
+    ページネーション手順:
+      1. 必要なページ数分のシートを先にコピー（fill 前に複製しないと fill 済みデータが混入する）
+      2. 各シートを対応する児童範囲で fill
     """
 
     def _populate(self) -> None:
-        ws = self.wb.active
+        template_ws = self.wb.active
         meta = self._get_template_meta()
         orientation = meta.get('orientation', 'portrait')
-        setup_print(ws, orientation=orientation)
+        setup_print(template_ws, orientation=orientation)
 
-        # 番号付きプレースホルダー {{氏名_1}} 等を全児童分置換
-        for i, (_, row) in enumerate(self.data.iterrows(), 1):
-            row_dict = row.to_dict()
-            _fill_numbered(ws, i, row_dict, self.options)
+        n = len(self.data)
+        if n == 0:
+            return
 
-        # ヘッダー行の非番号プレースホルダー（{{学年}} {{組}} {{担任名}} 等）を置換
-        if len(self.data) > 0:
-            first_row = self.data.iloc[0].to_dict()
-            fill_placeholders(ws, first_row, self.options)
+        cards_per_page = meta.get('cards_per_page')
+        multi_page = cards_per_page is not None and n > cards_per_page
+
+        if not multi_page:
+            # ── 単一ページモード（名列表・調べ表など）────────────────────────
+            for i, (_, row) in enumerate(self.data.iterrows(), 1):
+                _fill_numbered(template_ws, i, row.to_dict(), self.options)
+            fill_placeholders(template_ws, self.data.iloc[0].to_dict(), self.options)
+        else:
+            # ── 複数ページモード（名札など）───────────────────────────────────
+            # Step 1: 追加シートを先に複製（fill 前に行う）
+            num_pages = (n + cards_per_page - 1) // cards_per_page
+            pages = [template_ws]
+            for _ in range(1, num_pages):
+                new_ws = self.wb.copy_worksheet(template_ws)
+                setup_print(new_ws, orientation=orientation)
+                pages.append(new_ws)
+
+            # Step 2: 各シートに対応する児童範囲をfill
+            for page_num, page_ws in enumerate(pages):
+                start = page_num * cards_per_page
+                page_data = self.data.iloc[start: start + cards_per_page]
+                for slot, (_, row) in enumerate(page_data.iterrows(), 1):
+                    _fill_numbered(page_ws, slot, row.to_dict(), self.options)
+                fill_placeholders(page_ws, page_data.iloc[0].to_dict(), self.options)
 
     def _get_template_meta(self) -> dict:
         for _name, meta in TEMPLATES.items():
@@ -200,10 +257,23 @@ class GridGenerator(BaseGenerator):
 
 
 def _fill_numbered(ws, idx: int, data_row: dict, options: dict) -> None:
-    """{{氏名_1}}, {{氏名_2}} ... 形式の番号付きプレースホルダーを置換する。"""
+    """{{氏名_1}}, {{氏名_2}} ... 形式の番号付きプレースホルダーを置換する。
+
+    name_display モード（options['name_display']）に応じて
+    氏名系フィールドを選択的に空白化する（fill_placeholders と同一仕様）。
+    """
     from openpyxl.cell.cell import MergedCell
 
+    mode = options.get('name_display', 'furigana')
+
     def _val(key: str) -> str:
+        if mode == 'kanji' and key in _NAME_KANA_KEYS:
+            return ''
+        if mode == 'kana':
+            if key in _NAME_KANA_KEYS:
+                return ''
+            if key in _NAME_KANJI_KEYS:
+                key = _KANJI_TO_KANA[key]
         v = data_row.get(key, '')
         if v is None:
             return ''
@@ -262,11 +332,11 @@ class ListGenerator(BaseGenerator):
         return {}
 
     def _find_template_row(self, ws) -> int | None:
-        """{{氏名}} または {{表示氏名}} を含む最初の行番号を返す。"""
+        """氏名系プレースホルダーを含む最初の行番号を返す。"""
+        _NAME_PATS = ('{{氏名}}', '{{正式氏名}}', '{{氏名かな}}', '{{正式氏名かな}}')
         for row in ws.iter_rows():
             for cell in row:
-                if (cell.value and isinstance(cell.value, str)
-                        and ('{{氏名}}' in cell.value or '{{表示氏名}}' in cell.value)):
+                if cell.value and isinstance(cell.value, str) and any(p in cell.value for p in _NAME_PATS):
                     return cell.row
         return None
 
@@ -329,6 +399,11 @@ class IndividualGenerator(BaseGenerator):
         meta = self._get_template_meta()
         orientation = meta.get('orientation', 'portrait')
 
+        if len(self.data) == 0:
+            return
+
+        # Step 1: 先に全シートを複製（fill 前に行う — 置換済みデータの混入防止）
+        sheets = []
         for i, (_, row) in enumerate(self.data.iterrows()):
             row_dict = row.to_dict()
             shusseki = row_dict.get('出席番号', str(i + 1))
@@ -340,7 +415,10 @@ class IndividualGenerator(BaseGenerator):
                 ws.title = title
             else:
                 ws = copy_sheet_with_images(self.wb, template_ws, title)
+            sheets.append((ws, row_dict))
 
+        # Step 2: 各シートにデータを差し込み
+        for ws, row_dict in sheets:
             fill_placeholders(ws, row_dict, self.options)
             setup_print(ws, orientation=orientation)
 

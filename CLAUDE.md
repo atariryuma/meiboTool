@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## プロジェクト概要
 
 那覇市立小中学校向けの **名簿帳票自動生成 Windows デスクトップアプリ**。
-C4th（EDUCOM 校務支援システム）の Excel エクスポートを読み込み、名札・名列表・台帳・個票など 9 種の帳票を自動生成する。Python 3.11 + CustomTkinter + openpyxl。
+C4th（EDUCOM 校務支援システム）の Excel エクスポートを読み込み、名札・名列表・台帳・個票など 15 種の帳票を自動生成する。Python 3.11 + CustomTkinter + openpyxl。
 
 ## コマンド
 
@@ -33,7 +33,7 @@ venv/Scripts/python.exe -m ruff check meibo_tool/ --fix   # 自動修正
 # テンプレート Excel 生成（初回および更新時）
 cd meibo_tool && python -m templates.generators.generate_all
 
-# exe ビルド（build.spec が存在する場合）
+# exe ビルド
 pyinstaller build.spec
 # → dist/名簿帳票ツール/ フォルダが出力される
 ```
@@ -46,7 +46,7 @@ pyinstaller build.spec
 C4th Excel
   → core/importer.py  （ヘッダー行自動検出 → pandas DataFrame に読込）
   → core/mapper.py    （C4th カラム名 → 内部論理名に変換）
-  → gui/frames/       （必須入力パネルで「組」「出席番号」を追加）
+  → gui/frames/       （クラス選択パネルで学年・組を選択）
   → core/generator.py （テンプレートにデータを差込 → xlsx 出力）
 ```
 
@@ -54,9 +54,9 @@ C4th Excel
 
 | クラス | 用途 | テンプレート |
 | -------- | ------ | ------------ |
-| `GridGenerator` | 1 ページに N 名をグリッド配置 | 名札 3 種 |
-| `ListGenerator` | データ行を児童数分コピー展開 | 名列表・台帳 4 種 |
-| `IndividualGenerator` | 1 名/シートで `copy_worksheet` 複製 | 個票 2 種 |
+| `GridGenerator` | 1 ページに N 名をグリッド配置 | 名札・名列表・調べ表・横名簿 等 |
+| `ListGenerator` | データ行を児童数分コピー展開 | 台帳 2 種 |
+| `IndividualGenerator` | 1 名/シートで `copy_worksheet` 複製 | 個票 2 種（未テンプレート） |
 
 `create_generator()` がファクトリー関数。`TEMPLATES` レジストリの `type` キーで分岐する。
 
@@ -65,10 +65,24 @@ C4th Excel
 テンプレート Excel 内は `{{論理名}}` 形式。`fill_placeholders()` が正規表現で一括置換する。
 特殊キー: `{{年度}}` `{{年度和暦}}` `{{学校名}}` `{{担任名}}` `{{住所}}` (住所 4 フィールド自動結合)。
 
-### GUI 状態管理
+### GUI 構成
 
-`App.mandatory_ok` フラグが `False` の間、テンプレート選択・生成ボタンは `state='disabled'`。
-`MandatoryInputPanel` で「組」選択＋「自動連番」クリック後に「確定して進む」を押すと `True` になる。
+```text
+App (CTk) — 2カラムレイアウト
+├── ヘッダーバー（設定ボタン）
+├── 左パネル（CTkScrollableFrame）
+│   ├── ImportFrame      — ファイル選択・読込件数・同期ステータス
+│   ├── ClassSelectPanel — 学年・組の選択
+│   ├── SelectFrame      — テンプレート選択・担任名・学校名
+│   └── OutputFrame      — 生成ボタン・進捗バー
+└── 右パネル（_PreviewPanel）— データプレビュー Treeview
+```
+
+### 自動更新
+
+- **アプリ更新**: GitHub Releases API で最新バージョン確認 → zip ダウンロード → バッチファイルで更新
+- **名簿データ同期**: LAN（共有フォルダ）/ Google Drive（AES-256-GCM 暗号化）の 2 モード対応
+- **暗号化**: `core/crypto.py` — AES-256-GCM + PBKDF2-HMAC-SHA256 (600,000 回)、パスワードは Windows DPAPI で保護
 
 ## コーディング規約
 
@@ -84,27 +98,29 @@ C4th Excel
 
 1. **PyInstaller は `--onedir` のみ** — CustomTkinter の .json/.otf が `--onefile` では見つからずクラッシュする
 2. **openpyxl スタイルはイミュータブル** — `cell.font.bold = True` は AttributeError。必ず `cell.font = Font(...)` で新インスタンスを作る
-3. **`copy_worksheet` は画像をコピーしない** — `source_ws._images` を手動でループして `add_image()` で再挿入する
+3. **`copy_worksheet` は画像をコピーしない** — `_data()` でバイナリ取得 → `BytesIO` → `Image()` で再構築（`copy_sheet_with_images()` 参照）
 4. **結合セルは左上セルにのみ書き込む** — 他セルへの書き込みは `AttributeError: 'MergedCell' is read-only`
-5. **CustomTkinter の UI 操作はメインスレッドのみ** — バックグラウンドスレッドからは `self.after(0, callback)` で委譲する
+5. **CustomTkinter の UI 操作はメインスレッドのみ** — バックグラウンドスレッドからは `self.after(0, callback)` で委譲する。ジェネレーター作成（Tkinter ウィジェット参照）もメインスレッドで行う
 6. **C4th ヘッダーの全角スペース（U+3000）** — 「保護者1　続柄」等は全角スペース区切り。`normalize_header()` で統一する
 7. **IPAmj明朝フォント** — 正式名前列に IVS 付き異体字を含むため必須。`font_helper.apply_font()` で全セルに適用
+8. **IndividualGenerator のシート複製は fill 前に行う** — fill 後にコピーするとプレースホルダーが消失する
 
-## テンプレート 9 種
+## テンプレート 15 種
 
-| テンプレートファイル名 | タイプ | use_formal_name |
-| ---------------------- | ------ | --------------- |
-| 名札_通常.xlsx / 名札_装飾あり.xlsx / 名札_1年生用.xlsx | grid | false |
-| 掲示用名列表.xlsx | grid（番号付きプレースホルダー {{氏名_1}}〜{{氏名_40}}） | false |
-| 調べ表.xlsx | list | false |
-| 修了台帳.xlsx / 卒業台帳.xlsx | list | true |
-| 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | true |
-
-`use_formal_name=true` のテンプレートでは「正式名前」列（IVS 付き）を使用。空の場合は「名前」にフォールバックする（`resolve_name_fields()` 参照）。
+| テンプレートファイル名 | タイプ | 状態 |
+| ---------------------- | ------ | ---- |
+| 名札_通常.xlsx / 名札_装飾あり.xlsx / 名札_1年生用.xlsx | grid | ✅ |
+| ラベル_大2.xlsx / ラベル_小.xlsx / ラベル_特大.xlsx | grid | ✅ |
+| 掲示用名列表.xlsx | grid | ✅ |
+| 調べ表.xlsx | grid | ✅ |
+| 横名簿.xlsx / 縦一週間.xlsx | grid | ✅ |
+| 男女一覧.xlsx | grid | ❌ enabled=False |
+| 修了台帳.xlsx / 卒業台帳.xlsx | list | ✅ |
+| 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | ❌ enabled=False（テンプレ未生成） |
 
 ## C4th データの重要な仕様
 
-- **「組」「出席番号」は C4th に含まれない** — ファイル読込後に必須入力パネルで教員が入力する
+- **「組」「出席番号」は C4th に含まれない** — ファイル読込後にクラス選択パネルで教員が選択する（将来 C4th から出力予定）
 - **全カラム `dtype=str` で読み込む** — 生年月日等の型変換は後工程で行う
 - **ヘッダー行自動検出** — ファイル先頭にメタ情報行がある可能性があるため、文字列セル 5 個以上の行を検索する
 
@@ -114,19 +130,17 @@ C4th Excel
 | ---- | ---- |
 | `school_name` | 学校名（帳票タイトルに使用） |
 | `school_type` | `"elementary"` / `"middle"` |
-| `fiscal_year` | 年度（西暦） |
+| `fiscal_year` | 年度（西暦・起動時に自動計算） |
 | `template_dir` | テンプレートフォルダパス（`./テンプレート`） |
 | `output_dir` | 出力フォルダパス（`./出力`） |
-| `update.version_file_id` | Google Drive の version.json のファイル ID |
+| `update.github_repo` | GitHub リポジトリ（`owner/repo` 形式） |
+| `update.check_on_startup` | 起動時に更新チェックするか |
+| `update.skip_version` | スキップ設定したバージョン |
+| `data_source.mode` | `"manual"` / `"lan"` / `"gdrive"` |
+| `data_source.lan_path` | LAN 共有フォルダの UNC パス |
+| `data_source.gdrive_file_id` | Google Drive ファイル ID |
+| `data_source.encryption_password` | DPAPI で保護された暗号化パスワード |
 | `homeroom_teachers` | `{"1-1": "山田先生"}` 形式で担任名を保存 |
-
-## Google Drive 自動更新
-
-- 起動時にバックグラウンドスレッドで `updater.check_for_updates()` を実行
-- `version.json` を API キー不要で取得（「リンクを知っている全員が閲覧可」設定前提）
-- exe 自己更新はバッチファイル経由（実行中の exe はロックされるため）
-- バッチファイルには `chcp 65001` 必須（日本語パスの文字化け対策）
-- ネットワーク失敗時はサイレントにスキップし、通常起動する
 
 ## 現在地（セッション開始時に必ず確認）
 
@@ -136,48 +150,46 @@ C4th Excel
 
 | ファイル | 内容 | テスト |
 | -------- | ---- | ------ |
-| `utils/wareki.py` | 西暦→和暦変換 | ✅ 10ケース |
-| `utils/address.py` | 住所4フィールド結合 | ✅ 5ケース |
+| `utils/wareki.py` | 西暦→和暦変換 | ✅ 10 |
+| `utils/address.py` | 住所4フィールド結合 | ✅ 5 |
 | `utils/font_helper.py` | IPAmj明朝フォント適用 | — |
-| `core/config.py` | config.json 読み書き（パス解決バグ修正済み） | — |
-| `core/mapper.py` | C4th カラム名マッピング（全50列） | ✅ 6ケース |
-| `core/importer.py` | ヘッダー自動検出付き Excel 読込 | — |
-| `core/generator.py` | Grid/List/Individual ジェネレーター + setup_print バグ修正 | ✅ 12ケース |
-| `templates/template_registry.py` | テンプレート 9 種メタデータ | — |
-| `templates/generators/gen_meireihyo.py` | 掲示用名列表テンプレート生成（A4縦・2列・40名） | ✅ 10ケース |
-| `templates/generators/generate_all.py` | 全テンプレート一括生成エントリー | — |
-| `テンプレート/掲示用名列表.xlsx` | 生成済みテンプレートファイル | — |
-| `tests/conftest.py` | 共通フィクスチャ（dummy_df 等） | — |
+| `core/config.py` | config.json 読み書き・deep_merge・パス解決 | ✅ 13 |
+| `core/mapper.py` | C4th カラム名マッピング + resolve_name_fields | ✅ 12 |
+| `core/importer.py` | ヘッダー自動検出付き Excel 読込 | ✅ 11 |
+| `core/generator.py` | Grid/List/Individual ジェネレーター | ✅ 50 |
+| `core/crypto.py` | AES-256-GCM 暗号化/復号 + DPAPI パスワード保護 | ✅ 17 |
+| `core/data_sync.py` | 名簿データ自動同期（LAN/GDrive/手動） | ✅ 15 |
+| `core/updater.py` | GitHub Releases ベースのアプリ更新 | ✅ 20 |
+| `templates/template_registry.py` | テンプレート 15 種メタデータ | — |
+| `templates/generators/gen_meireihyo.py` | 掲示用名列表テンプレート生成 | — |
+| `templates/generators/gen_nafuda.py` | 名札3種テンプレート生成 | — |
+| `templates/generators/gen_daicho.py` | 台帳2種テンプレート生成 | — |
+| `templates/generators/gen_shirabehyo.py` | 調べ表テンプレート生成 | — |
+| `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
+| `templates/generators/generate_all.py` | 全テンプレート一括生成 | — |
+| `gui/app.py` | メインウィンドウ（2カラムレイアウト）| — |
+| `gui/frames/import_frame.py` | ファイル選択・同期ステータス表示 | — |
+| `gui/frames/class_select_panel.py` | 学年・組選択 | — |
+| `gui/frames/select_frame.py` | テンプレート選択・担任名・学校名 | — |
+| `gui/frames/output_frame.py` | 生成ボタン・進捗バー | — |
+| `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
+| `gui/dialogs/update_dialog.py` | 更新確認ダイアログ | — |
+| `.github/workflows/build-release.yml` | CI/CD（テスト→ビルド→Release） | — |
+| `tests/conftest.py` | 共通フィクスチャ | — |
 
-### 未実装 ❌（次に着手する順）
+### 未実装 ❌
 
-1. **`gui/app.py`** ← **次のタスク**
-   - CustomTkinter メインウィンドウ（2カラムレイアウト）
-   - 仕様: SPEC.md §3.1〜§3.4
-2. `gui/frames/import_frame.py` — ファイル選択・読込件数表示
-3. `gui/frames/mandatory_panel.py` — 組ドロップダウン・自動連番・確定ボタン
-4. `gui/frames/select_frame.py` — テンプレート選択ラジオボタン
-5. `gui/frames/output_frame.py` — 生成ボタン・進捗バー
-6. 統合確認: ダミーデータ読込 → 組設定 → 名列表.xlsx 出力まで一気通貫
-7. 名札テンプレート 3 種 (`gen_nafuda_*.py`)
-8. 台帳テンプレート 2 種 + 調べ表
-9. 個票テンプレート 2 種
-10. `core/updater.py` — Google Drive 自動更新
-11. `build.spec` + PyInstaller ビルド
+1. `gen_katei_chousahyo.py` — 家庭調査票テンプレート生成（Individual 型）
+2. `gen_gakkyuu_kojihyo.py` — 学級編成用個票テンプレート生成（Individual 型）
+3. `gui/dialogs/mapping_dialog.py` — カラムマッピング手動調整画面
+4. 統合確認: ダミーデータ読込 → クラス選択 → 全テンプレート出力まで一気通貫
+5. 別 PC（Python なし環境）での起動確認
 
 ### 開発環境の状態
 
-- テスト: **49件 全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **153 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
-- Git: 4コミット済み（master ブランチ）
-
-## 実装順序（依存関係順）
-
-1. `utils/wareki.py` → `utils/address.py` → `utils/font_helper.py`
-2. `core/config.py` → `core/mapper.py` → `core/importer.py`
-3. `templates/template_registry.py` → テンプレート生成スクリプト（`gen_meireihyo.py` を最初に）
-4. `core/generator.py`（ListGenerator から） → `gui/` → 統合テスト
-5. `core/updater.py` → `build.spec` + ビルド
+- Git: master ブランチ
 
 ## 詳細仕様の参照先（docs/SPEC.md）
 
@@ -185,7 +197,7 @@ C4th Excel
 | ---- | -- |
 | C4th 全 50 カラム定義・EXACT_MAP | 第2章 |
 | GUI 各パネルの詳細仕様・実装コード | 第3章 |
-| テンプレート 9 種の列幅・行高・差込フィールド | 第4章 |
+| テンプレート 15 種の列幅・行高・差込フィールド | 第4章 |
 | generator.py・fill_placeholders・印刷設定 | 第5章 |
-| Google Drive 更新・exe 自己更新バッチ | 第6章 |
+| 自動更新（GitHub Releases + 名簿データ同期） | 第6章 |
 | build.spec・テストケース一覧・ダミーデータ生成 | 第7章 |

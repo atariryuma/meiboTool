@@ -3,6 +3,9 @@
 SPEC.md 第7章 §7.10 参照。
 実行: python meibo_tool/tests/generate_dummy.py
 → meibo_tool/tests/fixtures/dummy_c4th.xlsx が生成される
+
+新フォーマット: 組・出席番号 カラムを含む（クラス選択機能に対応）。
+デフォルトで 3年1組 (15名) + 3年2組 (15名) = 30名 を生成する。
 """
 
 import os
@@ -19,11 +22,16 @@ FIRST_KANA_M = ['たろう', 'いちろう', 'けんた', 'しょう', 'だい�
 FIRST_KANA_F = ['はなこ', 'みさき', 'ひな', 'ゆい', 'さくら',
                 'りん', 'あおい', 'あや', 'かえで', 'あい']
 AREAS = ['天久', '古島', '真地', '小禄', '壺川']
-GUARDIANS_M = ['一郎', '健一', '浩二', '雄一', '正則']
-GUARDIANS_F = ['幸子', '美穂', '典子', '恵子', '和子']
+GUARDIANS = ['幸子', '美穂', '典子', '恵子', '和子']
 
 
-def generate_dummy(n: int = 35, grade: int = 1, seed: int = 42) -> pd.DataFrame:
+def generate_dummy(
+    n: int = 15,
+    grade: int = 3,
+    kumi: int = 1,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """1クラス分のダミーデータを生成する。"""
     random.seed(seed)
     rows = []
     for i in range(n):
@@ -34,18 +42,19 @@ def generate_dummy(n: int = 35, grade: int = 1, seed: int = 42) -> pd.DataFrame:
         if sex == '男':
             idx = random.randint(0, len(FIRST_NAMES_M) - 1)
             mei, mei_k = FIRST_NAMES_M[idx], FIRST_KANA_M[idx]
-            g_mei = random.choice(GUARDIANS_F)  # 保護者は母親が多い
         else:
             idx = random.randint(0, len(FIRST_NAMES_F) - 1)
             mei, mei_k = FIRST_NAMES_F[idx], FIRST_KANA_F[idx]
-            g_mei = random.choice(GUARDIANS_F)
+        g_mei = random.choice(GUARDIANS)
 
         area = random.choice(AREAS)
         chome = f'{random.randint(1,3)}-{random.randint(1,20)}-{random.randint(1,30)}'
-        birth_month = random.randint(4, 12) if grade == 1 else random.randint(1, 12)
+        birth_month = random.randint(1, 12)
 
         rows.append({
-            '生徒コード': f'S{grade:02d}{i+1:03d}',
+            '組': str(kumi),
+            '出席番号': str(i + 1),
+            '生徒コード': f'S{grade:02d}{kumi}{i+1:03d}',
             '学年': str(grade),
             '名前': f'{sei} {mei}',
             'ふりがな': f'{sei_k} {mei_k}',
@@ -85,10 +94,24 @@ def generate_dummy(n: int = 35, grade: int = 1, seed: int = 42) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def generate_multi_class(
+    classes: list[tuple[int, int]] | None = None,
+    n_per_class: int = 15,
+) -> pd.DataFrame:
+    """複数クラス分のダミーデータを結合して返す。"""
+    if classes is None:
+        classes = [(3, 1), (3, 2)]
+    frames = []
+    for seed_offset, (grade, kumi) in enumerate(classes):
+        df = generate_dummy(n=n_per_class, grade=grade, kumi=kumi, seed=42 + seed_offset)
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True)
+
+
 if __name__ == '__main__':
     out_dir = os.path.join(os.path.dirname(__file__), 'fixtures')
     os.makedirs(out_dir, exist_ok=True)
-    df = generate_dummy(n=35, grade=1)
+    df = generate_multi_class(classes=[(3, 1), (3, 2)], n_per_class=15)
     out_path = os.path.join(out_dir, 'dummy_c4th.xlsx')
     df.to_excel(out_path, index=False)
-    print(f'生成完了: {out_path}  ({len(df)} 名)')
+    print(f'生成完了: {out_path}  ({len(df)} 名, 3年1組+3年2組)')

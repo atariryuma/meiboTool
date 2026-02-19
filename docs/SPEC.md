@@ -1176,188 +1176,155 @@ def generate_from_template(template_path, output_path, data):
 
 ---
 
-## 第6章 Google Drive 自動更新
+## 第6章 自動更新（アプリ + 名簿データ同期）
+
+> **注**: 初版では Google Drive ベースのアプリ更新を計画していたが、GitHub Releases に変更した。
+> 名簿データの同期は校内 LAN + 暗号化 Google Drive の両対応。
 
 ### 6.1 概要
 
-アプリ本体（exe）およびテンプレートファイルを Google Drive の共有フォルダに配置し、起動時に自動で最新版を確認・ダウンロードする。RYUMA が 1 箇所（Google Drive）を更新するだけで、全校のアプリが自動的に最新化される。
+2つの「自動更新」機能がある:
 
-### 6.2 Google Drive 側の構成
+1. **アプリ自動更新** — 開発者が GitHub Releases に新バージョンを公開すると、各校のアプリが起動時に検出してダウンロード・更新する
+2. **名簿データ同期** — 管理者が名簿データを更新すると、教員のアプリが起動時に最新データを自動取得する
 
-「リンクを知っている全員が閲覧可」で共有。
+### 6.2 アプリ自動更新（GitHub Releases）
 
-```
-Google Drive:
-  名簿帳票ツール_配布/
-    ├── version.json           # バージョン管理ファイル
-    ├── 名簿帳票ツール.exe      # アプリ本体（最新版）
-    ├── テンプレート/
-    │   ├── 名札_通常.xlsx
-    │   ├── ... (全テンプレート)
-    └── assets/
-        └── flower_border.png
-```
+#### 実装ファイル
 
-### 6.3 version.json の仕様
+- `core/updater.py` — GitHub Releases API でバージョン確認 + ダウンロード + バッチ更新
+- `gui/dialogs/update_dialog.py` — 更新確認ダイアログ（CTkToplevel）
+- `.github/workflows/build-release.yml` — CI/CD ワークフロー
+
+#### config.json の `update` セクション
 
 ```json
 {
-  "app_version": "1.0.2",
-  "app_file_id": "1AbCdEfG_googledrivefileid",
-  "release_date": "2026-03-15",
-  "release_notes": "名札テンプレートの余白を調整",
-  "templates": {
-    "version": "1.0.1",
-    "files": {
-      "名札_通常.xlsx": "1XyZaBC_fileid1",
-      "名札_装飾あり.xlsx": "1XyZaBC_fileid2",
-      "名札_1年生用.xlsx": "1XyZaBC_fileid3",
-      "掲示用名列表.xlsx": "1XyZaBC_fileid4",
-      "調べ表.xlsx": "1XyZaBC_fileid5",
-      "修了台帳.xlsx": "1XyZaBC_fileid6",
-      "卒業台帳.xlsx": "1XyZaBC_fileid7",
-      "家庭調査票.xlsx": "1XyZaBC_fileid8",
-      "学級編成用個票.xlsx": "1XyZaBC_fileid9"
-    }
+  "update": {
+    "github_repo": "owner/meibo-tool",
+    "check_on_startup": true,
+    "current_app_version": "1.0.0",
+    "last_check_time": "",
+    "skip_version": ""
   }
 }
 ```
 
-`app_file_id` / `files` の値: 各ファイルの Google Drive ファイル ID（共有リンク `https://drive.google.com/file/d/{FILE_ID}/view` の `{FILE_ID}` 部分）。
+#### 更新フロー
 
-### 6.4 自動更新処理フロー
+```
+開発者: git tag v1.2.0 && git push origin v1.2.0
+  → GitHub Actions: テスト → ビルド → Release 作成（zip アセット）
 
-アプリ起動時に非同期（別スレッド）で実行。メイン画面の表示を妨げないこと。
-
-1. `config.json` から `version_file_id` を読み取る
-2. `requests.get()` で version.json をダウンロード（タイムアウト 5 秒）
-3. ダウンロード失敗時（オフライン等）→ スキップして通常起動。エラーは表示しない
-4. ダウンロード成功時 → ローカルのバージョンと比較
-5. a. アプリ本体が更新 → ダイアログ表示 →「はい」で exe ダウンロード＆差し替え＆再起動
-   b. テンプレートが更新 → バックグラウンドで差分テンプレートのみダウンロード・上書き → ステータスバーに通知
-   c. 両方最新 → 何もしない
-
-### 6.5 Google Drive ダウンロード — 実装コード（API キー不要）
-
-```python
-import requests
-import os
-
-def download_from_gdrive(file_id, dest_path, progress_cb=None):
-    """
-    Google Drive からファイルをダウンロード（APIキー不要）
-    共有設定が「リンクを知っている全員が閲覧可」であること
-    """
-    URL = 'https://drive.google.com/uc?export=download'
-    session = requests.Session()
-
-    response = session.get(URL, params={'id': file_id}, stream=True)
-
-    # 大きいファイル（>25MB）のウイルススキャン確認ページ対応
-    token = None
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            token = value
-            break
-    if token:
-        response = session.get(
-            URL, params={'id': file_id, 'confirm': token}, stream=True
-        )
-
-    total = int(response.headers.get('content-length', 0))
-    downloaded = 0
-    with open(dest_path, 'wb') as f:
-        for chunk in response.iter_content(chunk_size=32768):
-            if chunk:
-                f.write(chunk)
-                downloaded += len(chunk)
-                if progress_cb and total > 0:
-                    progress_cb(downloaded / total)
-    return dest_path
+アプリ起動時 [バックグラウンドスレッド]:
+  GET api.github.com/repos/{owner}/{repo}/releases/latest (timeout 5s)
+  → semver 比較（v-prefix 対応）
+  → 新版あり → メインスレッドへ通知 → UpdateDialog 表示
+    → 「今すぐ更新」: zip ダウンロード（進捗バー） → バッチファイル生成 → アプリ終了
+    → 「後で」: 次回起動時に再確認
+    → 「スキップ」: config に skip_version を保存
+  → ネットワークエラー → サイレントにスキップ
 ```
 
-> ⚠ **重要**: Google Drive の「リンクを知っている全員が閲覧可」設定であれば、Google API キーや OAuth 認証は不要。requests ライブラリのみでダウンロード可能。学校のネットワークで Google ドメインへのアクセスが許可されていることが前提。
-
-### 6.6 exe 自己更新バッチファイル — 実装コード
-
-> ⚠ **落とし穴**: Windows では実行中の exe ファイルを上書きできない（ファイルロック）。バッチファイルで待機→置換→再起動する。
-
-```python
-import subprocess, sys, os
-
-def generate_update_batch(new_exe_path, current_exe_path):
-    """
-    自己更新用バッチファイルを生成・実行
-    """
-    exe_name = os.path.basename(current_exe_path)
-    exe_dir = os.path.dirname(current_exe_path)
-
-    bat_content = f'''@echo off
-chcp 65001 > nul
-timeout /t 2 /nobreak > nul
-taskkill /IM "{exe_name}" /F > nul 2>&1
-timeout /t 1 /nobreak > nul
-del "{current_exe_path}"
-move "{new_exe_path}" "{current_exe_path}"
-start "" "{current_exe_path}"
-del "%~f0"
-'''
-    bat_path = os.path.join(exe_dir, '_update.bat')
-    with open(bat_path, 'w', encoding='utf-8') as f:
-        f.write(bat_content)
-
-    subprocess.Popen(
-        ['cmd', '/c', bat_path],
-        creationflags=subprocess.CREATE_NO_WINDOW,
-        cwd=exe_dir,
-    )
-    sys.exit(0)
-```
-
-> ⚠ **落とし穴**: `chcp 65001` は必須。日本語ファイル名を含むパスをバッチファイルで正しく扱うために UTF-8 コードページに切り替える。これがないと文字化けでファイルが見つからずエラーになる。
-
-### 6.7 updater.py ソースコード構成
+#### updater.py ソースコード構成
 
 ```
 core/updater.py
-  ├── check_for_updates(config) -> UpdateInfo | None
-  │     version.json を取得し、ローカルと比較
-  ├── download_file(file_id, dest_path, progress_callback)
-  │     Google Drive からファイルをダウンロード
-  ├── update_app(update_info)
-  │     exe 差し替えバッチ生成→再起動
-  ├── update_templates(update_info, template_dir)
-  │     差分テンプレートのみダウンロード・上書き
+  ├── check_for_update(config) -> UpdateInfo | None
+  │     GitHub Releases API で最新バージョンを確認
+  ├── is_newer(remote, local) -> bool
+  │     semver 比較（v-prefix 対応）
+  ├── download_release_asset(url, dest, progress_cb)
+  │     Release asset をストリーミングダウンロード
+  ├── generate_update_batch(zip_path, current_dir)
+  │     --onedir フォルダ更新バッチ生成→実行→sys.exit(0)
   └── UpdateInfo (dataclass)
-        app_version, template_version, app_file_id, template_files, release_notes
+        current_version, new_version, release_notes, asset_url, asset_name, asset_size
 ```
 
-### 6.8 日本語パスの安全な取得
+#### --onedir 対応バッチファイル
 
-```python
-import os, sys
+> ⚠ **落とし穴**: `--onefile` ではなく `--onedir` を使用するため、exe 単体ではなくフォルダ丸ごとの差し替えが必要。
 
-def get_app_dir():
-    """アプリケーションの実行ディレクトリを安全に取得"""
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    else:
-        return os.path.dirname(os.path.abspath(__file__))
-
-def get_output_dir():
-    base = get_app_dir()
-    out = os.path.join(base, '出力')
-    os.makedirs(out, exist_ok=True)
-    return out
-
-def get_template_dir():
-    if getattr(sys, 'frozen', False):
-        return os.path.join(sys._MEIPASS, 'テンプレート')
-    else:
-        return os.path.join(get_app_dir(), 'テンプレート')
+```
+chcp 65001 → taskkill → config.json バックアップ
+→ 旧フォルダを move でリネーム → 新フォルダを move でリネーム
+→ config.json 復元 → 再起動 → _old 削除 → 自己削除
 ```
 
-> ⚠ **落とし穴**: `os.path.join()` は日本語パスを正しく扱えるが、subprocess で bat ファイルを実行する際は `chcp 65001` で UTF-8 モードにすること。
+> ⚠ **落とし穴**: バッチの `ren` コマンドはスペース含むパスで失敗するため `move` を使用する。`chcp 65001` は日本語パスの文字化け対策で必須。
+
+### 6.3 名簿データ同期
+
+#### 実装ファイル
+
+- `core/data_sync.py` — データ同期マネージャー（3モード対応）
+- `core/crypto.py` — AES-256-GCM ファイル暗号化
+- `gui/dialogs/settings_dialog.py` — 管理者設定ダイアログ
+
+#### config.json の `data_source` セクション
+
+```json
+{
+  "data_source": {
+    "mode": "manual",
+    "lan_path": "",
+    "gdrive_file_id": "",
+    "encryption_password": "",
+    "last_sync_hash": "",
+    "last_sync_time": "",
+    "cache_file": ""
+  }
+}
+```
+
+#### 3モードの同期フロー
+
+**Manual モード（デフォルト）:** 従来の手動ファイル選択。何もしない。
+
+**LAN モード:**
+```
+起動 → lan_path の存在確認
+  → ファイルあり → SHA-256 ハッシュ比較
+    → 変更あり → cache/ にコピー → 自動インポート → ステータス通知
+    → 変更なし → キャッシュから読込
+  → ファイルなし → キャッシュがあれば使用、なければ警告表示
+```
+
+**Google Drive モード:**
+```
+起動 → drive.google.com/uc?export=download&id={file_id} でダウンロード
+  → SHA-256 比較 → 変更あり → crypto.decrypt_file() → cache/ に保存 → インポート
+  → パスワード不正 → エラーダイアログ「管理者に確認してください」
+  → ネットワーク不通 → キャッシュから読込
+```
+
+#### スレッド安全性
+
+`sync()` はバックグラウンドスレッドから呼ばれるため、config dict を直接変更しない。
+変更内容は `SyncResult.config_updates` に格納し、メインスレッドの `_on_sync_result()` で適用する。
+
+### 6.4 暗号化設計（core/crypto.py）
+
+- **アルゴリズム**: AES-256-GCM（`cryptography` ライブラリの AESGCM）
+- **鍵導出**: PBKDF2-HMAC-SHA256、600,000 イテレーション（OWASP 2023 推奨）
+- **ファイル形式**: `[4B magic: MBE1][16B salt][12B nonce][ciphertext + GCM tag]`
+- **config 内パスワード保護**: Windows DPAPI（`ctypes` 経由、pywin32 不要）。非 Windows は base64 フォールバック。
+
+### 6.5 管理者ワークフロー
+
+1. C4th から Excel エクスポート
+2. **LAN の場合**: 共有フォルダに保存するだけ
+3. **クラウドの場合**: アプリの設定画面で「名簿を暗号化」→ Google Drive に手動アップロード → ファイル ID を設定に貼付
+
+### 6.6 CI/CD（.github/workflows/build-release.yml）
+
+```
+トリガー: v* タグの push
+→ Windows-latest / Python 3.11
+→ pip install → ruff check → pytest → pyinstaller build.spec
+→ zip 化 → softprops/action-gh-release@v2 で Release 作成
+```
 
 ---
 

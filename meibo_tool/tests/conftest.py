@@ -79,6 +79,7 @@ def default_options() -> dict:
         'school_name': '那覇市立天久小学校',
         'teacher_name': '山田先生',
         'template_dir': '',  # 各テストで上書き
+        'name_display': 'furigana',  # デフォルト: 氏名・氏名かな 両方を展開
     }
 
 
@@ -87,17 +88,29 @@ def default_config() -> dict:
     """テスト用の config 辞書。"""
     return {
         'app_version': '1.0.0',
-        'school_name': '那覧市立天久小学校',
+        'school_name': '那覇市立天久小学校',
         'school_type': 'elementary',
         'template_dir': './テンプレート',
         'output_dir': './出力',
         'default_font': 'IPAmj明朝',
         'fiscal_year': 2025,
+        'graduation_cert_start_number': 1,
         'homeroom_teachers': {},
+        'last_loaded_file': '',
         'update': {
-            'version_file_id': '',
+            'github_repo': '',
             'check_on_startup': False,
             'current_app_version': '1.0.0',
-            'current_template_version': '1.0.0',
+            'last_check_time': '',
+            'skip_version': '',
+        },
+        'data_source': {
+            'mode': 'manual',
+            'lan_path': '',
+            'gdrive_file_id': '',
+            'encryption_password': '',
+            'last_sync_hash': '',
+            'last_sync_time': '',
+            'cache_file': '',
         },
     }
