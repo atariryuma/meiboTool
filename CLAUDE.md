@@ -107,18 +107,17 @@ App (CTk) — 2カラムレイアウト
 7. **IPAmj明朝フォント** — 正式名前列に IVS 付き異体字を含むため必須。`font_helper.apply_font()` で全セルに適用
 8. **IndividualGenerator のシート複製は fill 前に行う** — fill 後にコピーするとプレースホルダーが消失する
 
-## テンプレート 15 種
+## テンプレート 15 種（カテゴリ別）
 
-| テンプレートファイル名 | タイプ | 状態 |
-| ---------------------- | ------ | ---- |
-| 名札_通常.xlsx / 名札_装飾あり.xlsx / 名札_1年生用.xlsx | grid | ✅ |
-| ラベル_大2.xlsx / ラベル_小.xlsx / ラベル_特大.xlsx | grid | ✅ |
-| 掲示用名列表.xlsx | grid | ✅ |
-| 調べ表.xlsx | grid | ✅ |
-| 横名簿.xlsx / 縦一週間.xlsx | grid | ✅ |
-| 男女一覧.xlsx | grid | ❌ enabled=False |
-| 修了台帳.xlsx / 卒業台帳.xlsx | list | ✅ |
-| 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | ✅ |
+| カテゴリ | テンプレートファイル名 | タイプ | 状態 |
+| -------- | ---------------------- | ------ | ---- |
+| 名札・ラベル | ラベル_色付き.xlsx / サンプル_名札.xlsx / 名札_1年生用.xlsx | grid | ✅ |
+| 名札・ラベル | ラベル_大2.xlsx / ラベル_小.xlsx / ラベル_特大.xlsx | grid | ✅ |
+| 名簿・出欠表 | 掲示用名列表.xlsx / 調べ表.xlsx | grid | ✅ |
+| 名簿・出欠表 | 横名簿.xlsx / 縦一週間.xlsx | grid | ✅ |
+| 名簿・出欠表 | 男女一覧.xlsx | grid | ❌ enabled=False |
+| 台帳 | 修了台帳.xlsx / 卒業台帳.xlsx | list | ✅ |
+| 個票 | 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | ✅ |
 
 ## C4th データの重要な仕様
 
@@ -162,7 +161,8 @@ App (CTk) — 2カラムレイアウト
 | `core/crypto.py` | AES-256-GCM 暗号化/復号 + DPAPI パスワード保護 | ✅ 17 |
 | `core/data_sync.py` | 名簿データ自動同期（LAN/GDrive/手動） | ✅ 15 |
 | `core/updater.py` | GitHub Releases ベースのアプリ更新 | ✅ 20 |
-| `templates/template_registry.py` | テンプレート 15 種メタデータ | — |
+| `templates/template_registry.py` | テンプレート 15 種メタデータ + カテゴリ別表示 | — |
+| `templates/template_scanner.py` | テンプレート自動検出（.xlsx スキャン → メタデータ推定） | ✅ 13 |
 | `templates/generators/gen_meireihyo.py` | 掲示用名列表テンプレート生成 | — |
 | `templates/generators/gen_nafuda.py` | 名札3種テンプレート生成 | — |
 | `templates/generators/gen_daicho.py` | 台帳2種テンプレート生成 | — |
@@ -172,10 +172,10 @@ App (CTk) — 2カラムレイアウト
 | `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
 | `templates/generators/generate_all.py` | 全テンプレート一括生成 | — |
 | `gui/app.py` | メインウィンドウ（2カラム + CTkTabview プレビュー） | — |
-| `gui/preview_renderer.py` | openpyxl Worksheet → PIL Image レンダラー | ✅ 22 |
+| `gui/preview_renderer.py` | openpyxl Worksheet → PIL Image レンダラー（IPAmj明朝・画像・垂直揃え対応） | ✅ 22 |
 | `gui/frames/import_frame.py` | ファイル選択・同期ステータス表示 | — |
 | `gui/frames/class_select_panel.py` | 学年・組選択 | — |
-| `gui/frames/select_frame.py` | テンプレート選択・担任名・学校名（変更コールバック付き） | — |
+| `gui/frames/select_frame.py` | テンプレート選択（カテゴリ別グループ表示）・担任名・学校名 | — |
 | `gui/frames/output_frame.py` | 生成ボタン・進捗バー | — |
 | `gui/dialogs/mapping_dialog.py` | カラムマッピング手動調整ダイアログ | ✅ 13 |
 | `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
@@ -189,7 +189,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **242 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **284 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 
