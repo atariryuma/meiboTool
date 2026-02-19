@@ -82,3 +82,65 @@ def merge_special_needs_students(
 
     # 末尾に追加（デフォルト）
     return pd.concat([regular_df, special_df], ignore_index=True)
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# 交流学級割り当て
+# ────────────────────────────────────────────────────────────────────────────
+
+
+def make_student_key(row: pd.Series) -> str:
+    """特支児童の一意キー文字列を生成する。
+
+    形式: ``"{学年}-{組}-{出席番号}"`` (例: ``"1-なかよし-1"``)
+    """
+    return f"{row['学年']}-{row['組']}-{row['出席番号']}"
+
+
+def get_assigned_students(
+    all_special_df: pd.DataFrame,
+    assignments: dict[str, str],
+    target_class: str,
+) -> pd.DataFrame:
+    """指定クラスに割り当てられた特支児童を返す。
+
+    Args:
+        all_special_df: 全特支児童の DataFrame
+        assignments: ``{student_key: "学年-組"}`` 形式の割り当て辞書
+        target_class: 取得対象のクラス (例: ``"1-1"``)
+
+    Returns:
+        *target_class* に割り当て済みの特支児童 DataFrame
+    """
+    if all_special_df.empty or not assignments:
+        return pd.DataFrame(columns=all_special_df.columns)
+
+    required = {'学年', '組', '出席番号'}
+    if not required.issubset(all_special_df.columns):
+        return pd.DataFrame(columns=all_special_df.columns)
+
+    mask = all_special_df.apply(
+        lambda r: assignments.get(make_student_key(r)) == target_class,
+        axis=1,
+    )
+    return all_special_df[mask].copy()
+
+
+def get_unassigned_students(
+    special_df: pd.DataFrame,
+    assignments: dict[str, str],
+) -> pd.DataFrame:
+    """まだ交流学級が割り当てられていない特支児童を返す。"""
+    if special_df.empty:
+        return special_df.copy()
+
+    required = {'学年', '組', '出席番号'}
+    if not required.issubset(special_df.columns):
+        return special_df.copy()
+
+    mask = special_df.apply(
+        lambda r: make_student_key(r) not in assignments
+        or assignments.get(make_student_key(r)) == '',
+        axis=1,
+    )
+    return special_df[mask].copy()

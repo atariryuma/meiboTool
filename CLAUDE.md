@@ -122,7 +122,7 @@ App (CTk) — 2カラムレイアウト
 ## C4th データの重要な仕様
 
 - **「組」「出席番号」は C4th に含まれない** — ファイル読込後にクラス選択パネルで教員が選択する（将来 C4th から出力予定）
-- **特別支援学級** — C4th の「組」列に非数字の値（「なかよし」「ひまわり」等）が入る。`is_special_needs_class()` で判定。交流学級への統合は UI オプションで制御
+- **特別支援学級** — C4th の「組」列に非数字の値（「なかよし」「ひまわり」等）が入る。`is_special_needs_class()` で判定。交流学級は初回インポート時にダイアログで割り当て → config に保存 → 以降自動統合
 - **全カラム `dtype=str` で読み込む** — 生年月日等の型変換は後工程で行う
 - **ヘッダー行自動検出** — ファイル先頭にメタ情報行がある可能性があるため、文字列セル 5 個以上の行を検索する
 
@@ -143,6 +143,8 @@ App (CTk) — 2カラムレイアウト
 | `data_source.gdrive_file_id` | Google Drive ファイル ID |
 | `data_source.encryption_password` | DPAPI で保護された暗号化パスワード |
 | `homeroom_teachers` | `{"1-1": "山田先生"}` 形式で担任名を保存 |
+| `special_needs_assignments` | `{"1-なかよし-1": "1-1"}` 形式で特支児童の交流学級割り当てを保存 |
+| `special_needs_placement` | `"appended"` (末尾追加) / `"integrated"` (出席番号順統合) |
 
 ## 現在地（セッション開始時に必ず確認）
 
@@ -173,15 +175,16 @@ App (CTk) — 2カラムレイアウト
 | `templates/generators/gen_gakkyuu_kojihyo.py` | 学級編成用個票テンプレート生成 | ✅ 19 |
 | `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
 | `templates/generators/generate_all.py` | 全テンプレート一括生成 | — |
-| `core/special_needs.py` | 特別支援学級判定・検出・統合ロジック | ✅ 22 |
-| `gui/app.py` | メインウィンドウ（2カラム + CTkTabview プレビュー + 特支統合） | ✅ 23 |
+| `core/special_needs.py` | 特別支援学級判定・検出・統合・交流学級割り当てロジック | ✅ 36 |
+| `gui/app.py` | メインウィンドウ（2カラム + CTkTabview プレビュー + 特支自動統合） | ✅ 35 |
 | `gui/preview_renderer.py` | openpyxl Worksheet → PIL Image レンダラー（IPAmj明朝・画像・垂直揃え対応） | ✅ 22 |
 | `gui/frames/import_frame.py` | ファイル選択・同期ステータス表示 | — |
 | `gui/frames/class_select_panel.py` | 学年・組選択 + 特別支援学級表示 | — |
-| `gui/frames/select_frame.py` | テンプレート選択（カテゴリ別）・担任名・学校名・特支オプション | — |
+| `gui/frames/select_frame.py` | テンプレート選択（カテゴリ別）・担任名・学校名・特支配置設定 | — |
 | `gui/frames/output_frame.py` | 生成ボタン・進捗バー | — |
 | `gui/dialogs/mapping_dialog.py` | カラムマッピング手動調整ダイアログ | ✅ 13 |
 | `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
+| `gui/dialogs/exchange_class_dialog.py` | 交流学級割り当てダイアログ | — |
 | `gui/dialogs/update_dialog.py` | 更新確認ダイアログ | — |
 | `.github/workflows/build-release.yml` | CI/CD（テスト→ビルド→Release） | — |
 | `tests/conftest.py` | 共通フィクスチャ | — |
@@ -192,7 +195,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **447 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **473 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 

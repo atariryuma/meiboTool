@@ -9,6 +9,7 @@ from collections.abc import Callable
 
 import customtkinter as ctk
 
+from core.config import save_config
 from templates.template_registry import get_display_groups
 
 
@@ -23,12 +24,14 @@ class SelectFrame(ctk.CTkFrame):
         on_teacher_save: Callable | None = None,
         on_school_name_save: Callable | None = None,
         on_template_change: Callable | None = None,
+        on_exchange_class_edit: Callable | None = None,
     ) -> None:
         super().__init__(master, corner_radius=6)
         self._config = config
         self._on_teacher_save = on_teacher_save
         self._on_school_name_save = on_school_name_save
         self._on_template_change = on_template_change
+        self._on_exchange_class_edit = on_exchange_class_edit
         self.grid_columnconfigure(0, weight=1)
 
         row = 0
@@ -184,42 +187,51 @@ class SelectFrame(ctk.CTkFrame):
         self._sn_header.grid(row=row, column=0, sticky='w', padx=14, pady=(2, 2))
         row += 1
 
-        self._sn_include_var = ctk.BooleanVar(value=False)
-        self._sn_checkbox = ctk.CTkCheckBox(
-            self,
-            text='特別支援学級の児童を含める',
-            variable=self._sn_include_var,
-            command=self._on_sn_toggle,
+        # 配置方法ラベル
+        self._sn_placement_label = ctk.CTkLabel(
+            self, text='配置方法:', font=ctk.CTkFont(size=11),
         )
-        self._sn_checkbox.grid(row=row, column=0, padx=(20, 10), pady=2, sticky='w')
+        self._sn_placement_label.grid(
+            row=row, column=0, sticky='w', padx=(20, 10), pady=(2, 1),
+        )
         row += 1
 
-        self._sn_placement_var = ctk.StringVar(value='appended')
+        self._sn_placement_var = ctk.StringVar(
+            value=config.get('special_needs_placement', 'appended'),
+        )
         self._sn_placement_widgets: list[ctk.CTkRadioButton] = []
         for val, label in (
-            ('integrated', '出席番号順に統合'),
             ('appended', '末尾に追加'),
+            ('integrated', '出席番号順に統合'),
         ):
             rb = ctk.CTkRadioButton(
                 self, text=label, value=val,
                 variable=self._sn_placement_var,
-                state='disabled',
             )
             rb.grid(row=row, column=0, padx=(40, 10), pady=1, sticky='w')
             self._sn_placement_widgets.append(rb)
             row += 1
 
+        # 交流学級の割り当てボタン
+        self._sn_edit_btn = ctk.CTkButton(
+            self, text='交流学級の割り当て',
+            width=160, command=self._on_exchange_class_click,
+        )
+        self._sn_edit_btn.grid(row=row, column=0, padx=(20, 10), pady=(6, 4), sticky='w')
+        row += 1
+
         # 特支オプション全ウィジェット（表示/非表示切り替え用）
         self._sn_widgets_all: list[ctk.CTkBaseClass] = [
             self._sn_separator, self._sn_header,
-            self._sn_checkbox, *self._sn_placement_widgets,
+            self._sn_placement_label,
+            *self._sn_placement_widgets,
+            self._sn_edit_btn,
         ]
         for w in self._sn_widgets_all:
             w.grid_remove()
 
-        # 特支チェック変更時もプレビューを更新
-        self._sn_include_var.trace_add('write', self._fire_template_change)
-        self._sn_placement_var.trace_add('write', self._fire_template_change)
+        # 配置変更時は config に保存 + プレビューを更新
+        self._sn_placement_var.trace_add('write', self._on_placement_change)
 
         self._all_widgets = self._radio_widgets + self._mode_widgets + [
             self._school_entry,
@@ -259,8 +271,6 @@ class SelectFrame(ctk.CTkFrame):
             'teacher_name': self._teacher_var.get(),
             'school_name': self._school_var.get(),
             'name_display': self._mode_var.get(),
-            'include_special_needs': self._sn_include_var.get(),
-            'special_needs_placement': self._sn_placement_var.get(),
         }
 
     def set_special_needs_visible(self, visible: bool) -> None:
@@ -270,16 +280,19 @@ class SelectFrame(ctk.CTkFrame):
                 w.grid()
             else:
                 w.grid_remove()
-        if not visible:
-            self._sn_include_var.set(False)
 
     # ── 内部 ─────────────────────────────────────────────────────────────
 
-    def _on_sn_toggle(self) -> None:
-        """特支インクルードチェックの変更時、配置ラジオの有効/無効を切り替える。"""
-        state = 'normal' if self._sn_include_var.get() else 'disabled'
-        for rb in self._sn_placement_widgets:
-            rb.configure(state=state)
+    def _on_exchange_class_click(self) -> None:
+        """交流学級の割り当てボタン押下時。"""
+        if self._on_exchange_class_edit:
+            self._on_exchange_class_edit()
+
+    def _on_placement_change(self, *_args) -> None:
+        """配置方法変更時に config に保存 + プレビュー更新。"""
+        self._config['special_needs_placement'] = self._sn_placement_var.get()
+        save_config(self._config)
+        self._fire_template_change()
 
     def _fire_template_change(self, *_args) -> None:
         """テンプレートまたは名前表示モード変更時にコールバックを発火する。"""
