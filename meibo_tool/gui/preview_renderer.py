@@ -197,6 +197,188 @@ def _draw_images(
             continue
 
 
+# ── 描画パス（render_worksheet から分離） ─────────────────────────────────────
+
+def _cell_rect(
+    r: int,
+    c: int,
+    r_idx: int,
+    c_idx: int,
+    anchors: dict[tuple[int, int], tuple[int, int, int, int]],
+    col_x: list[float],
+    row_y: list[float],
+    num_cols: int,
+    num_rows: int,
+) -> tuple[float, float, float, float]:
+    """セル (r, c) の矩形 (x1, y1, x2, y2) を返す。結合セルの場合は全体矩形。"""
+    if (r, c) in anchors:
+        mr = anchors[(r, c)]
+        return (
+            col_x[mr[1] - 1],
+            row_y[mr[0] - 1],
+            col_x[min(mr[3], num_cols)],
+            row_y[min(mr[2], num_rows)],
+        )
+    return col_x[c_idx], row_y[r_idx], col_x[c_idx + 1], row_y[r_idx + 1]
+
+
+def _render_fills_and_grid(
+    ws: Worksheet,
+    draw: ImageDraw.ImageDraw,
+    num_rows: int,
+    num_cols: int,
+    anchors: dict,
+    covered: set,
+    col_x: list[float],
+    row_y: list[float],
+) -> None:
+    """Pass 1: セル塗りつぶし + グリッド線。"""
+    for r_idx in range(num_rows):
+        r = r_idx + 1
+        for c_idx in range(num_cols):
+            c = c_idx + 1
+            if (r, c) in covered:
+                continue
+
+            x1, y1, x2, y2 = _cell_rect(r, c, r_idx, c_idx, anchors, col_x, row_y, num_cols, num_rows)
+
+            cell = ws.cell(row=r, column=c)
+            if not isinstance(cell, MergedCell) and cell.fill and cell.fill.fgColor:
+                fill_rgb = _color_to_rgb(cell.fill.fgColor)
+                if fill_rgb and fill_rgb != (0, 0, 0):
+                    draw.rectangle([x1, y1, x2, y2], fill=fill_rgb)
+
+            draw.rectangle([x1, y1, x2, y2], outline=_GRID_COLOR)
+
+
+def _render_borders(
+    ws: Worksheet,
+    draw: ImageDraw.ImageDraw,
+    num_rows: int,
+    num_cols: int,
+    anchors: dict,
+    covered: set,
+    col_x: list[float],
+    row_y: list[float],
+) -> None:
+    """Pass 2: セル罫線。"""
+    for r_idx in range(num_rows):
+        r = r_idx + 1
+        for c_idx in range(num_cols):
+            c = c_idx + 1
+            if (r, c) in covered:
+                continue
+
+            cell = ws.cell(row=r, column=c)
+            if isinstance(cell, MergedCell) or not cell.border:
+                continue
+
+            x1, y1, x2, y2 = _cell_rect(r, c, r_idx, c_idx, anchors, col_x, row_y, num_cols, num_rows)
+
+            bdr = cell.border
+            for side_name, coords in [
+                ('top', [(x1, y1), (x2, y1)]),
+                ('bottom', [(x1, y2), (x2, y2)]),
+                ('left', [(x1, y1), (x1, y2)]),
+                ('right', [(x2, y1), (x2, y2)]),
+            ]:
+                side = getattr(bdr, side_name, None)
+                if side and side.style:
+                    if side.style in ('medium', 'thick'):
+                        draw.line(coords, fill=_BORDER_MEDIUM_COLOR, width=2)
+                    else:
+                        draw.line(coords, fill=_BORDER_THIN_COLOR, width=1)
+
+
+def _render_text(
+    ws: Worksheet,
+    draw: ImageDraw.ImageDraw,
+    num_rows: int,
+    num_cols: int,
+    anchors: dict,
+    covered: set,
+    col_x: list[float],
+    row_y: list[float],
+    scale: float,
+) -> None:
+    """Pass 3: テキスト描画。"""
+    for r_idx in range(num_rows):
+        r = r_idx + 1
+        for c_idx in range(num_cols):
+            c = c_idx + 1
+            if (r, c) in covered:
+                continue
+
+            cell = ws.cell(row=r, column=c)
+            if isinstance(cell, MergedCell) or cell.value is None:
+                continue
+
+            text = str(cell.value)
+            if not text:
+                continue
+
+            x1, y1, x2, y2 = _cell_rect(r, c, r_idx, c_idx, anchors, col_x, row_y, num_cols, num_rows)
+
+            # フォント
+            font_size_pt = 11
+            is_bold = False
+            if cell.font:
+                if cell.font.size:
+                    font_size_pt = cell.font.size
+                is_bold = bool(cell.font.bold)
+            font = _load_font(max(8, int(font_size_pt * scale)), is_bold)
+
+            # テキストカラー
+            text_rgb = _TEXT_COLOR
+            if cell.font and cell.font.color:
+                c_rgb = _color_to_rgb(cell.font.color)
+                if c_rgb:
+                    text_rgb = c_rgb
+
+            # アライメント
+            h_align = 'left'
+            v_align = 'center'
+            if cell.alignment:
+                if cell.alignment.horizontal:
+                    h_align = cell.alignment.horizontal
+                if cell.alignment.vertical:
+                    v_align = cell.alignment.vertical
+
+            cell_w = x2 - x1
+            cell_h = y2 - y1
+
+            # テキスト測定 + 切り詰め
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+
+            max_text_w = cell_w - _CELL_PAD * 2
+            if text_w > max_text_w and max_text_w > 0:
+                ratio = max_text_w / text_w
+                text = text[:max(1, int(len(text) * ratio))] + '…'
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_w = bbox[2] - bbox[0]
+                text_h = bbox[3] - bbox[1]
+
+            # 水平位置
+            if h_align == 'center':
+                tx = x1 + (cell_w - text_w) / 2
+            elif h_align == 'right':
+                tx = x2 - text_w - _CELL_PAD
+            else:
+                tx = x1 + _CELL_PAD
+
+            # 垂直位置
+            if v_align == 'top':
+                ty = y1 + _CELL_PAD
+            elif v_align == 'bottom':
+                ty = y2 - text_h - _CELL_PAD
+            else:
+                ty = y1 + (cell_h - text_h) / 2
+
+            draw.text((tx, ty), text, fill=text_rgb, font=font)
+
+
 # ── メイン API ─────────────────────────────────────────────────────────────────
 
 def render_worksheet(
@@ -225,19 +407,14 @@ def render_worksheet(
     col_widths = _get_col_widths(ws, num_cols, scale)
     row_heights = _get_row_heights(ws, num_rows, scale)
 
-    total_w = int(sum(col_widths) + _MARGIN * 2)
-    total_h = int(sum(row_heights) + _MARGIN * 2)
-
-    # 最小サイズ保証
-    total_w = max(total_w, 100)
-    total_h = max(total_h, 50)
+    total_w = max(int(sum(col_widths) + _MARGIN * 2), 100)
+    total_h = max(int(sum(row_heights) + _MARGIN * 2), 50)
 
     img = Image.new('RGB', (total_w, total_h), _BG_COLOR)
     draw = ImageDraw.Draw(img)
 
     anchors, covered = _build_merge_info(ws)
 
-    # 行・列のピクセル位置テーブル（累積）
     col_x = [_MARGIN]
     for w in col_widths:
         col_x.append(col_x[-1] + w)
@@ -246,178 +423,9 @@ def render_worksheet(
     for h in row_heights:
         row_y.append(row_y[-1] + h)
 
-    # ── Pass 1: 塗りつぶし + グリッド線 ──────────────────────────────────────
-    for r_idx in range(num_rows):
-        r = r_idx + 1  # 1-based
-        for c_idx in range(num_cols):
-            c = c_idx + 1  # 1-based
-
-            if (r, c) in covered:
-                continue
-
-            # セル矩形の算出
-            if (r, c) in anchors:
-                mr = anchors[(r, c)]
-                x1 = col_x[mr[1] - 1]
-                y1 = row_y[mr[0] - 1]
-                x2 = col_x[min(mr[3], num_cols)]
-                y2 = row_y[min(mr[2], num_rows)]
-            else:
-                x1 = col_x[c_idx]
-                y1 = row_y[r_idx]
-                x2 = col_x[c_idx + 1]
-                y2 = row_y[r_idx + 1]
-
-            # 塗りつぶし
-            cell = ws.cell(row=r, column=c)
-            if not isinstance(cell, MergedCell) and cell.fill and cell.fill.fgColor:
-                fill_rgb = _color_to_rgb(cell.fill.fgColor)
-                if fill_rgb and fill_rgb != (0, 0, 0):
-                    draw.rectangle([x1, y1, x2, y2], fill=fill_rgb)
-
-            # グリッド線（薄い線）
-            draw.rectangle([x1, y1, x2, y2], outline=_GRID_COLOR)
-
-    # ── Pass 2: 罫線 ──────────────────────────────────────────────────────
-    for r_idx in range(num_rows):
-        r = r_idx + 1
-        for c_idx in range(num_cols):
-            c = c_idx + 1
-
-            if (r, c) in covered:
-                continue
-
-            cell = ws.cell(row=r, column=c)
-            if isinstance(cell, MergedCell):
-                continue
-
-            if not cell.border:
-                continue
-
-            if (r, c) in anchors:
-                mr = anchors[(r, c)]
-                x1 = col_x[mr[1] - 1]
-                y1 = row_y[mr[0] - 1]
-                x2 = col_x[min(mr[3], num_cols)]
-                y2 = row_y[min(mr[2], num_rows)]
-            else:
-                x1 = col_x[c_idx]
-                y1 = row_y[r_idx]
-                x2 = col_x[c_idx + 1]
-                y2 = row_y[r_idx + 1]
-
-            bdr = cell.border
-            for side_name, coords in [
-                ('top', [(x1, y1), (x2, y1)]),
-                ('bottom', [(x1, y2), (x2, y2)]),
-                ('left', [(x1, y1), (x1, y2)]),
-                ('right', [(x2, y1), (x2, y2)]),
-            ]:
-                side = getattr(bdr, side_name, None)
-                if side and side.style:
-                    if side.style in ('medium', 'thick'):
-                        draw.line(coords, fill=_BORDER_MEDIUM_COLOR, width=2)
-                    else:
-                        draw.line(coords, fill=_BORDER_THIN_COLOR, width=1)
-
-    # ── Pass 3: テキスト ──────────────────────────────────────────────────
-    for r_idx in range(num_rows):
-        r = r_idx + 1
-        for c_idx in range(num_cols):
-            c = c_idx + 1
-
-            if (r, c) in covered:
-                continue
-
-            cell = ws.cell(row=r, column=c)
-            if isinstance(cell, MergedCell):
-                continue
-
-            if cell.value is None:
-                continue
-
-            text = str(cell.value)
-            if not text:
-                continue
-
-            # セル矩形
-            if (r, c) in anchors:
-                mr = anchors[(r, c)]
-                x1 = col_x[mr[1] - 1]
-                y1 = row_y[mr[0] - 1]
-                x2 = col_x[min(mr[3], num_cols)]
-                y2 = row_y[min(mr[2], num_rows)]
-            else:
-                x1 = col_x[c_idx]
-                y1 = row_y[r_idx]
-                x2 = col_x[c_idx + 1]
-                y2 = row_y[r_idx + 1]
-
-            # フォントサイズ
-            font_size_pt = 11  # デフォルト
-            is_bold = False
-            if cell.font:
-                if cell.font.size:
-                    font_size_pt = cell.font.size
-                is_bold = bool(cell.font.bold)
-
-            font_size_px = max(8, int(font_size_pt * scale))
-            font = _load_font(font_size_px, is_bold)
-
-            # テキストカラー
-            text_rgb = _TEXT_COLOR
-            if cell.font and cell.font.color:
-                c_rgb = _color_to_rgb(cell.font.color)
-                if c_rgb:
-                    text_rgb = c_rgb
-
-            # アライメント
-            h_align = 'left'
-            v_align = 'center'
-            if cell.alignment:
-                if cell.alignment.horizontal:
-                    h_align = cell.alignment.horizontal
-                if cell.alignment.vertical:
-                    v_align = cell.alignment.vertical
-
-            # テキスト描画位置の計算
-            cell_w = x2 - x1
-            cell_h = y2 - y1
-
-            # テキストが長すぎる場合は切り詰め
-            bbox = draw.textbbox((0, 0), text, font=font)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
-
-            max_text_w = cell_w - _CELL_PAD * 2
-            if text_w > max_text_w and max_text_w > 0:
-                ratio = max_text_w / text_w
-                max_chars = max(1, int(len(text) * ratio))
-                text = text[:max_chars] + '…'
-                bbox = draw.textbbox((0, 0), text, font=font)
-                text_w = bbox[2] - bbox[0]
-                text_h = bbox[3] - bbox[1]
-
-            # 水平位置
-            if h_align == 'center':
-                tx = x1 + (cell_w - text_w) / 2
-            elif h_align == 'right':
-                tx = x2 - text_w - _CELL_PAD
-            else:
-                tx = x1 + _CELL_PAD
-
-            # 垂直位置
-            if v_align == 'top':
-                ty = y1 + _CELL_PAD
-            elif v_align == 'bottom':
-                ty = y2 - text_h - _CELL_PAD
-            else:
-                # center (default)
-                ty = y1 + (cell_h - text_h) / 2
-
-            draw.text((tx, ty), text, fill=text_rgb, font=font)
-
-    # ── Pass 4: 埋め込み画像 ──────────────────────────────────────────────
+    _render_fills_and_grid(ws, draw, num_rows, num_cols, anchors, covered, col_x, row_y)
+    _render_borders(ws, draw, num_rows, num_cols, anchors, covered, col_x, row_y)
+    _render_text(ws, draw, num_rows, num_cols, anchors, covered, col_x, row_y, scale)
     _draw_images(ws, img, col_x, row_y, scale)
 
     return img
