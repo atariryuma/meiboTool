@@ -2,16 +2,19 @@
 
 GUI 右パネルのテンプレートプレビュー用。
 印刷品質ではなくレイアウト確認用の簡易レンダリング。
-フォントは Meiryo（Windows 標準）で近似表示する。
+フォントは IPAmj明朝（実印刷用フォント）→ Meiryo → YuGothic → MSGothic の順で検索。
+テンプレートに埋め込まれた画像も描画する。
 """
 
 from __future__ import annotations
 
 import functools
+import io
 import os
 from typing import TYPE_CHECKING
 
 from openpyxl.cell.cell import MergedCell
+from openpyxl.utils.units import EMU_to_pixels
 from PIL import Image, ImageDraw, ImageFont
 
 if TYPE_CHECKING:
@@ -32,20 +35,29 @@ _BORDER_THIN_COLOR = (120, 120, 120)
 _BORDER_MEDIUM_COLOR = (40, 40, 40)
 _TEXT_COLOR = (30, 30, 30)
 
-# Windows フォントパス候補
+# Windows フォントパス候補（実印刷フォント IPAmj明朝 を最優先）
 _FONT_PATHS = [
+    'C:/Windows/Fonts/ipamjm.ttf',
     'C:/Windows/Fonts/meiryo.ttc',
     'C:/Windows/Fonts/YuGothR.ttc',
+    'C:/Windows/Fonts/msgothic.ttc',
+]
+
+# bold 用フォントパス候補
+_BOLD_FONT_PATHS = [
+    'C:/Windows/Fonts/meiryob.ttc',
+    'C:/Windows/Fonts/YuGothB.ttc',
     'C:/Windows/Fonts/msgothic.ttc',
 ]
 
 
 # ── フォントキャッシュ ─────────────────────────────────────────────────────────
 
-@functools.lru_cache(maxsize=32)
+@functools.lru_cache(maxsize=64)
 def _load_font(size_px: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """システムフォントを読み込む。見つからない場合は PIL デフォルト。"""
-    for path in _FONT_PATHS:
+    """システムフォントを読み込む。bold の場合は専用フォントを試す。"""
+    paths = _BOLD_FONT_PATHS + _FONT_PATHS if bold else _FONT_PATHS
+    for path in paths:
         if os.path.exists(path):
             try:
                 return ImageFont.truetype(path, size=size_px, index=0)
@@ -125,6 +137,64 @@ def _build_merge_info(
                 if (r, c) != (mr[0], mr[1]):
                     covered.add((r, c))
     return anchors, covered
+
+
+def _draw_images(
+    ws: Worksheet,
+    img: Image.Image,
+    col_x: list[float],
+    row_y: list[float],
+    scale: float,
+) -> None:
+    """ワークシートに埋め込まれた画像を描画する。"""
+    if not hasattr(ws, '_images') or not ws._images:
+        return
+
+    for ws_img in ws._images:
+        try:
+            # 画像データ取得
+            img_data = io.BytesIO(ws_img._data())
+            pil_img = Image.open(img_data)
+
+            # アンカー位置の取得
+            anchor = ws_img.anchor
+            if hasattr(anchor, 'min_row') and hasattr(anchor, 'min_col'):
+                # TwoCellAnchor / OneCellAnchor — (0-based)
+                r = anchor.min_row
+                c = anchor.min_col
+            elif hasattr(anchor, '_from'):
+                r = anchor._from.row
+                c = anchor._from.col
+            else:
+                continue
+
+            if r >= len(row_y) or c >= len(col_x):
+                continue
+
+            x = int(col_x[c])
+            y = int(row_y[r])
+
+            # 画像サイズの決定
+            if hasattr(ws_img, 'width') and hasattr(ws_img, 'height'):
+                w = int(EMU_to_pixels(ws_img.width) * scale) if ws_img.width > 1000 else int(ws_img.width * scale)
+                h = int(EMU_to_pixels(ws_img.height) * scale) if ws_img.height > 1000 else int(ws_img.height * scale)
+            else:
+                w = int(pil_img.width * scale)
+                h = int(pil_img.height * scale)
+
+            if w > 0 and h > 0:
+                pil_img = pil_img.resize((w, h), Image.LANCZOS)
+                # RGBA → RGB 合成
+                if pil_img.mode == 'RGBA':
+                    bg = Image.new('RGB', pil_img.size, _BG_COLOR)
+                    bg.paste(pil_img, mask=pil_img.split()[3])
+                    pil_img = bg
+                elif pil_img.mode != 'RGB':
+                    pil_img = pil_img.convert('RGB')
+
+                img.paste(pil_img, (x, y))
+        except Exception:
+            continue
 
 
 # ── メイン API ─────────────────────────────────────────────────────────────────
@@ -303,8 +373,12 @@ def render_worksheet(
 
             # アライメント
             h_align = 'left'
-            if cell.alignment and cell.alignment.horizontal:
-                h_align = cell.alignment.horizontal
+            v_align = 'center'
+            if cell.alignment:
+                if cell.alignment.horizontal:
+                    h_align = cell.alignment.horizontal
+                if cell.alignment.vertical:
+                    v_align = cell.alignment.vertical
 
             # テキスト描画位置の計算
             cell_w = x2 - x1
@@ -317,13 +391,14 @@ def render_worksheet(
 
             max_text_w = cell_w - _CELL_PAD * 2
             if text_w > max_text_w and max_text_w > 0:
-                # 文字数で切り詰め
                 ratio = max_text_w / text_w
                 max_chars = max(1, int(len(text) * ratio))
                 text = text[:max_chars] + '…'
                 bbox = draw.textbbox((0, 0), text, font=font)
                 text_w = bbox[2] - bbox[0]
+                text_h = bbox[3] - bbox[1]
 
+            # 水平位置
             if h_align == 'center':
                 tx = x1 + (cell_w - text_w) / 2
             elif h_align == 'right':
@@ -331,8 +406,18 @@ def render_worksheet(
             else:
                 tx = x1 + _CELL_PAD
 
-            ty = y1 + (cell_h - text_h) / 2
+            # 垂直位置
+            if v_align == 'top':
+                ty = y1 + _CELL_PAD
+            elif v_align == 'bottom':
+                ty = y2 - text_h - _CELL_PAD
+            else:
+                # center (default)
+                ty = y1 + (cell_h - text_h) / 2
 
             draw.text((tx, ty), text, fill=text_rgb, font=font)
+
+    # ── Pass 4: 埋め込み画像 ──────────────────────────────────────────────
+    _draw_images(ws, img, col_x, row_y, scale)
 
     return img
