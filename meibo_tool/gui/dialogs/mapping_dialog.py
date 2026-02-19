@@ -148,6 +148,20 @@ class MappingDialog(ctk.CTkToplevel):
 
     def _on_ok(self) -> None:
         mapping = self._collect_mapping()
+        # 同じ論理名に複数列がマップされていないか検証
+        seen: dict[str, str] = {}
+        for col, logical in mapping.items():
+            if logical in seen:
+                import tkinter.messagebox as _mb
+                _mb.showwarning(
+                    '重複マッピング',
+                    f'「{logical}」が複数の列に割り当てられています:\n'
+                    f'  ・{seen[logical]}\n  ・{col}\n\n'
+                    'どちらか一方をスキップしてください。',
+                    parent=self,
+                )
+                return
+            seen[logical] = col
         self._on_confirm(mapping)
         self.destroy()
 

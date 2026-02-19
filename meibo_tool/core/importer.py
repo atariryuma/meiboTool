@@ -16,17 +16,19 @@ def detect_header_row(filepath: str, max_scan: int = 10) -> int:
     判定基準: 文字列セルが 5 つ以上連続する最初の行（1-indexed）。
     """
     wb = load_workbook(filepath, read_only=True, data_only=True)
-    ws = wb.active
-    result = 1  # フォールバック
-    for row_idx, row in enumerate(ws.iter_rows(max_row=max_scan), 1):
-        str_count = sum(
-            1 for cell in row
-            if cell.value is not None and isinstance(cell.value, str)
-        )
-        if str_count >= 5:
-            result = row_idx
-            break
-    wb.close()
+    try:
+        ws = wb.active
+        result = 1  # フォールバック
+        for row_idx, row in enumerate(ws.iter_rows(max_row=max_scan), 1):
+            str_count = sum(
+                1 for cell in row
+                if cell.value is not None and isinstance(cell.value, str)
+            )
+            if str_count >= 5:
+                result = row_idx
+                break
+    finally:
+        wb.close()
     return result
 
 

@@ -95,7 +95,13 @@ class ClassSelectPanel(ctk.CTkFrame):
         self._classes['-'] = (None, None, total)
         row_num += 1
 
-        for grade in sorted(grade_dict.keys()):
+        def _int_key(s: str) -> int:
+            try:
+                return int(s)
+            except ValueError:
+                return 0
+
+        for grade in sorted(grade_dict.keys(), key=_int_key):
             class_list = grade_dict[grade]
             grade_total = sum(c for _, c in class_list)
             grade_key = f'{grade}-'
@@ -111,7 +117,7 @@ class ClassSelectPanel(ctk.CTkFrame):
             self._classes[grade_key] = (grade, None, grade_total)
             row_num += 1
 
-            for (kumi, count) in sorted(class_list):
+            for (kumi, count) in sorted(class_list, key=lambda x: _int_key(x[0])):
                 val = f'{grade}-{kumi}'
                 ctk.CTkRadioButton(
                     self._radio_frame,

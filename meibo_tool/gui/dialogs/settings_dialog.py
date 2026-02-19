@@ -221,9 +221,29 @@ class SettingsDialog(ctk.CTkToplevel):
         """設定を保存する。"""
         mode = self._mode_var.get()
 
+        # LAN モード時は共有フォルダパス必須
+        lan_path = self._lan_entry.get().strip()
+        if mode == 'lan' and not lan_path:
+            mb.showwarning(
+                'パス未入力',
+                'LAN モードでは共有フォルダのパスを入力してください。',
+                parent=self,
+            )
+            return
+
+        # Google Drive モード時はファイル ID 必須
+        gd_id = self._gd_id_entry.get().strip()
+        if mode == 'gdrive' and not gd_id:
+            mb.showwarning(
+                'ファイル ID 未入力',
+                'Google Drive モードではファイル ID を入力してください。',
+                parent=self,
+            )
+            return
+
         self._ds['mode'] = mode
-        self._ds['lan_path'] = self._lan_entry.get().strip()
-        self._ds['gdrive_file_id'] = self._gd_id_entry.get().strip()
+        self._ds['lan_path'] = lan_path
+        self._ds['gdrive_file_id'] = gd_id
 
         pw = self._pw_entry.get().strip()
         if pw:

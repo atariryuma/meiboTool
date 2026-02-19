@@ -459,17 +459,19 @@ class App(ctk.CTk):
             ws = wb.active
             img = render_worksheet(ws, max_rows=60, max_cols=15, scale=1.5)
 
-            # メインスレッドで表示
-            self.after(0, lambda: self._right.show_preview_image(img))
+            # メインスレッドで表示（ウィンドウ破棄済みなら無視）
+            if self.winfo_exists():
+                self.after(0, lambda: self._right.show_preview_image(img))
 
         except Exception:
             logger.exception('プレビュー生成中にエラーが発生しました')
-            self.after(
-                0,
-                lambda: self._right.show_preview_error(
-                    'プレビューの生成中にエラーが発生しました'
-                ),
-            )
+            if self.winfo_exists():
+                self.after(
+                    0,
+                    lambda: self._right.show_preview_error(
+                        'プレビューの生成中にエラーが発生しました'
+                    ),
+                )
         finally:
             if tmp_path:
                 import contextlib

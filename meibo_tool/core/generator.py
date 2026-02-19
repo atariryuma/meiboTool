@@ -181,15 +181,24 @@ class BaseGenerator(ABC):
         # テンプレートをコピーしてから開く（元ファイル保護＋画像消失防止）
         shutil.copy2(self.template_path, self.output_path)
         self.wb = load_workbook(self.output_path)
-        self._populate()
-        self._apply_font_all()
-        self.wb.save(self.output_path)
-        self.wb.close()
+        try:
+            self._populate()
+            self._apply_font_all()
+            self.wb.save(self.output_path)
+        finally:
+            self.wb.close()
         return self.output_path
 
     def _apply_font_all(self) -> None:
         for ws in self.wb.worksheets:
             apply_font(ws)
+
+    def _get_template_meta(self) -> dict:
+        """TEMPLATES レジストリからテンプレートファイル名でメタデータを検索する。"""
+        for _name, meta in TEMPLATES.items():
+            if meta['file'] == os.path.basename(self.template_path):
+                return meta
+        return {}
 
     @abstractmethod
     def _populate(self) -> None:
@@ -248,13 +257,6 @@ class GridGenerator(BaseGenerator):
                 for slot, (_, row) in enumerate(page_data.iterrows(), 1):
                     _fill_numbered(page_ws, slot, row.to_dict(), self.options)
                 fill_placeholders(page_ws, page_data.iloc[0].to_dict(), self.options)
-
-    def _get_template_meta(self) -> dict:
-        for _name, meta in TEMPLATES.items():
-            if meta['file'] == os.path.basename(self.template_path):
-                return meta
-        return {}
-
 
 def _fill_numbered(ws, idx: int, data_row: dict, options: dict) -> None:
     """{{氏名_1}}, {{氏名_2}} ... 形式の番号付きプレースホルダーを置換する。
@@ -324,12 +326,6 @@ class ListGenerator(BaseGenerator):
         # ヘッダーのプレースホルダー（年度・学校名等）を置換
         first_row = self.data.iloc[0].to_dict() if len(self.data) > 0 else {}
         fill_placeholders(ws, first_row, self.options)
-
-    def _get_template_meta(self) -> dict:
-        for _name, meta in TEMPLATES.items():
-            if meta['file'] == os.path.basename(self.template_path):
-                return meta
-        return {}
 
     def _find_template_row(self, ws) -> int | None:
         """氏名系プレースホルダーを含む最初の行番号を返す。"""
@@ -421,12 +417,6 @@ class IndividualGenerator(BaseGenerator):
         for ws, row_dict in sheets:
             fill_placeholders(ws, row_dict, self.options)
             setup_print(ws, orientation=orientation)
-
-    def _get_template_meta(self) -> dict:
-        for _name, meta in TEMPLATES.items():
-            if meta['file'] == os.path.basename(self.template_path):
-                return meta
-        return {}
 
 
 # ────────────────────────────────────────────────────────────────────────────

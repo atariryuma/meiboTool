@@ -185,10 +185,13 @@ class SelectFrame(ctk.CTkFrame):
         return self._tmpl_var.get()
 
     def get_options(self) -> dict:
+        default_fy = self._config.get('fiscal_year', 2025)
         try:
             fy = int(self._fy_var.get())
+            if not (2000 <= fy <= 2100):
+                fy = default_fy
         except ValueError:
-            fy = self._config.get('fiscal_year', 2025)
+            fy = default_fy
         return {
             'fiscal_year': fy,
             'teacher_name': self._teacher_var.get(),

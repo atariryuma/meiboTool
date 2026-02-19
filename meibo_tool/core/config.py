@@ -13,15 +13,29 @@ def _current_fiscal_year() -> int:
     return today.year if today.month >= 4 else today.year - 1
 
 
-def _get_config_path() -> str:
-    """config.json の絶対パスを返す。exe / 開発どちらでも動作する。"""
+def _get_app_dir() -> str:
+    """アプリの実行ディレクトリを返す（ユーザー書き込み用）。"""
     if getattr(sys, 'frozen', False):
-        base = os.path.dirname(sys.executable)
-    else:
-        # config.py は meibo_tool/core/ にある。
-        # meibo_tool/core/config.py → core → meibo_tool → project_root
-        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    return os.path.join(base, 'config.json')
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _get_bundle_dir() -> str:
+    """PyInstaller バンドルデータのディレクトリを返す（読み取り専用リソース用）。
+
+    frozen 時は sys._MEIPASS（_internal/）、開発時はプロジェクトルート。
+    """
+    if getattr(sys, 'frozen', False):
+        return getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _get_config_path() -> str:
+    """config.json の絶対パスを返す。exe / 開発どちらでも動作する。
+
+    ユーザーが編集した config.json は exe と同じディレクトリに保存される。
+    """
+    return os.path.join(_get_app_dir(), 'config.json')
 
 
 def _default_config() -> dict[str, Any]:
@@ -68,18 +82,32 @@ def _deep_merge(base: dict, override: dict) -> dict:
 
 
 def load_config() -> dict[str, Any]:
-    """config.json を読み込む。存在しない / 不正な場合はデフォルト値を返す。"""
+    """config.json を読み込む。存在しない / 不正な場合はデフォルト値を返す。
+
+    読み込み優先順位:
+      1. exe ディレクトリの config.json（ユーザー編集版）
+      2. バンドルディレクトリの config.json（初期同梱版）
+      3. デフォルト値
+    """
     defaults = _default_config()
-    path = _get_config_path()
-    if not os.path.exists(path):
-        return _deep_merge(defaults, {})
-    try:
-        with open(path, encoding='utf-8') as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return _deep_merge(defaults, {})
-    # デフォルト値で補完（ネスト辞書も再帰マージで後方互換）
-    return _deep_merge(defaults, data)
+
+    # 読み込み候補パス（ユーザー版 → バンドル版）
+    candidates = [_get_config_path()]
+    bundle_path = os.path.join(_get_bundle_dir(), 'config.json')
+    if bundle_path != candidates[0]:
+        candidates.append(bundle_path)
+
+    for path in candidates:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding='utf-8') as f:
+                data = json.load(f)
+            return _deep_merge(defaults, data)
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    return _deep_merge(defaults, {})
 
 
 def save_config(config: dict[str, Any]) -> None:
@@ -90,15 +118,27 @@ def save_config(config: dict[str, Any]) -> None:
 
 
 def get_template_dir(config: dict[str, Any]) -> str:
-    """テンプレートフォルダの絶対パスを返す。"""
+    """テンプレートフォルダの絶対パスを返す。
+
+    解決順序:
+      1. exe ディレクトリからの相対パス（ユーザーがテンプレートを上書きした場合）
+      2. バンドルディレクトリ内のテンプレート（PyInstaller 同梱版）
+    """
     raw = config.get('template_dir', './テンプレート')
     if os.path.isabs(raw):
         return raw
-    base = os.path.dirname(_get_config_path())
-    return os.path.normpath(os.path.join(base, raw))
+    # exe ディレクトリから解決
+    app_path = os.path.normpath(os.path.join(_get_app_dir(), raw))
+    if os.path.isdir(app_path):
+        return app_path
+    # バンドルディレクトリにフォールバック（PyInstaller frozen）
+    bundle_path = os.path.normpath(os.path.join(_get_bundle_dir(), raw))
+    if os.path.isdir(bundle_path):
+        return bundle_path
+    return app_path
 
 
-def get_cache_dir(config: dict[str, Any] | None = None) -> str:
+def get_cache_dir() -> str:
     """キャッシュディレクトリの絶対パスを返す。存在しない場合は作成する。"""
     base = os.path.dirname(_get_config_path())
     path = os.path.join(base, 'cache')

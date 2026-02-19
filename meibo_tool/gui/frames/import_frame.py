@@ -81,5 +81,9 @@ class ImportFrame(ctk.CTkFrame):
             )
             self.on_load(df_mapped, unmapped, path)
         except Exception as e:
-            self._path_label.configure(text=str(e)[:60], text_color='red')
+            msg = str(e)
+            self._path_label.configure(text=msg[:80], text_color='red')
             self._count_label.configure(text='❌ 読込エラー', text_color='red')
+            if len(msg) > 80:
+                import tkinter.messagebox as _mb
+                _mb.showerror('読込エラー', msg)

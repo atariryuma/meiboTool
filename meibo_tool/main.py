@@ -1,5 +1,6 @@
 """名簿帳票ツール — エントリーポイント"""
 
+import logging
 import os
 import sys
 
@@ -9,9 +10,17 @@ if getattr(sys, 'frozen', False):
 
 
 def main():
-    from gui.app import App
-    app = App()
-    app.mainloop()
+    try:
+        from gui.app import App
+        app = App()
+        app.mainloop()
+    except Exception:
+        logging.exception('アプリの起動に失敗しました')
+        try:
+            import tkinter.messagebox as _mb
+            _mb.showerror('起動エラー', 'アプリの起動に失敗しました。\nログを確認してください。')
+        except Exception:
+            pass
 
 
 if __name__ == '__main__':
