@@ -307,6 +307,104 @@ class TestFillLayoutMixed:
             assert obj.obj_type == ObjectType.LABEL
 
 
+class TestVerticalTextDetection:
+    """縦書きテキスト検出のテスト。"""
+
+    def test_narrow_box_no_newline_is_vertical(self) -> None:
+        """狭い矩形＋改行なし → 縦書き判定。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.LABEL,
+            rect=Rect(30, 1980, 90, 2260),  # w=60, h=280
+            text='その他特記事項',
+            font=FontInfo('ＭＳ 明朝', 10.0),
+        )
+        from core.win_printer import PrintJob
+        assert PrintJob._is_vertical_text(obj, obj.text) is True
+
+    def test_wide_box_is_not_vertical(self) -> None:
+        """幅のある矩形 → 縦書きではない。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.LABEL,
+            rect=Rect(20, 100, 200, 160),  # w=180, h=60
+            text='学年',
+            font=FontInfo('ＭＳ 明朝', 10.0),
+        )
+        from core.win_printer import PrintJob
+        assert PrintJob._is_vertical_text(obj, obj.text) is False
+
+    def test_narrow_with_newline_is_not_vertical(self) -> None:
+        """狭い矩形でも改行あり → 縦書きではない。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.LABEL,
+            rect=Rect(350, 240, 390, 370),  # w=40, h=130
+            text='氏\r\n名',
+            font=FontInfo('ＭＳ 明朝', 10.0),
+        )
+        from core.win_printer import PrintJob
+        assert PrintJob._is_vertical_text(obj, obj.text) is False
+
+    def test_single_char_is_not_vertical(self) -> None:
+        """1文字 → 縦書きではない。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.LABEL,
+            rect=Rect(0, 0, 30, 100),  # w=30, h=100
+            text='A',
+            font=FontInfo('ＭＳ 明朝', 10.0),
+        )
+        from core.win_printer import PrintJob
+        assert PrintJob._is_vertical_text(obj, obj.text) is False
+
+
+class TestMultilineTextDetection:
+    """複数行テキスト検出のテスト。"""
+
+    def test_text_with_crlf(self) -> None:
+        from core.win_printer import PrintJob
+        assert PrintJob._is_multiline_text('行1\r\n行2') is True
+
+    def test_text_with_lf(self) -> None:
+        from core.win_printer import PrintJob
+        assert PrintJob._is_multiline_text('行1\n行2') is True
+
+    def test_text_with_cr(self) -> None:
+        from core.win_printer import PrintJob
+        assert PrintJob._is_multiline_text('行1\r行2') is True
+
+    def test_single_line(self) -> None:
+        from core.win_printer import PrintJob
+        assert PrintJob._is_multiline_text('単一行テキスト') is False
+
+
+class TestFontInfoBoldItalic:
+    """FontInfo の bold/italic テスト。"""
+
+    def test_default_not_bold(self) -> None:
+        f = FontInfo()
+        assert f.bold is False
+        assert f.italic is False
+
+    def test_bold_flag(self) -> None:
+        f = FontInfo(bold=True)
+        assert f.bold is True
+
+    def test_italic_flag(self) -> None:
+        f = FontInfo(italic=True)
+        assert f.italic is True
+
+    def test_bold_italic_preserved_in_fill(self) -> None:
+        """fill_layout で bold/italic が保持される。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.FIELD,
+            rect=Rect(10, 20, 200, 50),
+            field_id=108,
+            font=FontInfo('ＭＳ ゴシック', 14.0, bold=True, italic=True),
+        )
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {'氏名': 'テスト'})
+        assert result.objects[0].font.bold is True
+        assert result.objects[0].font.italic is True
+
+
 class TestFillLayoutWithRealLay:
     """実 .lay ファイルでの fill_layout テスト。"""
 

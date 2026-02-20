@@ -40,7 +40,12 @@ def _point_to_list(p: Point) -> list[int]:
 
 
 def _font_to_dict(f: FontInfo) -> dict:
-    return {'name': f.name, 'size_pt': f.size_pt}
+    d: dict = {'name': f.name, 'size_pt': f.size_pt}
+    if f.bold:
+        d['bold'] = True
+    if f.italic:
+        d['italic'] = True
+    return d
 
 
 def _object_to_dict(obj: LayoutObject) -> dict:
@@ -98,6 +103,8 @@ def _dict_to_font(data: dict) -> FontInfo:
     return FontInfo(
         name=data.get('name', ''),
         size_pt=data.get('size_pt', 10.0),
+        bold=data.get('bold', False),
+        italic=data.get('italic', False),
     )
 
 

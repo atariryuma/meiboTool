@@ -223,6 +223,13 @@ class TestFontInfo:
         f = FontInfo()
         assert f.name == ''
         assert f.size_pt == 10.0
+        assert f.bold is False
+        assert f.italic is False
+
+    def test_bold_italic(self):
+        f = FontInfo(bold=True, italic=True)
+        assert f.bold is True
+        assert f.italic is True
 
 
 # ── 実ファイルテスト ─────────────────────────────────────────────────────────

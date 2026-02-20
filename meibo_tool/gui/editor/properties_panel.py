@@ -333,12 +333,15 @@ class PropertiesPanel(ctk.CTkFrame):
             with contextlib.suppress(ValueError):
                 obj.field_id = int(field_str.split(':')[0].strip())
 
-        # フォント
+        # フォント（bold/italic を維持）
         font_name = self._font_name_var.get()
         font_size = self._safe_float(
             self._font_size_var.get(), obj.font.size_pt,
         )
-        obj.font = FontInfo(font_name, font_size)
+        obj.font = FontInfo(
+            font_name, font_size,
+            bold=obj.font.bold, italic=obj.font.italic,
+        )
 
         # 揃え
         h_idx = _H_ALIGN_CHOICES.index(self._h_align_var.get()) \

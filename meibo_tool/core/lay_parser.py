@@ -125,6 +125,8 @@ class FontInfo:
     """フォント情報。"""
     name: str = ''
     size_pt: float = 10.0
+    bold: bool = False
+    italic: bool = False
 
 
 @dataclass
@@ -257,6 +259,11 @@ def _parse_font(payload: bytes) -> FontInfo:
     for tag, data in _iter_tlv(payload):
         if tag == _TAG_FONT_NAME and len(data) >= 2:
             info.name = data.decode('utf-16-le', errors='replace')
+        elif tag == _TAG_FONT_STYLE and len(data) == 4:
+            style = struct.unpack_from('<I', data)[0]
+            # bit 0 = bold, bit 1 = italic (推定)
+            info.bold = bool(style & 0x01)
+            info.italic = bool(style & 0x02)
         elif tag == _TAG_FONT_SIZE and len(data) == 4:
             tenths = struct.unpack_from('<I', data)[0]
             info.size_pt = tenths / 10.0

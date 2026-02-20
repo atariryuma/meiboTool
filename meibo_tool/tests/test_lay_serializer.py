@@ -240,3 +240,56 @@ class TestRealFileRoundTrip:
         orig_ids = sorted(f.field_id for f in lay.fields)
         rest_ids = sorted(f.field_id for f in restored.fields)
         assert orig_ids == rest_ids
+
+
+class TestBoldItalicRoundTrip:
+    """bold/italic の JSON ラウンドトリップテスト。"""
+
+    def test_bold_preserved(self):
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.LABEL,
+                rect=Rect(0, 0, 100, 30),
+                text='太字',
+                font=FontInfo('ＭＳ ゴシック', 12.0, bold=True),
+            ),
+        ])
+        restored = dict_to_layfile(layfile_to_dict(lay))
+        assert restored.objects[0].font.bold is True
+        assert restored.objects[0].font.italic is False
+
+    def test_italic_preserved(self):
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.LABEL,
+                rect=Rect(0, 0, 100, 30),
+                text='斜体',
+                font=FontInfo('ＭＳ ゴシック', 12.0, italic=True),
+            ),
+        ])
+        restored = dict_to_layfile(layfile_to_dict(lay))
+        assert restored.objects[0].font.italic is True
+        assert restored.objects[0].font.bold is False
+
+    def test_bold_italic_combined(self):
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.LABEL,
+                rect=Rect(0, 0, 100, 30),
+                text='太字斜体',
+                font=FontInfo('ＭＳ ゴシック', 12.0, bold=True, italic=True),
+            ),
+        ])
+        restored = dict_to_layfile(layfile_to_dict(lay))
+        assert restored.objects[0].font.bold is True
+        assert restored.objects[0].font.italic is True
+
+    def test_normal_no_bold_italic_in_json(self):
+        """通常フォントでは bold/italic キーが JSON に含まれない。"""
+        lay = LayFile(objects=[
+            new_label(0, 0, 100, 30, text='通常'),
+        ])
+        d = layfile_to_dict(lay)
+        font_dict = d['objects'][0].get('font', {})
+        assert 'bold' not in font_dict
+        assert 'italic' not in font_dict

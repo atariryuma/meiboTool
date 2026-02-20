@@ -164,13 +164,79 @@ class CanvasBackend(RenderBackend):
         text: str, font_name: str, font_size: float,
         h_align: int = 0, v_align: int = 0,
         color: str = '#000000', tags: tuple[str, ...] = (),
-    ) -> int:
+        bold: bool = False, italic: bool = False,
+    ) -> int | None:
         import tkinter.font as tkfont
 
-        # テキスト描画位置計算
-        anchor_h = {0: 'w', 1: 'center', 2: 'e'}.get(h_align, 'center')
-        anchor_v = {0: 'n', 1: 'center', 2: 's'}.get(v_align, 'center')
+        if not text:
+            return None
 
+        # \r\n → \n に正規化
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+
+        # Canvas フォントサイズ（ポイント → Canvas 用スケール）
+        fname = font_name or 'IPAmj明朝'
+        scaled_size = max(int(font_size * self._scale / 0.5), 6)
+
+        # フォントスタイル
+        weight = 'bold' if bold else 'normal'
+        slant = 'italic' if italic else 'roman'
+
+        # ── 縦書き判定 ──
+        # 幅が狭くて高さがある矩形 + 改行なしテキスト → 縦書き
+        is_vertical = (
+            '\n' not in text
+            and len(text) > 1
+            and w < h * 0.5
+            and w < 120 * self._scale
+        )
+        has_newline = '\n' in text
+
+        if is_vertical:
+            return self._draw_vertical_text(
+                x, y, w, h, text, fname, scaled_size,
+                weight, slant, h_align, v_align, color, tags,
+            )
+
+        # ── 複数行テキスト ──
+        if has_newline:
+            return self._draw_multiline_text(
+                x, y, w, h, text, fname, scaled_size,
+                weight, slant, h_align, v_align, color, tags,
+            )
+
+        # ── 通常の単一行テキスト ──
+        # 自動文字サイズ調整（ボックス幅に収まるよう縮小）
+        box_w = max(w - 4, 1)
+        if box_w > 0:
+            try:
+                font_obj = tkfont.Font(
+                    family=fname, size=scaled_size,
+                    weight=weight, slant=slant,
+                )
+                text_w = font_obj.measure(text)
+                while text_w > box_w and scaled_size > 5:
+                    scaled_size -= 1
+                    font_obj.configure(size=scaled_size)
+                    text_w = font_obj.measure(text)
+            except Exception:
+                pass
+
+        font_spec = (fname, scaled_size, weight, slant)
+        tx, ty, anchor = self._calc_text_pos(
+            x, y, w, h, h_align, v_align,
+        )
+
+        return self._canvas.create_text(
+            tx, ty, text=text, font=font_spec, fill=color,
+            anchor=anchor, width=0, tags=tags,
+        )
+
+    def _calc_text_pos(
+        self, x: float, y: float, w: float, h: float,
+        h_align: int, v_align: int,
+    ) -> tuple[float, float, str]:
+        """テキスト描画位置と anchor を計算する。"""
         if h_align == 0:
             tx = x + 2
         elif h_align == 2:
@@ -185,7 +251,8 @@ class CanvasBackend(RenderBackend):
         else:
             ty = y + h / 2
 
-        # anchor 文字列を組み立て
+        anchor_h = {0: 'w', 1: 'center', 2: 'e'}.get(h_align, 'center')
+        anchor_v = {0: 'n', 1: 'center', 2: 's'}.get(v_align, 'center')
         anchor_map = {
             ('n', 'w'): 'nw', ('n', 'center'): 'n', ('n', 'e'): 'ne',
             ('center', 'w'): 'w', ('center', 'center'): 'center',
@@ -193,28 +260,84 @@ class CanvasBackend(RenderBackend):
             ('s', 'w'): 'sw', ('s', 'center'): 's', ('s', 'e'): 'se',
         }
         anchor = anchor_map.get((anchor_v, anchor_h), 'center')
+        return tx, ty, anchor
 
-        # Canvas フォントサイズ（ポイント → Canvas 用スケール）
-        fname = font_name or 'IPAmj明朝'
-        scaled_size = max(int(font_size * self._scale / 0.5), 6)
+    def _draw_vertical_text(
+        self, x: float, y: float, w: float, h: float,
+        text: str, fname: str, scaled_size: int,
+        weight: str, slant: str,
+        h_align: int, v_align: int,
+        color: str, tags: tuple[str, ...],
+    ) -> int | None:
+        """縦書きテキスト: 各文字を縦に1文字ずつ描画する。"""
+        import tkinter.font as tkfont
 
-        # ── 自動文字サイズ調整 ──
-        # ボックス幅に収まるようフォントサイズを縮小（2段折り返し防止）
-        box_w = max(w - 4, 1)
-        if text and box_w > 0:
+        chars = list(text)
+        n = len(chars)
+        if n == 0:
+            return None
+
+        # 各文字の高さを計測してサイズ調整
+        try:
+            font_obj = tkfont.Font(
+                family=fname, size=scaled_size,
+                weight=weight, slant=slant,
+            )
+            char_h = font_obj.metrics('linespace')
+        except Exception:
+            char_h = scaled_size
+
+        # 全文字の高さがボックスに収まるまで縮小
+        total_h = char_h * n
+        box_h = max(h - 4, 1)
+        while total_h > box_h and scaled_size > 5:
+            scaled_size -= 1
             try:
-                font_obj = tkfont.Font(family=fname, size=scaled_size)
-                text_w = font_obj.measure(text)
-                while text_w > box_w and scaled_size > 5:
-                    scaled_size -= 1
-                    font_obj.configure(size=scaled_size)
-                    text_w = font_obj.measure(text)
+                font_obj = tkfont.Font(
+                    family=fname, size=scaled_size,
+                    weight=weight, slant=slant,
+                )
+                char_h = font_obj.metrics('linespace')
             except Exception:
-                pass  # フォント計測失敗時は元サイズで描画
+                char_h = scaled_size
+            total_h = char_h * n
 
-        font_spec = (fname, scaled_size)
+        font_spec = (fname, scaled_size, weight, slant)
 
-        # width=0 で折り返しなし（1行描画）
+        # 水平位置: ボックス中央
+        cx = x + w / 2
+
+        # 垂直位置: 揃え方に応じて計算
+        if v_align == 0:  # top
+            start_y = y + 2
+        elif v_align == 2:  # bottom
+            start_y = y + h - total_h - 2
+        else:  # center
+            start_y = y + (h - total_h) / 2
+
+        last_id = None
+        for i, ch in enumerate(chars):
+            cy = start_y + char_h * i + char_h / 2
+            last_id = self._canvas.create_text(
+                cx, cy, text=ch, font=font_spec, fill=color,
+                anchor='center', width=0, tags=tags,
+            )
+        return last_id
+
+    def _draw_multiline_text(
+        self, x: float, y: float, w: float, h: float,
+        text: str, fname: str, scaled_size: int,
+        weight: str, slant: str,
+        h_align: int, v_align: int,
+        color: str, tags: tuple[str, ...],
+    ) -> int:
+        """複数行テキスト: \\n を尊重して描画する。"""
+        font_spec = (fname, scaled_size, weight, slant)
+        tx, ty, anchor = self._calc_text_pos(
+            x, y, w, h, h_align, v_align,
+        )
+
+        # tkinter create_text は \n を尊重する（width=0 でも改行される）
         return self._canvas.create_text(
             tx, ty, text=text, font=font_spec, fill=color,
             anchor=anchor, width=0, tags=tags,
@@ -293,6 +416,7 @@ class LayRenderer:
                 text, obj.font.name, obj.font.size_pt,
                 obj.h_align, obj.v_align, _TEXT_COLOR,
                 tags=(tag, 'label_text'),
+                bold=obj.font.bold, italic=obj.font.italic,
             )
 
     def _render_field(self, obj: LayoutObject, tag: str) -> None:
@@ -317,6 +441,7 @@ class LayRenderer:
             display, obj.font.name, obj.font.size_pt,
             obj.h_align, obj.v_align, _FIELD_TEXT_COLOR,
             tags=(tag, 'field_text'),
+            bold=obj.font.bold, italic=obj.font.italic,
         )
 
     def _render_line(self, obj: LayoutObject, tag: str) -> None:
