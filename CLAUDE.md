@@ -135,6 +135,7 @@ App (CTk) — 2カラムレイアウト
 | `fiscal_year` | 年度（西暦・起動時に自動計算） |
 | `template_dir` | テンプレートフォルダパス（`./テンプレート`） |
 | `output_dir` | 出力フォルダパス（`./出力`） |
+| `layout_dir` | レイアウトライブラリフォルダパス（`./レイアウト`） |
 | `update.github_repo` | GitHub リポジトリ（`owner/repo` 形式） |
 | `update.check_on_startup` | 起動時に更新チェックするか |
 | `update.skip_version` | スキップ設定したバージョン |
@@ -186,16 +187,20 @@ App (CTk) — 2カラムレイアウト
 | `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
 | `gui/dialogs/exchange_class_dialog.py` | 交流学級割り当てダイアログ | — |
 | `gui/dialogs/update_dialog.py` | 更新確認ダイアログ | — |
-| `core/lay_parser.py` | .lay バイナリパーサー + `new_label/new_field/new_line` ヘルパー | ✅ 27 |
-| `core/lay_serializer.py` | LayFile ↔ JSON 保存/読込 | ✅ 18 |
-| `core/lay_renderer.py` | マルチバックエンド描画エンジン（Canvas/PIL/GDI）+ `fill_layout()` | ✅ 25 |
-| `core/win_printer.py` | Windows GDI 直接印刷エンジン（pywin32） | ✅ 13 |
+| `core/lay_parser.py` | .lay バイナリパーサー + FontInfo bold/italic + `new_label/new_field/new_line` | ✅ 29 |
+| `core/lay_serializer.py` | LayFile ↔ JSON 保存/読込（bold/italic ラウンドトリップ） | ✅ 22 |
+| `core/lay_renderer.py` | Canvas/PILBackend 描画 + 縦書き/複数行 + `fill_layout()` + `render_layout_to_image()` | ✅ 50 |
+| `core/win_printer.py` | Windows GDI 直接印刷（縦書き・複数行・bold/italic 対応） | ✅ 13 |
+| `core/layout_registry.py` | レイアウトライブラリ管理（scan/import/delete/rename） | ✅ 15 |
 | `gui/editor/editor_window.py` | レイアウトエディター メインウィンドウ（Canvas + プロパティ + Undo/Redo） | — |
 | `gui/editor/layout_canvas.py` | インタラクティブ Canvas（選択・移動・リサイズ） | — |
-| `gui/editor/properties_panel.py` | オブジェクトプロパティ編集パネル | — |
-| `gui/editor/toolbar.py` | ツールバー（ファイル操作・ズーム・データ差込） | — |
+| `gui/editor/properties_panel.py` | オブジェクトプロパティ編集パネル（bold/italic 保持） | — |
+| `gui/editor/toolbar.py` | ツールバー（ファイル操作・ズーム・データ差込・ライブラリ保存） | — |
 | `gui/editor/data_fill_dialog.py` | C4th データ差込ダイアログ | — |
 | `gui/editor/print_dialog.py` | プリンター選択・印刷実行ダイアログ | — |
+| `gui/editor/print_preview_dialog.py` | 印刷プレビュー（PILBackend レンダリング + ページ送り） | — |
+| `gui/editor/layout_manager_dialog.py` | レイアウトライブラリ管理ダイアログ（Treeview 一覧） | — |
+| `gui/editor/object_list.py` | オブジェクト一覧パネル（TreeView + Canvas 連動） | — |
 | `templates/generators/gen_from_lay.py` | .lay → Excel テンプレート変換 | ✅ 27 |
 | `.github/workflows/build-release.yml` | CI/CD（テスト→ビルド→Release） | — |
 | `tests/conftest.py` | 共通フィクスチャ | — |
@@ -206,7 +211,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **583 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **628 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 

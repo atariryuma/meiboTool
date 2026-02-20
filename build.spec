@@ -20,6 +20,7 @@ datas = collect_data_files('customtkinter')
 # テンプレート Excel 群と config.json を同梱
 datas += [('テンプレート', 'テンプレート')]
 datas += [('config.json', '.')]
+datas += [('レイアウト', 'レイアウト')]
 
 a = Analysis(
     ['meibo_tool/main.py'],
