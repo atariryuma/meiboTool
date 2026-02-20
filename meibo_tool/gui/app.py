@@ -115,9 +115,14 @@ class App(ctk.CTk):
         header_bar.grid_columnconfigure(0, weight=1)
 
         ctk.CTkButton(
+            header_bar, text='レイアウトエディター', width=140, height=28,
+            command=self._open_editor,
+        ).grid(row=0, column=1, padx=5, sticky='e')
+
+        ctk.CTkButton(
             header_bar, text='設定', width=60, height=28,
             command=self._open_settings,
-        ).grid(row=0, column=1, padx=5, sticky='e')
+        ).grid(row=0, column=2, padx=5, sticky='e')
 
         # 左パネル（スクロール可）
         self._left = ctk.CTkScrollableFrame(self, width=310, corner_radius=0)
@@ -475,6 +480,11 @@ class App(ctk.CTk):
             mb.showwarning('復号エラー', result.message)
         elif result.status == 'error' and result.message:
             self.import_frame.show_sync_status(result.message, warning=True)
+
+    def _open_editor(self) -> None:
+        """レイアウトエディターを開く。"""
+        from gui.editor.editor_window import EditorWindow
+        EditorWindow(self)
 
     def _open_settings(self) -> None:
         """設定ダイアログを開く。"""
