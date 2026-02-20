@@ -25,6 +25,7 @@ from core.lay_parser import (
 )
 from core.lay_serializer import load_layout, save_layout
 from gui.editor.layout_canvas import LayoutCanvas
+from gui.editor.object_list import ObjectListPanel
 from gui.editor.properties_panel import PropertiesPanel
 from gui.editor.toolbar import EditorToolbar
 
@@ -73,6 +74,7 @@ class EditorWindow(ctk.CTkToplevel):
 
         self._build_ui()
         self._canvas_panel.set_layout(self._lay)
+        self._object_list.set_layout(self._lay)
         self._update_status()
 
     # ── UI 構築 ───────────────────────────────────────────────────────────
@@ -104,23 +106,29 @@ class EditorWindow(ctk.CTkToplevel):
         main = ctk.CTkFrame(self)
         main.grid(row=1, column=0, sticky='nsew')
         main.grid_rowconfigure(0, weight=1)
-        main.grid_columnconfigure(0, weight=1)
+        main.grid_columnconfigure(1, weight=1)
 
-        # Canvas
+        # Object List (左サイド)
+        self._object_list = ObjectListPanel(
+            main, on_select=self._on_list_select,
+        )
+        self._object_list.grid(row=0, column=0, sticky='ns', padx=(2, 0), pady=2)
+
+        # Canvas (中央)
         self._canvas_panel = LayoutCanvas(
             main,
             on_select=self._on_object_selected,
             on_modify=self._on_object_modified,
             on_cursor=self._on_cursor_move,
         )
-        self._canvas_panel.grid(row=0, column=0, sticky='nsew')
+        self._canvas_panel.grid(row=0, column=1, sticky='nsew')
 
         # Canvas クリック（追加モード用）
         self._canvas_panel.canvas.bind('<Button-1>', self._on_canvas_click, add=True)
 
-        # Properties Panel
+        # Properties Panel (右サイド)
         self._props = PropertiesPanel(main, on_change=self._on_prop_change)
-        self._props.grid(row=0, column=1, sticky='ns', padx=(0, 2), pady=2)
+        self._props.grid(row=0, column=2, sticky='ns', padx=(0, 2), pady=2)
 
         # ── ステータスバー ──
         self._status = ctk.CTkLabel(
@@ -141,22 +149,32 @@ class EditorWindow(ctk.CTkToplevel):
     # ── コールバック ─────────────────────────────────────────────────────
 
     def _on_object_selected(self, index: int) -> None:
-        """オブジェクト選択時。"""
-        if index >= 0 and index < len(self._lay.objects):
+        """Canvas でオブジェクト選択時。"""
+        if 0 <= index < len(self._lay.objects):
             self._props.set_object(self._lay.objects[index], index)
+            self._object_list.select(index)
         else:
             self._props.set_object(None)
+        self._update_status()
+
+    def _on_list_select(self, index: int) -> None:
+        """オブジェクト一覧で選択時。"""
+        if 0 <= index < len(self._lay.objects):
+            self._canvas_panel.select(index)
+            self._props.set_object(self._lay.objects[index], index)
         self._update_status()
 
     def _on_object_modified(self) -> None:
         """ドラッグ移動/リサイズ完了時。"""
         self._dirty = True
+        self._object_list.refresh()
         self._update_status()
 
     def _on_prop_change(self, obj: LayoutObject) -> None:
         """プロパティパネルで値が変更された時。"""
         self._dirty = True
         self._canvas_panel.refresh()
+        self._object_list.refresh()
         self._update_status()
 
     def _on_cursor_move(self, mx: int, my: int) -> None:
@@ -180,6 +198,7 @@ class EditorWindow(ctk.CTkToplevel):
         self._undo_stack.clear()
         self._redo_stack.clear()
         self._canvas_panel.set_layout(self._lay)
+        self._object_list.set_layout(self._lay)
         self._props.set_object(None)
         self._update_status()
 
@@ -205,6 +224,7 @@ class EditorWindow(ctk.CTkToplevel):
             self._undo_stack.clear()
             self._redo_stack.clear()
             self._canvas_panel.set_layout(self._lay)
+            self._object_list.set_layout(self._lay)
             self._props.set_object(None)
             self._update_status()
         except Exception as e:
@@ -316,6 +336,7 @@ class EditorWindow(ctk.CTkToplevel):
         self._add_mode = None
         self._dirty = True
         self._canvas_panel.set_layout(self._lay)
+        self._object_list.set_layout(self._lay)
         new_idx = len(self._lay.objects) - 1
         self._canvas_panel.select(new_idx)
         self._on_object_selected(new_idx)
@@ -330,6 +351,7 @@ class EditorWindow(ctk.CTkToplevel):
         self._lay.objects.pop(idx)
         self._dirty = True
         self._canvas_panel.set_layout(self._lay)
+        self._object_list.set_layout(self._lay)
         self._props.set_object(None)
         self._update_status()
 
