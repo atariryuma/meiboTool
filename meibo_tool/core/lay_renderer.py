@@ -33,13 +33,13 @@ _PAGE_BG = '#FFFFFF'
 _PAGE_BORDER = '#999999'
 
 # オブジェクト色
-_LABEL_BG = '#FFFFFF'
-_FIELD_BG = '#E8F0FE'
-_LABEL_OUTLINE = '#CCCCCC'
-_FIELD_OUTLINE = '#4285F4'
-_LINE_COLOR = '#333333'
-_TEXT_COLOR = '#222222'
-_FIELD_TEXT_COLOR = '#1A73E8'
+_LABEL_BG = ''            # 透明（印刷イメージと一致）
+_FIELD_BG = '#F0F6FF'     # ごく薄い水色（編集時のみ見える目印）
+_LABEL_OUTLINE = ''       # 透明（枠線なし）
+_FIELD_OUTLINE = '#B0C4DE' # 薄い点線枠（編集時の目印）
+_LINE_COLOR = '#000000'
+_TEXT_COLOR = '#000000'
+_FIELD_TEXT_COLOR = '#4A7AB5'
 
 # 選択表示
 _SELECT_OUTLINE = '#1A73E8'
@@ -165,6 +165,8 @@ class CanvasBackend(RenderBackend):
         h_align: int = 0, v_align: int = 0,
         color: str = '#000000', tags: tuple[str, ...] = (),
     ) -> int:
+        import tkinter.font as tkfont
+
         # テキスト描画位置計算
         anchor_h = {0: 'w', 1: 'center', 2: 'e'}.get(h_align, 'center')
         anchor_v = {0: 'n', 1: 'center', 2: 's'}.get(v_align, 'center')
@@ -193,13 +195,29 @@ class CanvasBackend(RenderBackend):
         anchor = anchor_map.get((anchor_v, anchor_h), 'center')
 
         # Canvas フォントサイズ（ポイント → Canvas 用スケール）
+        fname = font_name or 'IPAmj明朝'
         scaled_size = max(int(font_size * self._scale / 0.5), 6)
 
-        font_spec = (font_name or 'IPAmj明朝', scaled_size)
+        # ── 自動文字サイズ調整 ──
+        # ボックス幅に収まるようフォントサイズを縮小（2段折り返し防止）
+        box_w = max(w - 4, 1)
+        if text and box_w > 0:
+            try:
+                font_obj = tkfont.Font(family=fname, size=scaled_size)
+                text_w = font_obj.measure(text)
+                while text_w > box_w and scaled_size > 5:
+                    scaled_size -= 1
+                    font_obj.configure(size=scaled_size)
+                    text_w = font_obj.measure(text)
+            except Exception:
+                pass  # フォント計測失敗時は元サイズで描画
 
+        font_spec = (fname, scaled_size)
+
+        # width=0 で折り返しなし（1行描画）
         return self._canvas.create_text(
             tx, ty, text=text, font=font_spec, fill=color,
-            anchor=anchor, width=max(w - 4, 0), tags=tags,
+            anchor=anchor, width=0, tags=tags,
         )
 
 
@@ -214,10 +232,19 @@ class LayRenderer:
         self._b = backend
 
     def render_all(self) -> None:
-        """ページ外枠 + 全オブジェクトを描画する。"""
+        """ページ外枠 + 全オブジェクトを描画する。
+
+        罫線（LINE）は最前面に描画する。
+        """
         self._render_page_outline()
+        # LABEL / FIELD を先に描画
         for i, obj in enumerate(self._lay.objects):
-            self.render_object(obj, index=i)
+            if obj.obj_type != ObjectType.LINE:
+                self.render_object(obj, index=i)
+        # LINE を最前面に描画
+        for i, obj in enumerate(self._lay.objects):
+            if obj.obj_type == ObjectType.LINE:
+                self.render_object(obj, index=i)
 
     def _render_page_outline(self) -> None:
         """ページ背景と外枠を描画する。"""
@@ -245,16 +272,17 @@ class LayRenderer:
             self._render_line(obj, tag)
 
     def _render_label(self, obj: LayoutObject, tag: str) -> None:
-        """LABEL オブジェクトを描画する。"""
+        """LABEL オブジェクトを描画する（透明背景）。"""
         if obj.rect is None:
             return
         r = obj.rect
         px1, py1 = self._b._to_px(r.left, r.top)
         px2, py2 = self._b._to_px(r.right, r.bottom)
 
+        # 透明なヒットエリア（選択用の不可視矩形）
         self._b.draw_rect(
             px1, py1, px2, py2,
-            fill=_LABEL_BG, outline=_LABEL_OUTLINE, width=1,
+            fill='', outline='', width=0,
             tags=(tag, 'label'),
         )
 
@@ -268,13 +296,14 @@ class LayRenderer:
             )
 
     def _render_field(self, obj: LayoutObject, tag: str) -> None:
-        """FIELD オブジェクトを描画する（水色背景 + プレースホルダー）。"""
+        """FIELD オブジェクトを描画する（薄い点線枠 + プレースホルダー）。"""
         if obj.rect is None:
             return
         r = obj.rect
         px1, py1 = self._b._to_px(r.left, r.top)
         px2, py2 = self._b._to_px(r.right, r.bottom)
 
+        # 薄い背景 + 点線枠（編集時の目印）
         self._b.draw_rect(
             px1, py1, px2, py2,
             fill=_FIELD_BG, outline=_FIELD_OUTLINE, width=1,

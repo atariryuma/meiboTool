@@ -137,8 +137,13 @@ class PrintJob:
 
         self._dc.StartPage()
 
+        # LABEL / FIELD を先に描画、LINE は最前面
         for obj in lay.objects:
-            self._render_object(obj)
+            if obj.obj_type != ObjectType.LINE:
+                self._render_object(obj)
+        for obj in lay.objects:
+            if obj.obj_type == ObjectType.LINE:
+                self._render_object(obj)
 
         self._dc.EndPage()
 
@@ -207,12 +212,35 @@ class PrintJob:
         right = self._model_x(r.right)
         bottom = self._model_y(r.bottom)
 
-        font = self._create_font(obj.font.name, obj.font.size_pt)
+        # ── 自動文字サイズ調整 ──
+        size_pt = obj.font.size_pt
+        box_w = right - left
+        font = self._create_font(obj.font.name, size_pt)
         old_font = self._dc.SelectObject(font)
+
+        # テキスト幅を計測し、ボックスに収まるまで縮小
+        calc_flags = (
+            _H_ALIGN_FLAGS.get(obj.h_align, 0)
+            | win32con.DT_SINGLELINE | win32con.DT_NOPREFIX | win32con.DT_CALCRECT
+        )
+        _h, _w, calc_rect = self._dc.DrawText(
+            text, (left, top, left + 10000, bottom), calc_flags,
+        )
+        text_w = calc_rect[2] - calc_rect[0]
+        while text_w > box_w and size_pt > 3:
+            self._dc.SelectObject(old_font)
+            font.DeleteObject()
+            size_pt -= 0.5
+            font = self._create_font(obj.font.name, size_pt)
+            old_font = self._dc.SelectObject(font)
+            _h, _w, calc_rect = self._dc.DrawText(
+                text, (left, top, left + 10000, bottom), calc_flags,
+            )
+            text_w = calc_rect[2] - calc_rect[0]
 
         # DrawText フラグ構築
         flags = _H_ALIGN_FLAGS.get(obj.h_align, 0)
-        flags |= win32con.DT_WORDBREAK | win32con.DT_NOPREFIX
+        flags |= win32con.DT_SINGLELINE | win32con.DT_NOPREFIX
 
         # 垂直揃え: DrawText は直接サポートしないため手動計算
         rect = (left, top, right, bottom)
@@ -252,7 +280,7 @@ class PrintJob:
         old_font = self._dc.SelectObject(font)
 
         flags = _H_ALIGN_FLAGS.get(obj.h_align, 0)
-        flags |= win32con.DT_WORDBREAK | win32con.DT_NOPREFIX
+        flags |= win32con.DT_SINGLELINE | win32con.DT_NOPREFIX
 
         self._dc.DrawText(text, (left, top, right, bottom), flags)
         self._dc.SelectObject(old_font)
