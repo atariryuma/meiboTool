@@ -83,6 +83,13 @@ class EditorToolbar(ctk.CTkFrame):
         ).grid(row=0, column=col, padx=2, pady=4)
         col += 1
 
+        # ── ライブラリに保存 ──
+        ctk.CTkButton(
+            self, text='ライブラリ保存', width=110, height=28,
+            command=self._callbacks.get('save_to_library', lambda: None),
+        ).grid(row=0, column=col, padx=2, pady=4)
+        col += 1
+
         # ── スペーサー ──
         col = 20
 

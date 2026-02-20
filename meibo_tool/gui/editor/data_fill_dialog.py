@@ -232,9 +232,6 @@ class DataFillDialog(ctk.CTkToplevel):
         if self._df is None:
             mb.showwarning('データ未読込', 'Excel ファイルを先に読み込んでください。', parent=self)
             return
-        if self._on_print is None:
-            mb.showinfo('印刷', '印刷機能は Phase 3 で実装予定です。', parent=self)
-            return
 
         filled_layouts = []
         opts = self._get_options()
@@ -243,4 +240,11 @@ class DataFillDialog(ctk.CTkToplevel):
             filled = fill_layout(self._lay, row, opts)
             filled_layouts.append(filled)
 
-        self._on_print(filled_layouts)
+        # 印刷プレビューを表示してから印刷
+        from gui.editor.print_preview_dialog import PrintPreviewDialog
+        PrintPreviewDialog(self, filled_layouts, on_print=self._do_print)
+
+    def _do_print(self, layouts: list) -> None:
+        """プレビューから印刷実行。"""
+        if self._on_print:
+            self._on_print(layouts)

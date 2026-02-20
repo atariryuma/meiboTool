@@ -46,6 +46,7 @@ def _default_config() -> dict[str, Any]:
         'school_type': 'elementary',
         'template_dir': './テンプレート',
         'output_dir': './出力',
+        'layout_dir': './レイアウト',
         'default_font': 'IPAmj明朝',
         'fiscal_year': _current_fiscal_year(),
         'graduation_cert_start_number': 1,
@@ -149,6 +150,18 @@ def get_cache_dir() -> str:
 def get_output_dir(config: dict[str, Any]) -> str:
     """出力フォルダの絶対パスを返す。存在しない場合は作成する。"""
     raw = config.get('output_dir', './出力')
+    if os.path.isabs(raw):
+        path = raw
+    else:
+        base = os.path.dirname(_get_config_path())
+        path = os.path.normpath(os.path.join(base, raw))
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def get_layout_dir(config: dict[str, Any]) -> str:
+    """レイアウトライブラリフォルダの絶対パスを返す。存在しない場合は作成する。"""
+    raw = config.get('layout_dir', './レイアウト')
     if os.path.isabs(raw):
         path = raw
     else:

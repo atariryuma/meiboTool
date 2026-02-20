@@ -12,6 +12,7 @@ LayFile オブジェクトを異なる描画先（Canvas / PIL / GDI）に統一
 
 from __future__ import annotations
 
+import os
 import tkinter as tk
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -22,6 +23,12 @@ from core.lay_parser import (
     ObjectType,
     resolve_field_name,
 )
+
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
 
 if TYPE_CHECKING:
     pass
@@ -344,13 +351,179 @@ class CanvasBackend(RenderBackend):
         )
 
 
+# ── PIL バックエンド ──────────────────────────────────────────────────────────
+
+
+class PILBackend(RenderBackend):
+    """PIL (Pillow) への描画バックエンド。印刷プレビュー用。"""
+
+    def __init__(self, image: Image.Image, dpi: int = 150) -> None:
+        self._img = image
+        self._draw = ImageDraw.Draw(image)
+        self._dpi = dpi
+        self._scale = 0.25 * dpi / 25.4  # model unit → pixels
+
+    def _to_px(self, x: int, y: int) -> tuple[float, float]:
+        """モデル座標を画像ピクセルに変換する。"""
+        return x * self._scale, y * self._scale
+
+    def draw_rect(
+        self, left: float, top: float, right: float, bottom: float,
+        fill: str = '', outline: str = '#000000', width: int = 1,
+        **kwargs: object,
+    ) -> None:
+        fill_c = fill if fill else None
+        outline_c = outline if outline else None
+        if fill_c is None and outline_c is None:
+            return
+        self._draw.rectangle(
+            [left, top, right, bottom],
+            fill=fill_c, outline=outline_c, width=max(1, width),
+        )
+
+    def draw_line(
+        self, x1: float, y1: float, x2: float, y2: float,
+        color: str = '#000000', width: int = 1,
+        **kwargs: object,
+    ) -> None:
+        self._draw.line(
+            [(x1, y1), (x2, y2)], fill=color, width=max(1, width),
+        )
+
+    def draw_text(
+        self, x: float, y: float, w: float, h: float,
+        text: str, font_name: str, font_size: float,
+        h_align: int = 0, v_align: int = 0,
+        color: str = '#000000',
+        bold: bool = False, italic: bool = False,
+        **kwargs: object,
+    ) -> None:
+        if not text:
+            return
+
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+
+        # 縦書き判定（CanvasBackend と同じロジック）
+        is_vertical = (
+            '\n' not in text
+            and len(text) > 1
+            and w < h * 0.5
+            and w < 120 * self._scale
+        )
+        has_newline = '\n' in text
+
+        if is_vertical:
+            self._draw_vertical(x, y, w, h, text, font_size, h_align, v_align, color)
+        elif has_newline:
+            self._draw_multiline(x, y, w, h, text, font_size, h_align, v_align, color)
+        else:
+            self._draw_single_line(x, y, w, h, text, font_size, h_align, v_align, color)
+
+    def _load_font(self, size_pt: float) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+        """PIL フォントをロードする。"""
+        size_px = max(8, int(size_pt * self._dpi / 72))
+        for path in _FONT_PATHS:
+            if os.path.exists(path):
+                try:
+                    return ImageFont.truetype(path, size=size_px)
+                except (OSError, IndexError):
+                    continue
+        return ImageFont.load_default()
+
+    def _draw_single_line(
+        self, x: float, y: float, w: float, h: float,
+        text: str, font_size: float,
+        h_align: int, v_align: int, color: str,
+    ) -> None:
+        font = self._load_font(font_size)
+
+        # 自動フォント縮小
+        bbox = self._draw.textbbox((0, 0), text, font=font)
+        tw = bbox[2] - bbox[0]
+        current_size = font_size
+        while tw > w * 1.05 and current_size > 4:
+            current_size *= 0.9
+            font = self._load_font(current_size)
+            bbox = self._draw.textbbox((0, 0), text, font=font)
+            tw = bbox[2] - bbox[0]
+
+        bbox = self._draw.textbbox((0, 0), text, font=font)
+        tw = bbox[2] - bbox[0]
+        th = bbox[3] - bbox[1]
+
+        # 水平アライメント
+        if h_align == 1:     # 中央
+            tx = x + (w - tw) / 2
+        elif h_align == 2:   # 右揃え
+            tx = x + w - tw
+        else:                # 左揃え
+            tx = x
+
+        # 垂直アライメント
+        if v_align == 1:     # 中央
+            ty = y + (h - th) / 2
+        elif v_align == 2:   # 下揃え
+            ty = y + h - th
+        else:                # 上揃え
+            ty = y
+
+        self._draw.text((tx, ty), text, fill=color, font=font)
+
+    def _draw_vertical(
+        self, x: float, y: float, w: float, h: float,
+        text: str, font_size: float,
+        h_align: int, v_align: int, color: str,
+    ) -> None:
+        n = len(text)
+        char_h = h / n if n > 0 else h
+        char_size = min(font_size, char_h * 72 / self._dpi * 0.9)
+        font = self._load_font(char_size)
+
+        for i, ch in enumerate(text):
+            bbox = self._draw.textbbox((0, 0), ch, font=font)
+            cw = bbox[2] - bbox[0]
+            ch_h = bbox[3] - bbox[1]
+            cx = x + (w - cw) / 2
+            cy = y + i * char_h + (char_h - ch_h) / 2
+            self._draw.text((cx, cy), ch, fill=color, font=font)
+
+    def _draw_multiline(
+        self, x: float, y: float, w: float, h: float,
+        text: str, font_size: float,
+        h_align: int, v_align: int, color: str,
+    ) -> None:
+        lines = text.split('\n')
+        font = self._load_font(font_size)
+
+        # 行高さ計算
+        line_h = h / len(lines) if lines else h
+
+        for i, line in enumerate(lines):
+            if not line:
+                continue
+            bbox = self._draw.textbbox((0, 0), line, font=font)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+
+            # 水平アライメント
+            if h_align == 1:
+                tx = x + (w - tw) / 2
+            elif h_align == 2:
+                tx = x + w - tw
+            else:
+                tx = x
+
+            ty = y + i * line_h + (line_h - th) / 2
+            self._draw.text((tx, ty), line, fill=color, font=font)
+
+
 # ── レンダラー ───────────────────────────────────────────────────────────────
 
 
 class LayRenderer:
     """LayFile を指定バックエンドに描画するレンダラー。"""
 
-    def __init__(self, lay: LayFile, backend: CanvasBackend) -> None:
+    def __init__(self, lay: LayFile, backend: RenderBackend) -> None:
         self._lay = lay
         self._b = backend
 
@@ -456,6 +629,29 @@ class LayRenderer:
             color=_LINE_COLOR, width=1,
             tags=(tag, 'line'),
         )
+
+
+# ── PIL レンダリング ──────────────────────────────────────────────────────────
+
+
+def render_layout_to_image(lay: LayFile, dpi: int = 150) -> Image.Image:
+    """LayFile を PIL 画像にレンダリングする。
+
+    Args:
+        lay: レンダリング対象のレイアウト
+        dpi: 画像解像度 (default 150)
+
+    Returns:
+        PIL.Image.Image (RGB)
+    """
+    scale = 0.25 * dpi / 25.4
+    w = int(lay.page_width * scale)
+    h = int(lay.page_height * scale)
+    img = Image.new('RGB', (w, h), (255, 255, 255))
+    backend = PILBackend(img, dpi)
+    renderer = LayRenderer(lay, backend)
+    renderer.render_all()
+    return img
 
 
 # ── 選択ハンドル描画 ─────────────────────────────────────────────────────────

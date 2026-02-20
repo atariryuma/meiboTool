@@ -115,7 +115,7 @@ class App(ctk.CTk):
         header_bar.grid_columnconfigure(0, weight=1)
 
         ctk.CTkButton(
-            header_bar, text='レイアウトエディター', width=140, height=28,
+            header_bar, text='レイアウトライブラリ', width=140, height=28,
             command=self._open_editor,
         ).grid(row=0, column=1, padx=5, sticky='e')
 
@@ -482,9 +482,20 @@ class App(ctk.CTk):
             self.import_frame.show_sync_status(result.message, warning=True)
 
     def _open_editor(self) -> None:
-        """レイアウトエディターを開く。"""
+        """レイアウトライブラリを開く。"""
+        from gui.editor.layout_manager_dialog import LayoutManagerDialog
+        LayoutManagerDialog(
+            self, self.config, on_open=self._open_editor_with_file,
+        )
+
+    def _open_editor_with_file(self, path: str) -> None:
+        """指定ファイルでレイアウトエディターを開く。空パスなら新規。"""
         from gui.editor.editor_window import EditorWindow
-        EditorWindow(self)
+        if path:
+            from core.lay_serializer import load_layout
+            EditorWindow(self, lay=load_layout(path))
+        else:
+            EditorWindow(self)
 
     def _open_settings(self) -> None:
         """設定ダイアログを開く。"""
