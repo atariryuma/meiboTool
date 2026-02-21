@@ -20,6 +20,8 @@ from core.lay_parser import (
     LayFile,
     LayoutObject,
     ObjectType,
+    Point,
+    Rect,
     resolve_field_name,
 )
 
@@ -703,6 +705,126 @@ def draw_selection_handles(
 def clear_selection_handles(canvas: tk.Canvas) -> None:
     """選択ハンドルを削除する。"""
     canvas.delete('handles')
+
+
+# ── タイル配置 ───────────────────────────────────────────────────────────────
+
+# A4 用紙サイズ（0.25mm 単位）
+A4_WIDTH = 840     # 210mm
+A4_HEIGHT = 1188   # 297mm
+
+
+def calculate_page_arrangement(
+    lay: LayFile,
+    paper_width: int = A4_WIDTH,
+    paper_height: int = A4_HEIGHT,
+) -> tuple[int, int, int]:
+    """レイアウトサイズから1ページあたりの配置数を計算する。
+
+    Args:
+        lay: レイアウト
+        paper_width: 用紙幅（0.25mm 単位）
+        paper_height: 用紙高さ（0.25mm 単位）
+
+    Returns:
+        (cols, rows, per_page) タプル
+    """
+    cols = max(1, paper_width // max(1, lay.page_width))
+    rows = max(1, paper_height // max(1, lay.page_height))
+    return cols, rows, cols * rows
+
+
+def tile_layouts(
+    layouts: list[LayFile],
+    cols: int,
+    rows: int,
+    paper_width: int = A4_WIDTH,
+    paper_height: int = A4_HEIGHT,
+) -> list[LayFile]:
+    """複数のレイアウトを1ページにタイル配置した LayFile のリストを返す。
+
+    各レイアウトを用紙上のグリッドに配置し、中央揃えする。
+    既に per_page == 1 の場合は元のリストをそのまま返す。
+
+    Args:
+        layouts: 差込済みの個別レイアウト
+        cols: 列数
+        rows: 行数
+        paper_width: 用紙幅（0.25mm 単位）
+        paper_height: 用紙高さ（0.25mm 単位）
+
+    Returns:
+        タイル配置された page LayFile のリスト
+    """
+    per_page = cols * rows
+    if per_page <= 1 or not layouts:
+        return layouts
+
+    cell_w = layouts[0].page_width
+    cell_h = layouts[0].page_height
+
+    # 中央揃えマージン
+    margin_x = (paper_width - cols * cell_w) // 2
+    margin_y = (paper_height - rows * cell_h) // 2
+
+    pages: list[LayFile] = []
+    for page_start in range(0, len(layouts), per_page):
+        page_items = layouts[page_start:page_start + per_page]
+
+        page = LayFile(
+            title='印刷ページ',
+            page_width=paper_width,
+            page_height=paper_height,
+            objects=[],
+        )
+
+        for i, lay in enumerate(page_items):
+            col = i % cols
+            row = i // cols
+            ox = margin_x + col * cell_w
+            oy = margin_y + row * cell_h
+
+            for obj in lay.objects:
+                new_obj = _offset_object(obj, ox, oy)
+                page.objects.append(new_obj)
+
+        pages.append(page)
+
+    return pages
+
+
+def _offset_object(obj: LayoutObject, dx: int, dy: int) -> LayoutObject:
+    """オブジェクトの座標をオフセットしたコピーを返す。"""
+    new_rect = None
+    if obj.rect is not None:
+        new_rect = Rect(
+            obj.rect.left + dx,
+            obj.rect.top + dy,
+            obj.rect.right + dx,
+            obj.rect.bottom + dy,
+        )
+
+    new_start = None
+    if obj.line_start is not None:
+        new_start = Point(obj.line_start.x + dx, obj.line_start.y + dy)
+
+    new_end = None
+    if obj.line_end is not None:
+        new_end = Point(obj.line_end.x + dx, obj.line_end.y + dy)
+
+    return LayoutObject(
+        obj_type=obj.obj_type,
+        rect=new_rect,
+        line_start=new_start,
+        line_end=new_end,
+        text=obj.text,
+        field_id=obj.field_id,
+        font=obj.font,
+        h_align=obj.h_align,
+        v_align=obj.v_align,
+        prefix=obj.prefix,
+        suffix=obj.suffix,
+    )
 
 
 # ── データ差込 ───────────────────────────────────────────────────────────────

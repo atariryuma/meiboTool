@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import math
 import os
 import threading
 import tkinter as tk
@@ -22,7 +23,12 @@ from PIL import Image as PILImage
 from core.config import get_layout_dir
 from core.importer import import_c4th_excel
 from core.lay_parser import LayFile
-from core.lay_renderer import fill_layout, render_layout_to_image
+from core.lay_renderer import (
+    calculate_page_arrangement,
+    fill_layout,
+    render_layout_to_image,
+    tile_layouts,
+)
 from core.lay_serializer import load_layout
 from core.layout_registry import scan_layout_dir
 from core.special_needs import (
@@ -98,9 +104,17 @@ class RosterPrintPanel(ctk.CTkFrame):
         scrollbar.grid(row=0, column=1, sticky='ns')
         self._tree.configure(yscrollcommand=scrollbar.set)
 
+        # 配置情報ラベル（レイアウト選択時に更新）
+        self._arrangement_label = ctk.CTkLabel(
+            left, text='', font=ctk.CTkFont(size=11), text_color='gray30',
+        )
+        self._arrangement_label.grid(
+            row=2, column=0, sticky='w', padx=10, pady=(0, 2),
+        )
+
         # 名簿データセクション
         data_frame = ctk.CTkFrame(left, fg_color='transparent')
-        data_frame.grid(row=2, column=0, sticky='ew', padx=5, pady=5)
+        data_frame.grid(row=3, column=0, sticky='ew', padx=5, pady=5)
         data_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(
@@ -125,7 +139,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         # オプションセクション
         opt_frame = ctk.CTkFrame(left, fg_color='transparent')
-        opt_frame.grid(row=3, column=0, sticky='ew', padx=5, pady=5)
+        opt_frame.grid(row=4, column=0, sticky='ew', padx=5, pady=5)
         opt_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(
@@ -155,7 +169,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         # 特別支援学級配置セクション
         placement_frame = ctk.CTkFrame(left, fg_color='transparent')
-        placement_frame.grid(row=4, column=0, sticky='ew', padx=5, pady=5)
+        placement_frame.grid(row=5, column=0, sticky='ew', padx=5, pady=5)
 
         ctk.CTkLabel(
             placement_frame, text='特別支援学級',
@@ -176,7 +190,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         # ボタンセクション
         btn_frame = ctk.CTkFrame(left, fg_color='transparent')
-        btn_frame.grid(row=5, column=0, sticky='ew', padx=5, pady=(5, 8))
+        btn_frame.grid(row=6, column=0, sticky='ew', padx=5, pady=(5, 8))
 
         ctk.CTkButton(
             btn_frame, text='プレビュー', width=120,
@@ -252,34 +266,75 @@ class RosterPrintPanel(ctk.CTkFrame):
             else:
                 self._selected_lay = load_layout(path)
             self._selected_path = path
+            self._update_arrangement_info()
+            if self._df is not None:
+                self._update_count_label(self._df)
             self._render_preview()
         except Exception as e:
             mb.showerror('読み込みエラー', str(e))
             self._selected_lay = None
 
+    def _update_arrangement_info(self) -> None:
+        """選択中レイアウトの用紙配置情報を表示する。"""
+        if self._selected_lay is None:
+            self._arrangement_label.configure(text='')
+            return
+
+        cols, rows, per_page = calculate_page_arrangement(self._selected_lay)
+        w_mm = self._selected_lay.page_width * 0.25
+        h_mm = self._selected_lay.page_height * 0.25
+
+        if per_page == 1:
+            text = f'{w_mm:.0f}×{h_mm:.0f}mm → A4に1名/ページ'
+        else:
+            text = (
+                f'{w_mm:.0f}×{h_mm:.0f}mm'
+                f' → A4に{cols}×{rows}={per_page}名/ページ'
+            )
+        self._arrangement_label.configure(text=text)
+
     # ── プレビュー ─────────────────────────────────────────────────────
 
     def _render_preview(self) -> None:
-        """選択中のレイアウトをプレビュー表示する。"""
+        """選択中のレイアウトをプレビュー表示する。
+
+        per_page > 1 の場合はタイル配置した1ページ分をプレビューする。
+        """
         if self._selected_lay is None:
             return
 
-        lay = self._selected_lay
+        cols, rows, per_page = calculate_page_arrangement(self._selected_lay)
 
-        # データがある場合は1人目を差し込んでプレビュー
         if self._df is not None and not self._df.empty:
-            try:
-                row = self._df.iloc[0].to_dict()
-                lay = fill_layout(self._selected_lay, row, self._get_options())
-            except Exception:
-                pass  # 差込失敗時はテンプレートのまま表示
+            # データあり: 先頭 per_page 名分を差し込んでタイルプレビュー
+            opts = self._get_options()
+            sample = self._df.head(per_page)
+            filled: list[LayFile] = []
+            for _, row in sample.iterrows():
+                try:
+                    filled.append(
+                        fill_layout(self._selected_lay, row.to_dict(), opts),
+                    )
+                except Exception:
+                    filled.append(self._selected_lay)
+
+            if per_page > 1 and filled:
+                pages = tile_layouts(filled, cols, rows)
+                preview_lay = pages[0] if pages else self._selected_lay
+            elif filled:
+                preview_lay = filled[0]
+            else:
+                preview_lay = self._selected_lay
+        else:
+            # データなし: テンプレートのまま表示（タイルなし）
+            preview_lay = self._selected_lay
 
         # バックグラウンドでレンダリング（世代カウンターでキャンセル管理）
         self._render_generation += 1
         gen = self._render_generation
         threading.Thread(
             target=self._render_worker,
-            args=(lay, gen),
+            args=(preview_lay, gen),
             daemon=True,
         ).start()
 
@@ -344,23 +399,33 @@ class RosterPrintPanel(ctk.CTkFrame):
                 text_color=ctk.ThemeManager.theme['CTkLabel']['text_color'],
             )
 
-            # 特支検出して件数表示
-            n_regular = len(detect_regular_students(df))
-            n_special = len(detect_special_needs_students(df))
-            total = len(df)
-            if n_special > 0:
-                self._count_label.configure(
-                    text=f'印刷対象: {total} 名'
-                    f'（通常 {n_regular} + 特支 {n_special}）',
-                )
-            else:
-                self._count_label.configure(text=f'印刷対象: {total} 名')
+            self._update_count_label(df)
 
             # プレビュー更新（データ差込あり）
             self._render_preview()
 
         except Exception as e:
             mb.showerror('読み込みエラー', str(e))
+
+    def _update_count_label(self, df: pd.DataFrame) -> None:
+        """印刷対象の件数とページ数を表示する。"""
+        n_regular = len(detect_regular_students(df))
+        n_special = len(detect_special_needs_students(df))
+        total = len(df)
+
+        parts: list[str] = [f'印刷対象: {total} 名']
+        if n_special > 0:
+            parts[0] += f'（通常 {n_regular} + 特支 {n_special}）'
+
+        # レイアウト選択済みならページ数も表示
+        if self._selected_lay is not None:
+            _cols, _rows, per_page = calculate_page_arrangement(
+                self._selected_lay,
+            )
+            n_pages = math.ceil(total / max(1, per_page))
+            parts.append(f'→ {n_pages} ページ')
+
+        self._count_label.configure(text=' '.join(parts))
 
     # ── オプション ─────────────────────────────────────────────────────
 
@@ -408,6 +473,15 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         return filled
 
+    def _tile_for_printing(self, filled: list[LayFile]) -> list[LayFile]:
+        """差込済みレイアウトをタイル配置する（per_page > 1 の場合）。"""
+        if not filled or self._selected_lay is None:
+            return filled
+        cols, rows, per_page = calculate_page_arrangement(self._selected_lay)
+        if per_page <= 1:
+            return filled
+        return tile_layouts(filled, cols, rows)
+
     def _on_preview(self) -> None:
         """プレビューボタン押下時。"""
         if self._selected_lay is None:
@@ -422,9 +496,11 @@ class RosterPrintPanel(ctk.CTkFrame):
             mb.showerror('エラー', '差込可能なデータがありません。')
             return
 
+        pages = self._tile_for_printing(filled)
+
         from gui.editor.print_preview_dialog import PrintPreviewDialog
         PrintPreviewDialog(
-            self.winfo_toplevel(), filled,
+            self.winfo_toplevel(), pages,
             on_print=self._do_print,
         )
 
@@ -442,8 +518,10 @@ class RosterPrintPanel(ctk.CTkFrame):
             mb.showerror('エラー', '差込可能なデータがありません。')
             return
 
+        pages = self._tile_for_printing(filled)
+
         from gui.editor.print_dialog import PrintDialog
-        PrintDialog(self.winfo_toplevel(), filled)
+        PrintDialog(self.winfo_toplevel(), pages)
 
     def _do_print(self, layouts: list[LayFile]) -> None:
         """PrintPreviewDialog からの印刷コールバック。"""

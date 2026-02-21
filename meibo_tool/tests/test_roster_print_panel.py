@@ -8,16 +8,32 @@ from __future__ import annotations
 
 import pandas as pd
 
-from core.lay_parser import LayFile, new_field
+from core.lay_parser import LayFile, new_field, new_label
+from core.lay_renderer import (
+    A4_HEIGHT,
+    A4_WIDTH,
+    calculate_page_arrangement,
+    tile_layouts,
+)
 
 
 def _make_lay() -> LayFile:
-    """テスト用 LayFile を生成する。"""
+    """テスト用 LayFile を生成する（A4 個票）。"""
     return LayFile(
         title='テスト個票',
         page_width=840,
         page_height=1188,
         objects=[new_field(10, 10, 200, 50, field_id=108)],
+    )
+
+
+def _make_small_lay(w: int = 280, h: int = 100) -> LayFile:
+    """テスト用の小さいレイアウト（ラベル等）。"""
+    return LayFile(
+        title='テストラベル',
+        page_width=w,
+        page_height=h,
+        objects=[new_label(5, 5, w - 5, h - 5, text='テスト')],
     )
 
 
@@ -158,3 +174,126 @@ class TestGuardConditions:
         """データ未読込 → 空リスト（ガード条件の確認）。"""
         # _build_filled_layouts は df が None の場合 [] を返す
         assert True
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# タイル配置テスト
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestCalculatePageArrangement:
+    """calculate_page_arrangement のテスト。"""
+
+    def test_a4_layout_is_1x1(self) -> None:
+        """A4 サイズレイアウト → 1×1 = 1名/ページ。"""
+        lay = _make_lay()  # 840×1188 = A4
+        cols, rows, per_page = calculate_page_arrangement(lay)
+        assert (cols, rows, per_page) == (1, 1, 1)
+
+    def test_half_a4_is_1x2(self) -> None:
+        """A4 半分 → 1×2 = 2名/ページ。"""
+        lay = _make_small_lay(840, 594)  # 210mm × 148.5mm
+        cols, rows, per_page = calculate_page_arrangement(lay)
+        assert (cols, rows, per_page) == (1, 2, 2)
+
+    def test_quarter_a4_is_2x2(self) -> None:
+        """A4 四分割 → 2×2 = 4名/ページ。"""
+        lay = _make_small_lay(420, 594)  # 105mm × 148.5mm
+        cols, rows, per_page = calculate_page_arrangement(lay)
+        assert (cols, rows, per_page) == (2, 2, 4)
+
+    def test_small_label(self) -> None:
+        """小ラベル 70×25mm → 3×11 = 33名/ページ。"""
+        lay = _make_small_lay(280, 100)  # 70mm × 25mm
+        cols, rows, per_page = calculate_page_arrangement(lay)
+        assert cols == 3
+        assert rows == 11
+        assert per_page == 33
+
+    def test_custom_paper_size(self) -> None:
+        """カスタム用紙サイズ対応。"""
+        lay = _make_small_lay(420, 594)
+        cols, rows, per_page = calculate_page_arrangement(
+            lay, paper_width=1188, paper_height=840,  # A4 横
+        )
+        assert cols == 2
+        assert rows == 1
+        assert per_page == 2
+
+    def test_larger_than_paper(self) -> None:
+        """レイアウトが用紙より大きい → 1×1。"""
+        lay = _make_small_lay(1200, 1600)
+        cols, rows, per_page = calculate_page_arrangement(lay)
+        assert (cols, rows, per_page) == (1, 1, 1)
+
+
+class TestTileLayouts:
+    """tile_layouts のテスト。"""
+
+    def test_per_page_1_returns_original(self) -> None:
+        """1名/ページ → タイル変換なし。"""
+        layouts = [_make_lay(), _make_lay()]
+        result = tile_layouts(layouts, cols=1, rows=1)
+        assert result is layouts  # 同一オブジェクト
+
+    def test_2x2_tiling_4_students(self) -> None:
+        """4名 × 2×2 → 1ページ。"""
+        small = _make_small_lay(420, 594)
+        layouts = [small] * 4
+        result = tile_layouts(layouts, cols=2, rows=2)
+        assert len(result) == 1
+        # 4 つのレイアウトが 1 ページに統合される
+        assert result[0].page_width == A4_WIDTH
+        assert result[0].page_height == A4_HEIGHT
+        # 各レイアウトのオブジェクト × 4
+        assert len(result[0].objects) == len(small.objects) * 4
+
+    def test_2x2_tiling_5_students(self) -> None:
+        """5名 × 2×2 → 2ページ（4+1）。"""
+        small = _make_small_lay(420, 594)
+        layouts = [small] * 5
+        result = tile_layouts(layouts, cols=2, rows=2)
+        assert len(result) == 2
+        assert len(result[0].objects) == len(small.objects) * 4  # 最初のページ: 4名
+        assert len(result[1].objects) == len(small.objects) * 1  # 2ページ目: 1名
+
+    def test_objects_are_offset(self) -> None:
+        """タイル配置でオブジェクト座標がオフセットされる。"""
+        small = _make_small_lay(420, 594)
+        assert small.objects[0].rect is not None
+        original_left = small.objects[0].rect.left
+
+        layouts = [small, small]
+        result = tile_layouts(layouts, cols=2, rows=1)
+
+        # 1ページに統合
+        assert len(result) == 1
+        page = result[0]
+
+        # 1つ目のオブジェクト: margin_x + 元の位置
+        margin_x = (A4_WIDTH - 2 * 420) // 2
+        assert page.objects[0].rect is not None
+        assert page.objects[0].rect.left == margin_x + original_left
+
+        # 2つ目のオブジェクト: margin_x + 420 + 元の位置
+        assert page.objects[1].rect is not None
+        assert page.objects[1].rect.left == margin_x + 420 + original_left
+
+    def test_empty_layouts_returns_empty(self) -> None:
+        """空リスト → 空リスト。"""
+        result = tile_layouts([], cols=2, rows=2)
+        assert result == []
+
+    def test_centered_on_page(self) -> None:
+        """タイルが用紙の中央に配置される。"""
+        # 280×100 のラベル → 3×11 配置
+        small = _make_small_lay(280, 100)
+        layouts = [small]
+        result = tile_layouts(layouts, cols=3, rows=11)
+
+        # マージン計算: (840 - 3*280) / 2 = 0, (1188 - 11*100) / 2 = 44
+        expected_margin_y = (A4_HEIGHT - 11 * 100) // 2
+        assert expected_margin_y == 44
+
+        page = result[0]
+        assert page.objects[0].rect is not None
+        assert page.objects[0].rect.top == expected_margin_y + small.objects[0].rect.top
