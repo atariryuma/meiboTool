@@ -21,6 +21,7 @@ from core.lay_parser import (
     new_line,
 )
 from core.lay_renderer import (
+    _contains_gaiji,
     canvas_to_model,
     fill_layout,
     get_page_arrangement,
@@ -395,6 +396,98 @@ class TestFontInfoBoldItalic:
         result = fill_layout(lay, {'氏名': 'テスト'})
         assert result.objects[0].font.bold is True
         assert result.objects[0].font.italic is True
+
+
+class TestContainsGaiji:
+    """外字（IVS異体字・CJK拡張漢字）検出テスト。"""
+
+    def test_normal_text_no_gaiji(self) -> None:
+        """通常テキストは外字なし。"""
+        assert _contains_gaiji('山田太郎') is False
+
+    def test_empty_string(self) -> None:
+        assert _contains_gaiji('') is False
+
+    def test_ascii(self) -> None:
+        assert _contains_gaiji('Hello World') is False
+
+    def test_katakana_hiragana(self) -> None:
+        assert _contains_gaiji('やまだたろう') is False
+        assert _contains_gaiji('ヤマダタロウ') is False
+
+    def test_ivs_variation_selector(self) -> None:
+        """IVS 異体字セレクタ (U+E0100) を含むテキスト。"""
+        # 葛 + VS17 (U+E0100) — 葛飾区の「葛」の異体字
+        text = '葛\U000E0100城'
+        assert _contains_gaiji(text) is True
+
+    def test_cjk_extension_b(self) -> None:
+        """CJK統合漢字拡張B (U+20000〜) の文字。"""
+        # U+20000 (CJK Extension B の先頭)
+        text = '田中\U00020000太郎'
+        assert _contains_gaiji(text) is True
+
+    def test_ivs_at_end(self) -> None:
+        """IVS がテキスト末尾にある場合。"""
+        text = '邊\U000E0100'
+        assert _contains_gaiji(text) is True
+
+
+class TestFillLayoutFontSelection:
+    """fill_layout のフォント選択テスト: 外字なし→元フォント、外字あり→IPAmj明朝。"""
+
+    def test_no_gaiji_keeps_original_font(self) -> None:
+        """外字を含まないデータは .lay のフォントをそのまま使う。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.FIELD,
+            rect=Rect(10, 20, 200, 50),
+            field_id=108,
+            font=FontInfo('ＭＳ ゴシック', 12.0),
+        )
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {'氏名': '山田太郎'})
+        assert result.objects[0].font.name == 'ＭＳ ゴシック'
+
+    def test_gaiji_overrides_to_ipamj(self) -> None:
+        """IVS 異体字を含むデータは IPAmj明朝 に上書きされる。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.FIELD,
+            rect=Rect(10, 20, 200, 50),
+            field_id=108,
+            font=FontInfo('ＭＳ ゴシック', 12.0),
+        )
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {'氏名': '葛\U000E0100城太郎'})
+        assert result.objects[0].font.name == 'IPAmj明朝'
+        # サイズ・bold・italic は元のまま
+        assert result.objects[0].font.size_pt == 12.0
+
+    def test_gaiji_preserves_bold_italic(self) -> None:
+        """外字で IPAmj明朝 に上書きされても bold/italic は保持。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.FIELD,
+            rect=Rect(10, 20, 200, 50),
+            field_id=108,
+            font=FontInfo('ＭＳ ゴシック', 14.0, bold=True, italic=True),
+        )
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {'氏名': '邊\U000E0100太郎'})
+        assert result.objects[0].font.name == 'IPAmj明朝'
+        assert result.objects[0].font.bold is True
+        assert result.objects[0].font.italic is True
+
+    def test_label_always_keeps_original_font(self) -> None:
+        """LABEL（静的テキスト）は外字有無にかかわらず元フォントのまま。"""
+        obj = new_label(10, 20, 200, 50, text='見出し')
+        obj = LayoutObject(
+            obj_type=ObjectType.LABEL,
+            rect=obj.rect,
+            text='見出し',
+            font=FontInfo('ＭＳ 明朝', 16.0),
+        )
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {})
+        assert result.objects[0].font.name == 'ＭＳ 明朝'
 
 
 class TestFillLayoutWithRealLay:

@@ -1211,6 +1211,26 @@ def _offset_object(obj: LayoutObject, dx: int, dy: int) -> LayoutObject:
     )
 
 
+# ── 外字検出 ─────────────────────────────────────────────────────────────────
+
+
+def _contains_gaiji(text: str) -> bool:
+    """テキストに外字（IVS 異体字・CJK拡張漢字）が含まれるか判定する。
+
+    IVS (Ideographic Variation Sequence) の異体字セレクタ (U+E0100〜U+E01EF) や
+    CJK統合漢字拡張B以降 (U+20000〜) の文字は IPAmj明朝 でないと正しく表示できない。
+    """
+    for ch in text:
+        cp = ord(ch)
+        # IVS 異体字セレクタ (Variation Selectors Supplement)
+        if 0xE0100 <= cp <= 0xE01EF:
+            return True
+        # CJK統合漢字拡張B〜I (U+20000〜U+3134F)
+        if cp >= 0x20000:
+            return True
+    return False
+
+
 # ── データ差込 ───────────────────────────────────────────────────────────────
 
 
@@ -1289,14 +1309,17 @@ def fill_layout(
             logical_name = resolve_field_name(obj.field_id)
             value = _resolve(logical_name)
             text = obj.prefix + value + obj.suffix
-            # データフィールドは IPAmj明朝 に上書き（IVS 異体字対応）
-            # 静的テキスト（LABEL）は .lay のフォントをそのまま使う
-            filled_font = FontInfo(
-                name='IPAmj明朝',
-                size_pt=obj.font.size_pt,
-                bold=obj.font.bold,
-                italic=obj.font.italic,
-            )
+            # 外字（IVS 異体字・CJK拡張漢字）を含む場合のみ IPAmj明朝 に上書き
+            # それ以外はレイアウトの元フォントをそのまま使う
+            if _contains_gaiji(text):
+                filled_font = FontInfo(
+                    name='IPAmj明朝',
+                    size_pt=obj.font.size_pt,
+                    bold=obj.font.bold,
+                    italic=obj.font.italic,
+                )
+            else:
+                filled_font = obj.font
             filled_obj = LayoutObject(
                 obj_type=ObjectType.LABEL,
                 rect=obj.rect,
