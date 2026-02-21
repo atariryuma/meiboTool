@@ -22,7 +22,10 @@ from core.special_needs import is_special_needs_class
 class ClassSelectPanel(ctk.CTkFrame):
     """学年・クラス選択パネル。"""
 
-    def __init__(self, master, on_select: Callable) -> None:
+    def __init__(
+        self, master, on_select: Callable,
+        title: str = '② クラス選択',
+    ) -> None:
         """
         on_select(filter_dict) をラジオボタン変更時に呼ぶ。
         filter_dict = {'学年': str | None, '組': str | None}
@@ -38,7 +41,7 @@ class ClassSelectPanel(ctk.CTkFrame):
 
         ctk.CTkLabel(
             self,
-            text='② クラス選択',
+            text=title,
             font=ctk.CTkFont(size=13, weight='bold'),
         ).grid(row=0, column=0, sticky='w', padx=10, pady=(8, 4))
 

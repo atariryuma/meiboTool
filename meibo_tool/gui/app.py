@@ -130,8 +130,8 @@ class App(ctk.CTk):
         )
         self._main_tabview.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
 
-        tab_excel = self._main_tabview.add('帳票生成')
         tab_print = self._main_tabview.add('名簿印刷')
+        tab_excel = self._main_tabview.add('帳票生成')
 
         # ── 帳票生成タブ（既存の左右パネル） ──────────────────────────
         tab_excel.grid_columnconfigure(0, weight=0, minsize=320)

@@ -195,8 +195,7 @@ App (CTk) — 2カラムレイアウト
 | `gui/editor/editor_window.py` | レイアウトエディター メインウィンドウ（Canvas + プロパティ + Undo/Redo） | — |
 | `gui/editor/layout_canvas.py` | インタラクティブ Canvas（選択・移動・リサイズ） | — |
 | `gui/editor/properties_panel.py` | オブジェクトプロパティ編集パネル（bold/italic 保持） | — |
-| `gui/editor/toolbar.py` | ツールバー（ファイル操作・ズーム・データ差込・ライブラリ保存） | — |
-| `gui/editor/data_fill_dialog.py` | C4th データ差込ダイアログ | — |
+| `gui/editor/toolbar.py` | ツールバー（ファイル操作・ズーム・オブジェクト追加/削除） | — |
 | `gui/editor/print_dialog.py` | プリンター選択・印刷実行ダイアログ | — |
 | `gui/editor/print_preview_dialog.py` | 印刷プレビュー（PILBackend レンダリング + ページ送り） | — |
 | `gui/editor/layout_manager_dialog.py` | レイアウトライブラリ管理ダイアログ（Treeview 一覧） | — |
@@ -211,7 +210,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **646 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **667 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 

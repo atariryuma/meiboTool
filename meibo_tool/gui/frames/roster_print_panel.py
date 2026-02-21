@@ -34,10 +34,24 @@ from core.layout_registry import scan_layout_dir
 from core.special_needs import (
     detect_regular_students,
     detect_special_needs_students,
+    get_assigned_students,
     merge_special_needs_students,
 )
+from gui.frames.class_select_panel import ClassSelectPanel
 
 logger = logging.getLogger(__name__)
+
+
+def _sort_by_attendance(df: pd.DataFrame) -> pd.DataFrame:
+    """出席番号で数値ソートして返す。"""
+    if '出席番号' not in df.columns:
+        return df.reset_index(drop=True)
+    result = df.copy()
+    result['_sort_key'] = pd.to_numeric(
+        result['出席番号'], errors='coerce',
+    ).fillna(0)
+    result = result.sort_values('_sort_key').drop(columns='_sort_key')
+    return result.reset_index(drop=True)
 
 
 class RosterPrintPanel(ctk.CTkFrame):
@@ -54,6 +68,7 @@ class RosterPrintPanel(ctk.CTkFrame):
         self._selected_lay: LayFile | None = None
         self._selected_path: str | None = None
         self._df: pd.DataFrame | None = None
+        self._filtered_df: pd.DataFrame | None = None
         self._render_generation = 0
 
         self._build_ui()
@@ -67,10 +82,9 @@ class RosterPrintPanel(ctk.CTkFrame):
         self.grid_rowconfigure(0, weight=1)
 
         # ── 左パネル ──────────────────────────────────────────────────
-        left = ctk.CTkFrame(self, width=310, corner_radius=6)
+        left = ctk.CTkScrollableFrame(self, width=310, corner_radius=6)
         left.grid(row=0, column=0, sticky='nsew', padx=(5, 2), pady=5)
         left.grid_columnconfigure(0, weight=1)
-        left.grid_rowconfigure(1, weight=1)  # Treeview が伸びる
 
         # レイアウト選択ヘッダー
         ctk.CTkLabel(
@@ -137,9 +151,15 @@ class RosterPrintPanel(ctk.CTkFrame):
             row=2, column=0, columnspan=2, padx=3, pady=(2, 0), sticky='w',
         )
 
+        # クラス選択パネル
+        self._class_panel = ClassSelectPanel(
+            left, on_select=self._on_class_select, title='クラス選択',
+        )
+        self._class_panel.grid(row=4, column=0, sticky='ew', padx=0, pady=5)
+
         # オプションセクション
         opt_frame = ctk.CTkFrame(left, fg_color='transparent')
-        opt_frame.grid(row=4, column=0, sticky='ew', padx=5, pady=5)
+        opt_frame.grid(row=5, column=0, sticky='ew', padx=5, pady=5)
         opt_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(
@@ -169,7 +189,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         # 特別支援学級配置セクション
         placement_frame = ctk.CTkFrame(left, fg_color='transparent')
-        placement_frame.grid(row=5, column=0, sticky='ew', padx=5, pady=5)
+        placement_frame.grid(row=6, column=0, sticky='ew', padx=5, pady=5)
 
         ctk.CTkLabel(
             placement_frame, text='特別支援学級',
@@ -190,7 +210,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         # ボタンセクション
         btn_frame = ctk.CTkFrame(left, fg_color='transparent')
-        btn_frame.grid(row=6, column=0, sticky='ew', padx=5, pady=(5, 8))
+        btn_frame.grid(row=7, column=0, sticky='ew', padx=5, pady=(5, 8))
 
         ctk.CTkButton(
             btn_frame, text='プレビュー', width=120,
@@ -267,8 +287,9 @@ class RosterPrintPanel(ctk.CTkFrame):
                 self._selected_lay = load_layout(path)
             self._selected_path = path
             self._update_arrangement_info()
-            if self._df is not None:
-                self._update_count_label(self._df)
+            df = self._filtered_df if self._filtered_df is not None else self._df
+            if df is not None:
+                self._update_count_label(df)
             self._render_preview()
         except Exception as e:
             mb.showerror('読み込みエラー', str(e))
@@ -305,10 +326,11 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         cols, rows, per_page = calculate_page_arrangement(self._selected_lay)
 
-        if self._df is not None and not self._df.empty:
+        df = self._filtered_df if self._filtered_df is not None else self._df
+        if df is not None and not df.empty:
             # データあり: 先頭 per_page 名分を差し込んでタイルプレビュー
             opts = self._get_options()
-            sample = self._df.head(per_page)
+            sample = df.head(per_page)
             filled: list[LayFile] = []
             for _, row in sample.iterrows():
                 try:
@@ -393,19 +415,64 @@ class RosterPrintPanel(ctk.CTkFrame):
         try:
             df, _unmapped = import_c4th_excel(path)
             self._df = df
+            self._filtered_df = df
 
             self._file_label.configure(
                 text=os.path.basename(path),
                 text_color=ctk.ThemeManager.theme['CTkLabel']['text_color'],
             )
 
-            self._update_count_label(df)
+            # クラス選択パネルにデータを反映
+            self._class_panel.set_data(df)
+
+            self._update_count_label(self._filtered_df)
 
             # プレビュー更新（データ差込あり）
             self._render_preview()
 
         except Exception as e:
             mb.showerror('読み込みエラー', str(e))
+
+    def _on_class_select(self, filter_dict: dict[str, str | None]) -> None:
+        """クラス選択時のコールバック。"""
+        if self._df is None:
+            return
+        g = filter_dict.get('学年')
+        k = filter_dict.get('組')
+        self._filtered_df = self._filter_df(g, k)
+        self._update_count_label(self._filtered_df)
+        self._render_preview()
+
+    def _filter_df(
+        self,
+        学年: str | None,
+        組: str | None,
+    ) -> pd.DataFrame:
+        """学年・組でフィルタリングし、割り当て済み特支児童を自動含有する。"""
+        assert self._df is not None
+        df = self._df.copy()
+        if 学年 and '学年' in df.columns:
+            df = df[df['学年'] == 学年]
+
+        if 組 and '組' in df.columns:
+            df_regular = _sort_by_attendance(df[df['組'] == 組].copy())
+
+            # 割り当て済み特支児童を自動で取得
+            assignments = self._config.get('special_needs_assignments', {})
+            if assignments:
+                target_class = f'{学年}-{組}'
+                special_all = detect_special_needs_students(self._df)
+                assigned = get_assigned_students(
+                    special_all, assignments, target_class,
+                )
+                if not assigned.empty:
+                    placement = self._placement_var.get()
+                    return merge_special_needs_students(
+                        df_regular, assigned, placement=placement,
+                    )
+            return df_regular
+
+        return _sort_by_attendance(df)
 
     def _update_count_label(self, df: pd.DataFrame) -> None:
         """印刷対象の件数とページ数を表示する。"""
@@ -443,12 +510,13 @@ class RosterPrintPanel(ctk.CTkFrame):
     # ── 差込・印刷 ─────────────────────────────────────────────────────
 
     def _build_filled_layouts(self) -> list[LayFile]:
-        """全生徒のデータを差し込んだレイアウト一覧を生成する。"""
-        if self._selected_lay is None or self._df is None:
+        """選択クラスの生徒データを差し込んだレイアウト一覧を生成する。"""
+        df = self._filtered_df if self._filtered_df is not None else self._df
+        if self._selected_lay is None or df is None:
             return []
 
-        regular = detect_regular_students(self._df)
-        special = detect_special_needs_students(self._df)
+        regular = detect_regular_students(df)
+        special = detect_special_needs_students(df)
 
         placement = self._placement_var.get()
         merged = merge_special_needs_students(regular, special, placement)
