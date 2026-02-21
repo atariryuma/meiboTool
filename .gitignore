@@ -41,3 +41,7 @@ cache/
 
 # Test output
 tests/output/
+output_test*.xlsx
+output_test*.png
+editor_preview.*
+*.ps

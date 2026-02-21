@@ -22,20 +22,3 @@ def build_address(row: dict | pd.Series) -> str:
         if s and s.lower() != 'nan':
             parts.append(s)
     return ''.join(parts)
-
-
-def build_guardian_address(row: dict | pd.Series) -> str:
-    """
-    保護者の住所を結合して返す。
-    全フィールドが空の場合は空文字を返す（同上と判断させるのは呼び出し元）。
-    """
-    fields = ['保護者都道府県', '保護者市区町村', '保護者町番地', '保護者建物名']
-    parts = []
-    for f in fields:
-        val = row.get(f, '')
-        if val is None:
-            continue
-        s = str(val).strip()
-        if s and s.lower() != 'nan':
-            parts.append(s)
-    return ''.join(parts)
