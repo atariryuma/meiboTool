@@ -213,6 +213,8 @@ class LayoutManagerDialog(ctk.CTkToplevel):
 
     def destroy(self) -> None:
         """Treeview のイベントバインドを解除してから破棄する。"""
-        with contextlib.suppress(tk.TclError):
+        with contextlib.suppress(tk.TclError, AttributeError):
+            self._tree.focus = lambda *_a: None
             self._tree.unbind('<Double-1>')
+        self.focus_set = lambda: None  # スケジュール済み focus コールバック無効化
         super().destroy()

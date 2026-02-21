@@ -173,6 +173,7 @@ class MappingDialog(ctk.CTkToplevel):
 
     def destroy(self) -> None:
         """grab を解放してから破棄する。"""
+        self.focus_set = lambda: None  # スケジュール済み focus コールバック無効化
         with contextlib.suppress(tk.TclError):
             self.grab_release()
         super().destroy()

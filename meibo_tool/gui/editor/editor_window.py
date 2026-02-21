@@ -91,8 +91,6 @@ class EditorWindow(ctk.CTkToplevel):
             'add_field': self._on_add_field,
             'add_line': self._on_add_line,
             'delete': self._on_delete,
-            'data_fill': self._on_data_fill,
-            'save_to_library': self._on_save_to_library,
             'zoom_in': self._on_zoom_in,
             'zoom_out': self._on_zoom_out,
         }
@@ -352,57 +350,6 @@ class EditorWindow(ctk.CTkToplevel):
         self._object_list.set_layout(self._lay)
         self._props.set_object(None)
         self._update_status()
-
-    # ── ライブラリ保存 ─────────────────────────────────────────────────
-
-    def _on_save_to_library(self) -> None:
-        """現在のレイアウトをライブラリに保存する。"""
-        import os
-        import tkinter.messagebox as _mb
-
-        from core.config import get_layout_dir, load_config
-        from core.lay_serializer import save_layout
-        from core.layout_registry import unique_path
-
-        config = load_config()
-        layout_dir = get_layout_dir(config)
-        name = self._lay.title or '新規レイアウト'
-        dest = unique_path(layout_dir, name)
-
-        try:
-            save_layout(self._lay, dest)
-            _mb.showinfo(
-                '保存完了',
-                f'ライブラリに保存しました:\n{os.path.basename(dest)}',
-                parent=self,
-            )
-        except Exception as e:
-            _mb.showerror('保存エラー', str(e), parent=self)
-
-    # ── データ差込 ─────────────────────────────────────────────────────
-
-    def _on_data_fill(self) -> None:
-        """データ差込ダイアログを開く。"""
-        from gui.editor.data_fill_dialog import DataFillDialog
-        DataFillDialog(
-            self, self._lay,
-            on_preview=self._on_fill_preview,
-            on_print=self._on_fill_print,
-        )
-
-    def _on_fill_preview(self, filled_lay: LayFile) -> None:
-        """差込プレビューを Canvas に表示する。"""
-        self._canvas_panel.set_layout(filled_lay)
-
-    def _on_fill_print(self, filled_layouts: list[LayFile]) -> None:
-        """差込済みレイアウトの印刷プレビューを表示する。"""
-        from gui.editor.print_preview_dialog import PrintPreviewDialog
-        PrintPreviewDialog(self, filled_layouts, on_print=self._do_print)
-
-    def _do_print(self, layouts: list[LayFile]) -> None:
-        """実際に印刷ダイアログを開く。"""
-        from gui.editor.print_dialog import PrintDialog
-        PrintDialog(self, layouts)
 
     # ── ズーム ───────────────────────────────────────────────────────────
 

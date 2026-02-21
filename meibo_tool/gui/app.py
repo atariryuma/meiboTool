@@ -106,17 +106,16 @@ class App(ctk.CTk):
     # ────────────────────────────────────────────────────────────────────────
 
     def _build_layout(self) -> None:
-        self.grid_columnconfigure(0, weight=0, minsize=320)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
-        # ── ヘッダーバー（設定ボタン） ───────────────────────────────────
+        # ── ヘッダーバー ────────────────────────────────────────────────
         header_bar = ctk.CTkFrame(self, height=36, corner_radius=0, fg_color='transparent')
-        header_bar.grid(row=0, column=0, columnspan=2, sticky='ew', padx=5, pady=(5, 0))
+        header_bar.grid(row=0, column=0, sticky='ew', padx=5, pady=(5, 0))
         header_bar.grid_columnconfigure(0, weight=1)
 
         ctk.CTkButton(
-            header_bar, text='レイアウトライブラリ', width=140, height=28,
+            header_bar, text='レイアウト編集', width=120, height=28,
             command=self._open_editor,
         ).grid(row=0, column=1, padx=5, sticky='e')
 
@@ -125,21 +124,35 @@ class App(ctk.CTk):
             command=self._open_settings,
         ).grid(row=0, column=2, padx=5, sticky='e')
 
+        # ── メインタブ ──────────────────────────────────────────────────
+        self._main_tabview = ctk.CTkTabview(
+            self, corner_radius=6, command=self._on_tab_change,
+        )
+        self._main_tabview.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
+
+        tab_excel = self._main_tabview.add('帳票生成')
+        tab_print = self._main_tabview.add('名簿印刷')
+
+        # ── 帳票生成タブ（既存の左右パネル） ──────────────────────────
+        tab_excel.grid_columnconfigure(0, weight=0, minsize=320)
+        tab_excel.grid_columnconfigure(1, weight=1)
+        tab_excel.grid_rowconfigure(0, weight=1)
+
         # 左パネル（スクロール可）
-        self._left = ctk.CTkScrollableFrame(self, width=310, corner_radius=0)
-        self._left.grid(row=1, column=0, sticky='nsew', padx=(5, 2), pady=5)
+        self._left = ctk.CTkScrollableFrame(tab_excel, width=310, corner_radius=0)
+        self._left.grid(row=0, column=0, sticky='nsew', padx=(0, 2))
         self._left.grid_columnconfigure(0, weight=1)
 
         # 右パネル
-        self._right = _PreviewPanel(self)
-        self._right.grid(row=1, column=1, sticky='nsew', padx=(2, 5), pady=5)
+        self._right = _PreviewPanel(tab_excel)
+        self._right.grid(row=0, column=1, sticky='nsew', padx=(2, 0))
 
         # セクション配置
         self.import_frame = ImportFrame(self._left, on_load=self._on_import)
         self.import_frame.grid(row=0, column=0, sticky='ew', padx=5, pady=(5, 3))
 
         self.class_select = ClassSelectPanel(
-            self._left, on_select=self._on_class_select
+            self._left, on_select=self._on_class_select,
         )
         self.class_select.grid(row=1, column=0, sticky='ew', padx=5, pady=3)
 
@@ -162,6 +175,14 @@ class App(ctk.CTk):
         )
         self.output_frame.grid(row=3, column=0, sticky='ew', padx=5, pady=(3, 5))
         self.output_frame.set_enabled(False)
+
+        # ── 名簿印刷タブ ────────────────────────────────────────────────
+        tab_print.grid_columnconfigure(0, weight=1)
+        tab_print.grid_rowconfigure(0, weight=1)
+
+        from gui.frames.roster_print_panel import RosterPrintPanel
+        self._roster_print = RosterPrintPanel(tab_print, self.config)
+        self._roster_print.grid(row=0, column=0, sticky='nsew')
 
     # ────────────────────────────────────────────────────────────────────────
     # 起動時処理
@@ -493,10 +514,20 @@ class App(ctk.CTk):
         """指定ファイルでレイアウトエディターを開く。空パスなら新規。"""
         from gui.editor.editor_window import EditorWindow
         if path:
-            from core.lay_serializer import load_layout
-            EditorWindow(self, lay=load_layout(path))
+            if path.lower().endswith('.lay'):
+                from core.lay_parser import parse_lay
+                EditorWindow(self, lay=parse_lay(path))
+            else:
+                from core.lay_serializer import load_layout
+                ew = EditorWindow(self, lay=load_layout(path))
+                ew._current_file = path
         else:
             EditorWindow(self)
+
+    def _on_tab_change(self) -> None:
+        """タブ切り替え時にレイアウト一覧を更新する。"""
+        if self._main_tabview.get() == '名簿印刷':
+            self._roster_print.refresh_layouts()
 
     def _open_settings(self) -> None:
         """設定ダイアログを開く。"""

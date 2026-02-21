@@ -76,20 +76,6 @@ class EditorToolbar(ctk.CTkFrame):
         sep3.grid(row=0, column=col, padx=6, pady=6)
         col += 1
 
-        # ── データ差込 ──
-        ctk.CTkButton(
-            self, text='データ差込', width=100, height=28,
-            command=self._callbacks.get('data_fill', lambda: None),
-        ).grid(row=0, column=col, padx=2, pady=4)
-        col += 1
-
-        # ── ライブラリに保存 ──
-        ctk.CTkButton(
-            self, text='ライブラリ保存', width=110, height=28,
-            command=self._callbacks.get('save_to_library', lambda: None),
-        ).grid(row=0, column=col, padx=2, pady=4)
-        col += 1
-
         # ── スペーサー ──
         col = 20
 
