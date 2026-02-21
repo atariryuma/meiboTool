@@ -104,11 +104,16 @@ class TestLoadSaveConfig:
         loaded = load_config()
         assert loaded['school_name'] == 'テスト小学校'
 
+    @patch('core.config._get_bundle_dir')
     @patch('core.config._get_config_path')
-    def test_load_malformed_json_returns_defaults(self, mock_path, tmp_path):
+    def test_load_malformed_json_returns_defaults(
+        self, mock_path, mock_bundle, tmp_path,
+    ):
         config_path = tmp_path / 'config.json'
         config_path.write_text('{invalid json!!!', encoding='utf-8')
         mock_path.return_value = str(config_path)
+        # バンドルディレクトリも tmp_path にして実 config.json を読まないようにする
+        mock_bundle.return_value = str(tmp_path / 'no_bundle')
 
         config = load_config()
         # エラーにならずデフォルト値が返される

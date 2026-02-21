@@ -10,6 +10,7 @@ import logging
 import os
 import tempfile
 import threading
+import tkinter as tk
 import tkinter.messagebox as mb
 import tkinter.ttk as ttk
 
@@ -738,27 +739,34 @@ class _PreviewPanel(ctk.CTkFrame):
     def show_preview_loading(self) -> None:
         """プレビュー生成中のローディング表示。"""
         self._preview_image_ref = None
-        self._preview_label.configure(
-            text='プレビューを生成中…', text_color='gray', image=None,
-        )
-        self._preview_label.grid(row=0, column=0, padx=20, pady=40)
+        with contextlib.suppress(tk.TclError):
+            self._preview_label.configure(
+                text='プレビューを生成中…', text_color='gray', image=None,
+            )
+            self._preview_label.grid(row=0, column=0, padx=20, pady=40)
 
     def show_preview_image(self, pil_image: PILImage.Image) -> None:
         """PIL Image をプレビュータブに表示する。"""
-        ctk_img = ctk.CTkImage(
-            light_image=pil_image,
-            size=(pil_image.width, pil_image.height),
-        )
-        self._preview_image_ref = ctk_img  # GC 防止
-        self._preview_label.configure(text='', image=ctk_img, text_color='gray')
-        self._preview_label.grid(row=0, column=0, padx=4, pady=4)
-        # プレビュータブに自動切替
-        self._tabview.set('プレビュー')
+        try:
+            ctk_img = ctk.CTkImage(
+                light_image=pil_image,
+                size=(pil_image.width, pil_image.height),
+            )
+            self._preview_image_ref = ctk_img  # GC 防止
+            self._preview_label.configure(
+                text='', image=ctk_img, text_color='gray',
+            )
+            self._preview_label.grid(row=0, column=0, padx=4, pady=4)
+            # プレビュータブに自動切替
+            self._tabview.set('プレビュー')
+        except tk.TclError:
+            pass
 
     def show_preview_error(self, msg: str) -> None:
         """プレビューエラーメッセージを表示する。"""
         self._preview_image_ref = None
-        self._preview_label.configure(
-            text=msg, text_color='#CC4444', image=None,
-        )
-        self._preview_label.grid(row=0, column=0, padx=20, pady=40)
+        with contextlib.suppress(tk.TclError):
+            self._preview_label.configure(
+                text=msg, text_color='#CC4444', image=None,
+            )
+            self._preview_label.grid(row=0, column=0, padx=20, pady=40)

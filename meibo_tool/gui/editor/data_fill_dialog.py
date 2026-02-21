@@ -37,7 +37,7 @@ class DataFillDialog(ctk.CTkToplevel):
         self._on_preview = on_preview
         self._on_print = on_print
         self._df: pd.DataFrame | None = None
-        self._options: dict = {
+        self._fill_options: dict = {
             'fiscal_year': 2025,
             'school_name': '',
             'teacher_name': '',
@@ -203,7 +203,7 @@ class DataFillDialog(ctk.CTkToplevel):
     # ── プレビュー・印刷 ─────────────────────────────────────────────────
 
     def _get_options(self) -> dict:
-        opts = dict(self._options)
+        opts = dict(self._fill_options)
         opts['school_name'] = self._school_var.get()
         opts['teacher_name'] = self._teacher_var.get()
         with contextlib.suppress(ValueError):

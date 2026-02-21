@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import tkinter as tk
 import tkinter.filedialog as fd
 import tkinter.messagebox as mb
 import tkinter.ttk as ttk
@@ -208,3 +210,9 @@ class LayoutManagerDialog(ctk.CTkToplevel):
         if self._on_open:
             self._on_open('')  # 空パス = 新規
         self.destroy()
+
+    def destroy(self) -> None:
+        """Treeview のイベントバインドを解除してから破棄する。"""
+        with contextlib.suppress(tk.TclError):
+            self._tree.unbind('<Double-1>')
+        super().destroy()

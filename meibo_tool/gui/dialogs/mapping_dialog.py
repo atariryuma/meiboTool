@@ -6,6 +6,8 @@ import 直後に unmapped が存在する場合に表示される。
 
 from __future__ import annotations
 
+import contextlib
+import tkinter as tk
 from collections.abc import Callable
 
 import customtkinter as ctk
@@ -168,3 +170,9 @@ class MappingDialog(ctk.CTkToplevel):
     def _on_skip_all(self) -> None:
         self._on_confirm({})
         self.destroy()
+
+    def destroy(self) -> None:
+        """grab を解放してから破棄する。"""
+        with contextlib.suppress(tk.TclError):
+            self.grab_release()
+        super().destroy()
