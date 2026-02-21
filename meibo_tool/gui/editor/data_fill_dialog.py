@@ -235,10 +235,24 @@ class DataFillDialog(ctk.CTkToplevel):
 
         filled_layouts = []
         opts = self._get_options()
+        errors = []
         for i in range(len(self._df)):
-            row = self._df.iloc[i].to_dict()
-            filled = fill_layout(self._lay, row, opts)
-            filled_layouts.append(filled)
+            try:
+                row = self._df.iloc[i].to_dict()
+                filled = fill_layout(self._lay, row, opts)
+                filled_layouts.append(filled)
+            except Exception as e:
+                errors.append(f'行 {i + 1}: {e}')
+
+        if errors:
+            msg = '\n'.join(errors[:10])
+            if len(errors) > 10:
+                msg += f'\n... 他 {len(errors) - 10} 件'
+            mb.showwarning('差込エラー', f'一部の行でエラー:\n{msg}', parent=self)
+
+        if not filled_layouts:
+            mb.showerror('エラー', '差込可能なデータがありません。', parent=self)
+            return
 
         # 印刷プレビューを表示してから印刷
         from gui.editor.print_preview_dialog import PrintPreviewDialog

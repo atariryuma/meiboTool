@@ -293,3 +293,96 @@ class TestBoldItalicRoundTrip:
         font_dict = d['objects'][0].get('font', {})
         assert 'bold' not in font_dict
         assert 'italic' not in font_dict
+
+
+# ── アトミック書き込みテスト ──────────────────────────────────────────────────
+
+
+class TestAtomicSave:
+    """save_layout のアトミック書き込みテスト。"""
+
+    def test_overwrite_existing_file(self, tmp_path):
+        """既存ファイルの上書きが成功すること。"""
+        path = str(tmp_path / 'test.json')
+        save_layout(LayFile(title='v1'), path)
+        save_layout(LayFile(title='v2'), path)
+
+        restored = load_layout(path)
+        assert restored.title == 'v2'
+
+    def test_original_preserved_on_error(self, tmp_path):
+        """シリアライズエラー時に元ファイルが残ること。"""
+        path = str(tmp_path / 'test.json')
+        save_layout(LayFile(title='元データ'), path)
+
+        # json.dump がエラーを起こすオブジェクトを仕込む
+        from unittest.mock import patch
+        with patch('core.lay_serializer.json.dump', side_effect=TypeError('bad')), \
+             pytest.raises(TypeError):
+            save_layout(LayFile(title='壊れる'), path)
+
+        # 元ファイルが無傷であること
+        restored = load_layout(path)
+        assert restored.title == '元データ'
+
+    def test_no_temp_file_left_on_error(self, tmp_path):
+        """エラー時に一時ファイルが残らないこと。"""
+        path = str(tmp_path / 'test.json')
+
+        from unittest.mock import patch
+        with patch('core.lay_serializer.json.dump', side_effect=OSError('disk full')), \
+             pytest.raises(OSError):
+            save_layout(LayFile(), path)
+
+        # 一時ファイルが残っていないこと
+        files = list(tmp_path.iterdir())
+        assert all(not f.name.startswith('.layout_') for f in files)
+
+
+# ── デシリアライズ エッジケーステスト ─────────────────────────────────────────
+
+
+class TestDeserializationEdgeCases:
+    """dict_to_layfile / _dict_to_object のエッジケーステスト。"""
+
+    def test_object_with_empty_text(self):
+        """text='' のオブジェクトが正しく復元される。"""
+        data = {
+            'format': 'meibo_layout_v1',
+            'objects': [{'type': 'LABEL', 'rect': [0, 0, 100, 30]}],
+        }
+        lay = dict_to_layfile(data)
+        assert lay.objects[0].text == ''
+
+    def test_object_with_no_rect(self):
+        """rect なしのオブジェクトが正しく復元される。"""
+        data = {
+            'format': 'meibo_layout_v1',
+            'objects': [{'type': 'LABEL', 'text': 'no rect'}],
+        }
+        lay = dict_to_layfile(data)
+        assert lay.objects[0].rect is None
+
+    def test_font_defaults(self):
+        """font キーなしで FontInfo のデフォルトが使われる。"""
+        data = {
+            'format': 'meibo_layout_v1',
+            'objects': [{'type': 'LABEL'}],
+        }
+        lay = dict_to_layfile(data)
+        assert lay.objects[0].font.name == ''
+        assert lay.objects[0].font.size_pt == 10.0
+        assert lay.objects[0].font.bold is False
+
+    def test_load_nonexistent_file_raises(self, tmp_path):
+        """存在しないファイルを読むと FileNotFoundError。"""
+        with pytest.raises(FileNotFoundError):
+            load_layout(str(tmp_path / 'no_such.json'))
+
+    def test_load_invalid_json_raises(self, tmp_path):
+        """不正な JSON ファイルを読むと json.JSONDecodeError。"""
+        path = str(tmp_path / 'bad.json')
+        with open(path, 'w') as f:
+            f.write('{broken json}')
+        with pytest.raises(json.JSONDecodeError):
+            load_layout(path)

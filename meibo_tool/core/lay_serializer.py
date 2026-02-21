@@ -12,6 +12,7 @@ LayFile オブジェクトを人間可読な JSON 形式で保存・読込する
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 
 from core.lay_parser import (
@@ -163,13 +164,28 @@ def dict_to_layfile(data: dict) -> LayFile:
 
 
 def save_layout(lay: LayFile, path: str) -> None:
-    """LayFile を JSON ファイルに保存する。"""
+    """LayFile を JSON ファイルに保存する。
+
+    アトミック書き込み: 一時ファイルに書いてからリネームする。
+    書き込み中にエラーが起きても元ファイルは壊れない。
+    """
     out_dir = Path(path).parent
     if out_dir != Path('.'):
         out_dir.mkdir(parents=True, exist_ok=True)
     data = layfile_to_dict(lay)
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # 同じディレクトリに一時ファイルを作成（rename がアトミックになるよう同一FS）
+    fd, tmp_path = tempfile.mkstemp(
+        dir=str(out_dir), suffix='.tmp', prefix='.layout_',
+    )
+    try:
+        with open(fd, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        # Windows では既存ファイルへの rename が失敗するため replace を使う
+        Path(tmp_path).replace(path)
+    except BaseException:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise
 
 
 def load_layout(path: str) -> LayFile:

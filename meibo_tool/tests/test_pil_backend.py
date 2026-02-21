@@ -182,3 +182,74 @@ class TestPILTextModes:
         ])
         img = render_layout_to_image(lay, dpi=150)
         assert isinstance(img, Image.Image)
+
+
+# ── エッジケーステスト ────────────────────────────────────────────────────────
+
+
+class TestEdgeCases:
+    """PILBackend と render_layout_to_image のエッジケーステスト。"""
+
+    def test_zero_page_dimensions(self):
+        """ページサイズ 0 でもクラッシュしない。"""
+        lay = LayFile(page_width=0, page_height=0)
+        img = render_layout_to_image(lay, dpi=150)
+        assert img.width >= 1
+        assert img.height >= 1
+
+    def test_zero_dpi_clamped(self):
+        """DPI=0 でもクラッシュしない。"""
+        lay = LayFile(page_width=840, page_height=1188)
+        img = render_layout_to_image(lay, dpi=0)
+        assert img.width >= 1
+        assert img.height >= 1
+
+    def test_empty_layout(self):
+        """オブジェクトなしでも画像が返る（ページ枠描画あり）。"""
+        lay = LayFile(objects=[])
+        img = render_layout_to_image(lay, dpi=72)
+        assert isinstance(img, Image.Image)
+        assert img.width > 0
+        assert img.height > 0
+
+    def test_bold_italic_text(self):
+        """bold/italic テキストがエラーなく描画される。"""
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.LABEL,
+                rect=Rect(10, 10, 200, 50),
+                text='太字斜体',
+                font=FontInfo('', 12.0, bold=True, italic=True),
+            ),
+        ])
+        img = render_layout_to_image(lay, dpi=100)
+        arr = np.array(img)
+        assert (arr != 255).any()
+
+    def test_very_long_text(self):
+        """非常に長いテキストでクラッシュしない。"""
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.LABEL,
+                rect=Rect(10, 10, 100, 30),
+                text='あ' * 200,
+                font=FontInfo('', 10.0),
+            ),
+        ])
+        img = render_layout_to_image(lay, dpi=72)
+        assert isinstance(img, Image.Image)
+
+    def test_field_with_prefix_suffix(self):
+        """prefix/suffix 付きフィールドが描画される。"""
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.FIELD,
+                rect=Rect(10, 10, 200, 50),
+                field_id=108,
+                font=FontInfo('', 10.0),
+                prefix='〒',
+                suffix='様',
+            ),
+        ])
+        img = render_layout_to_image(lay, dpi=100)
+        assert isinstance(img, Image.Image)

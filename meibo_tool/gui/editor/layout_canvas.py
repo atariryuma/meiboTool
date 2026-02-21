@@ -44,7 +44,7 @@ class LayoutCanvas(ctk.CTkFrame):
     def __init__(
         self, master: ctk.CTkBaseClass,
         on_select: Callable[[int], None] | None = None,
-        on_modify: Callable[[], None] | None = None,
+        on_modify: Callable[[int, LayoutObject], None] | None = None,
         on_cursor: Callable[[int, int], None] | None = None,
     ) -> None:
         super().__init__(master)
@@ -278,8 +278,8 @@ class LayoutCanvas(ctk.CTkFrame):
         self.refresh()
 
     def _on_release(self, event: tk.Event) -> None:
-        if self._dragging and self._on_modify:
-            self._on_modify()
+        if self._dragging and self._on_modify and self._drag_orig_obj is not None:
+            self._on_modify(self._selected_idx, self._drag_orig_obj)
         self._dragging = False
         self._drag_handle = None
         self._drag_orig_obj = None

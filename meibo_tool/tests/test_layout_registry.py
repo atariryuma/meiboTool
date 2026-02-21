@@ -203,3 +203,40 @@ class TestDeleteRename:
 
         with pytest.raises(FileExistsError):
             rename_layout(path1, 'b')
+
+    def test_rename_same_name(self, tmp_path):
+        """同じ名前にリネームしてもエラーにならない。"""
+        path = str(tmp_path / 'same.json')
+        _make_layout_json(path, title='同名テスト')
+
+        new_path = rename_layout(path, 'same')
+        assert os.path.isfile(new_path)
+
+
+# ── unique_path テスト ───────────────────────────────────────────────────────
+
+
+class TestUniquePath:
+    """unique_path のテスト。"""
+
+    def test_no_collision(self, tmp_path):
+        from core.layout_registry import unique_path
+        result = unique_path(str(tmp_path), 'new_layout')
+        assert result.endswith('new_layout.json')
+
+    def test_collision_increments(self, tmp_path):
+        from core.layout_registry import unique_path
+        # 衝突ファイルを作成
+        (tmp_path / 'test.json').write_text('{}')
+        (tmp_path / 'test_1.json').write_text('{}')
+
+        result = unique_path(str(tmp_path), 'test')
+        assert result.endswith('test_2.json')
+
+    def test_import_json_nonexistent_raises(self, tmp_path):
+        """存在しない JSON ファイルのインポートはエラー。"""
+        with pytest.raises(FileNotFoundError):
+            import_json_file(
+                str(tmp_path / 'no_such.json'),
+                str(tmp_path / 'lib'),
+            )

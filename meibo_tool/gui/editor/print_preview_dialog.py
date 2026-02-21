@@ -124,3 +124,11 @@ class PrintPreviewDialog(ctk.CTkToplevel):
         if self._on_print:
             self._on_print(self._layouts)
             self.destroy()
+
+    def destroy(self) -> None:
+        """ダイアログ破棄時に PIL 画像を解放する。"""
+        for img in self._preview_images:
+            img.close()
+        self._preview_images.clear()
+        self._tk_image = None
+        super().destroy()

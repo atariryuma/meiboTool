@@ -155,7 +155,7 @@ class LayoutManagerDialog(ctk.CTkToplevel):
     def _on_open_click(self) -> None:
         """選択中のレイアウトをエディターで開く。"""
         idx = self._get_selected_index()
-        if idx is None:
+        if idx is None or idx >= len(self._layouts):
             mb.showinfo('選択なし', 'レイアウトを選択してください。', parent=self)
             return
 
@@ -167,7 +167,7 @@ class LayoutManagerDialog(ctk.CTkToplevel):
     def _on_rename(self) -> None:
         """選択中のレイアウトをリネームする。"""
         idx = self._get_selected_index()
-        if idx is None:
+        if idx is None or idx >= len(self._layouts):
             mb.showinfo('選択なし', 'レイアウトを選択してください。', parent=self)
             return
 
@@ -189,7 +189,7 @@ class LayoutManagerDialog(ctk.CTkToplevel):
     def _on_delete(self) -> None:
         """選択中のレイアウトを削除する。"""
         idx = self._get_selected_index()
-        if idx is None:
+        if idx is None or idx >= len(self._layouts):
             mb.showinfo('選択なし', 'レイアウトを選択してください。', parent=self)
             return
 

@@ -641,9 +641,9 @@ def render_layout_to_image(lay: LayFile, dpi: int = 150) -> Image.Image:
     Returns:
         PIL.Image.Image (RGB)
     """
-    scale = 0.25 * dpi / 25.4
-    w = int(lay.page_width * scale)
-    h = int(lay.page_height * scale)
+    scale = 0.25 * max(1, dpi) / 25.4
+    w = max(1, int(lay.page_width * scale))
+    h = max(1, int(lay.page_height * scale))
     img = Image.new('RGB', (w, h), (255, 255, 255))
     backend = PILBackend(img, dpi)
     renderer = LayRenderer(lay, backend)

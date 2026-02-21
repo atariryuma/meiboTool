@@ -161,8 +161,9 @@ class EditorWindow(ctk.CTkToplevel):
             self._props.set_object(self._lay.objects[index], index)
         self._update_status()
 
-    def _on_object_modified(self) -> None:
+    def _on_object_modified(self, index: int, before: LayoutObject) -> None:
         """ドラッグ移動/リサイズ完了時。"""
+        self._push_undo(index, before)
         self._dirty = True
         self._object_list.refresh()
         self._update_status()
