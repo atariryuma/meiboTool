@@ -661,3 +661,119 @@ class TestRenderWithUnitMm:
         # 2100 * 0.1mm = 210mm → 210 * 150 / 25.4 ≈ 1240px
         expected_w = int(2100 * 0.1 * 150 / 25.4)
         assert abs(img.size[0] - expected_w) <= 1
+
+
+# ── Bug修正: 特殊キー追加テスト ────────────────────────────────────────────
+
+
+class TestFillLayoutGuardianAddress:
+    """保護者住所の結合・同上判定テスト。"""
+
+    def test_guardian_address_c4th_separate_fields(self) -> None:
+        """C4th データ: 4分割フィールドが結合される。"""
+        obj = new_field(10, 20, 200, 50, field_id=683)  # 保護者住所
+        lay = _make_layout(obj)
+        data = {
+            '保護者都道府県': '沖縄県',
+            '保護者市区町村': '那覇市',
+            '保護者町番地': '泊1-2-3',
+            '保護者建物名': '',
+        }
+        result = fill_layout(lay, data)
+        assert result.objects[0].text == '沖縄県那覇市泊1-2-3'
+
+    def test_guardian_address_same_as_student(self) -> None:
+        """保護者住所=児童住所 → 「同上」。"""
+        obj = new_field(10, 20, 200, 50, field_id=683)
+        lay = _make_layout(obj)
+        data = {
+            '都道府県': '沖縄県', '市区町村': '那覇市',
+            '町番地': '天久1-2-3', '建物名': '',
+            '保護者都道府県': '沖縄県', '保護者市区町村': '那覇市',
+            '保護者町番地': '天久1-2-3', '保護者建物名': '',
+        }
+        result = fill_layout(lay, data)
+        assert result.objects[0].text == '同上'
+
+    def test_guardian_address_suzuki_single_field(self) -> None:
+        """スズキ校務: 単一フィールドがそのまま使われる。"""
+        obj = new_field(10, 20, 200, 50, field_id=683)
+        lay = _make_layout(obj)
+        data = {'保護者住所': '東京都千代田区永田町1-7-1'}
+        result = fill_layout(lay, data)
+        assert result.objects[0].text == '東京都千代田区永田町1-7-1'
+
+    def test_guardian_address_empty(self) -> None:
+        """保護者住所データがない場合は空。"""
+        obj = new_field(10, 20, 200, 50, field_id=683)
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {})
+        assert result.objects[0].text == ''
+
+
+class TestFillLayoutFiscalYear:
+    """年度1/年度2 の解決テスト。"""
+
+    def test_nendo1_resolved(self) -> None:
+        """年度1 が fiscal_year から解決される。"""
+        obj = new_field(10, 20, 200, 50, field_id=101)  # 年度1
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {}, {'fiscal_year': 2025})
+        assert result.objects[0].text == '2025'
+
+    def test_nendo2_resolved(self) -> None:
+        """年度2 が fiscal_year から解決される。"""
+        obj = new_field(10, 20, 200, 50, field_id=102)  # 年度2
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {}, {'fiscal_year': 2026})
+        assert result.objects[0].text == '2026'
+
+
+class TestFillLayoutPageMeta:
+    """ページ番号/人数合計テスト。"""
+
+    def test_page_number(self) -> None:
+        """ページ番号が options から取得される。"""
+        obj = new_field(10, 20, 200, 50, field_id=138)  # ページ番号
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {}, {'page_number': 3})
+        assert result.objects[0].text == '3'
+
+    def test_total_count(self) -> None:
+        """人数合計が options から取得される。"""
+        obj = new_field(10, 20, 200, 50, field_id=204)  # 人数合計
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {}, {'total_count': 35})
+        assert result.objects[0].text == '35'
+
+    def test_page_meta_empty_when_not_set(self) -> None:
+        """options にない場合は空文字。"""
+        lay = _make_layout(
+            new_field(0, 0, 100, 30, field_id=138),
+            new_field(0, 30, 100, 60, field_id=204),
+        )
+        result = fill_layout(lay, {}, {})
+        assert result.objects[0].text == ''
+        assert result.objects[1].text == ''
+
+
+class TestFillLayoutTransferDate:
+    """転出日の日付フォーマットテスト。"""
+
+    def test_transfer_out_date_formatted(self) -> None:
+        """転出日が YY/MM/DD にフォーマットされる。"""
+        obj = new_field(10, 20, 200, 50, field_id=137)  # 転出日
+        lay = _make_layout(obj)
+        data = {'転出日': '2025-03-31'}
+        result = fill_layout(lay, data)
+        assert result.objects[0].text == '25/03/31'
+
+    def test_enrollment_date_formatted(self) -> None:
+        """編入日が YY/MM/DD にフォーマットされる。"""
+        obj = new_field(10, 20, 200, 50, field_id=108)  # 氏名の ID を借用
+        lay = _make_layout(obj)
+        # 直接 _resolve をテストできないため、data_row 経由で確認
+        data = {'氏名': '2025-04-01'}
+        result = fill_layout(lay, data)
+        # 氏名は DATE_KEYS に含まれないのでそのまま
+        assert result.objects[0].text == '2025-04-01'

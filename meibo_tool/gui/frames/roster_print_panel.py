@@ -355,9 +355,11 @@ class RosterPrintPanel(ctk.CTkFrame):
         if df is not None and not df.empty:
             # データあり: 先頭 per_page 名分を差し込んでタイルプレビュー
             opts = self._get_options()
+            opts['total_count'] = len(df)
             sample = df.head(per_page)
             filled: list[LayFile] = []
-            for _, row in sample.iterrows():
+            for i, (_idx, row) in enumerate(sample.iterrows()):
+                opts['page_number'] = i + 1
                 try:
                     filled.append(
                         fill_layout(self._selected_lay, row.to_dict(), opts),
@@ -550,10 +552,13 @@ class RosterPrintPanel(ctk.CTkFrame):
         merged = merge_special_needs_students(regular, special, placement)
 
         opts = self._get_options()
+        total = len(merged)
+        opts['total_count'] = total
         filled: list[LayFile] = []
         errors: list[str] = []
 
         for i, (_idx, row) in enumerate(merged.iterrows()):
+            opts['page_number'] = i + 1
             try:
                 filled.append(
                     fill_layout(self._selected_lay, row.to_dict(), opts),

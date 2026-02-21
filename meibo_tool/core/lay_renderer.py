@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import tkinter as tk
 from abc import ABC, abstractmethod
+from io import BytesIO
 
 from core.lay_parser import (
     FontInfo,
@@ -135,6 +136,12 @@ class RenderBackend(ABC):
     ) -> None:
         """テキストを描画する。"""
 
+    def draw_image(  # noqa: B027
+        self, left: float, top: float, right: float, bottom: float,
+        image_data: bytes, **kwargs: object,
+    ) -> None:
+        """画像を描画する。デフォルトでは何もしない。"""
+
 
 # ── Canvas バックエンド ──────────────────────────────────────────────────────
 
@@ -150,6 +157,7 @@ class CanvasBackend(RenderBackend):
         self._scale = scale
         self._ox = offset_x
         self._oy = offset_y
+        self._images: list = []  # PhotoImage の GC 防止
 
     @property
     def scale(self) -> float:
@@ -370,6 +378,27 @@ class CanvasBackend(RenderBackend):
             anchor=anchor, width=0, tags=tags,
         )
 
+    def draw_image(
+        self, left: float, top: float, right: float, bottom: float,
+        image_data: bytes, tags: tuple[str, ...] = (),
+    ) -> int | None:
+        """埋め込み画像を Canvas に描画する。"""
+        if not HAS_PIL:
+            return None
+        try:
+            from PIL import ImageTk
+            img = Image.open(BytesIO(image_data))
+            w = max(1, int(right - left))
+            h = max(1, int(bottom - top))
+            img = img.resize((w, h), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(img)
+            self._images.append(photo)
+            return self._canvas.create_image(
+                left, top, image=photo, anchor='nw', tags=tags,
+            )
+        except Exception:
+            return None
+
 
 # ── PIL バックエンド ──────────────────────────────────────────────────────────
 
@@ -560,6 +589,25 @@ class PILBackend(RenderBackend):
             ty = y + i * line_h + (line_h - th) / 2
             self._draw.text((tx, ty), line, fill=color, font=font)
 
+    def draw_image(
+        self, left: float, top: float, right: float, bottom: float,
+        image_data: bytes, **kwargs: object,
+    ) -> None:
+        """埋め込み画像を PIL 画像に描画する。"""
+        try:
+            img = Image.open(BytesIO(image_data))
+            w = max(1, int(right - left))
+            h = max(1, int(bottom - top))
+            img = img.resize((w, h), Image.Resampling.LANCZOS)
+            if img.mode == 'RGBA':
+                self._img.paste(img, (int(left), int(top)), img)
+            else:
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                self._img.paste(img, (int(left), int(top)))
+        except Exception:
+            pass
+
 
 # ── レンダラー ───────────────────────────────────────────────────────────────
 
@@ -567,9 +615,13 @@ class PILBackend(RenderBackend):
 class LayRenderer:
     """LayFile を指定バックエンドに描画するレンダラー。"""
 
-    def __init__(self, lay: LayFile, backend: RenderBackend) -> None:
+    def __init__(
+        self, lay: LayFile, backend: RenderBackend,
+        layout_registry: dict[str, LayFile] | None = None,
+    ) -> None:
         self._lay = lay
         self._b = backend
+        self._registry = layout_registry or {}
 
     def render_all(self, *, skip_page_outline: bool = False) -> None:
         """ページ外枠 + 全オブジェクトを描画する。
@@ -585,9 +637,15 @@ class LayRenderer:
         for i, obj in enumerate(self._lay.objects):
             if obj.obj_type == ObjectType.TABLE:
                 self.render_object(obj, index=i)
-        # LABEL / FIELD を描画
+        # MEIBO を描画（参照先レイアウトを展開）
         for i, obj in enumerate(self._lay.objects):
-            if obj.obj_type not in (ObjectType.LINE, ObjectType.TABLE):
+            if obj.obj_type == ObjectType.MEIBO:
+                self.render_object(obj, index=i)
+        # LABEL / FIELD / IMAGE を描画
+        for i, obj in enumerate(self._lay.objects):
+            if obj.obj_type not in (
+                ObjectType.LINE, ObjectType.TABLE, ObjectType.MEIBO,
+            ):
                 self.render_object(obj, index=i)
         # LINE を最前面に描画
         for i, obj in enumerate(self._lay.objects):
@@ -620,6 +678,10 @@ class LayRenderer:
             self._render_line(obj, tag)
         elif obj.obj_type == ObjectType.TABLE:
             self._render_table(obj, tag)
+        elif obj.obj_type == ObjectType.MEIBO:
+            self._render_meibo(obj, tag)
+        elif obj.obj_type == ObjectType.IMAGE:
+            self._render_image(obj, tag)
 
     def _render_label(self, obj: LayoutObject, tag: str) -> None:
         """LABEL オブジェクトを描画する（透明背景）。"""
@@ -782,6 +844,48 @@ class LayRenderer:
                     tags=(tag, 'table_hline'),
                 )
 
+    def _render_meibo(self, obj: LayoutObject, tag: str) -> None:
+        """MEIBO オブジェクトを描画する（参照先レイアウトを繰り返し配置）。"""
+        if obj.meibo is None or not self._registry:
+            return
+        meibo = obj.meibo
+        ref_lay = self._registry.get(meibo.ref_name)
+        if ref_lay is None:
+            return
+        for i in range(meibo.row_count):
+            if meibo.direction == 0:  # 横並び
+                dx = meibo.origin_x + i * meibo.cell_width
+                dy = meibo.origin_y
+            else:  # 縦並び
+                dx = meibo.origin_x
+                dy = meibo.origin_y + i * meibo.cell_height
+            for ref_obj in ref_lay.objects:
+                offset_obj = _offset_object(ref_obj, dx, dy)
+                if offset_obj.obj_type == ObjectType.LABEL:
+                    self._render_label(offset_obj, tag)
+                elif offset_obj.obj_type == ObjectType.FIELD:
+                    self._render_field(offset_obj, tag)
+                elif offset_obj.obj_type == ObjectType.LINE:
+                    self._render_line(offset_obj, tag)
+                elif offset_obj.obj_type == ObjectType.TABLE:
+                    self._render_table(offset_obj, tag)
+                elif offset_obj.obj_type == ObjectType.IMAGE:
+                    self._render_image(offset_obj, tag)
+
+    def _render_image(self, obj: LayoutObject, tag: str) -> None:
+        """IMAGE オブジェクトを描画する（埋め込み PNG 画像）。"""
+        if obj.image is None or not obj.image.image_data:
+            return
+        if obj.rect is None:
+            return
+        r = obj.rect
+        px1, py1 = self._b._to_px(r.left, r.top)
+        px2, py2 = self._b._to_px(r.right, r.bottom)
+        self._b.draw_image(
+            px1, py1, px2, py2,
+            obj.image.image_data,
+            tags=(tag, 'image'),
+        )
 
 
 # ── PIL レンダリング ──────────────────────────────────────────────────────────
@@ -789,6 +893,7 @@ class LayRenderer:
 
 def render_layout_to_image(
     lay: LayFile, dpi: int = 150, *, for_print: bool = False,
+    layout_registry: dict[str, LayFile] | None = None,
 ) -> Image.Image:
     """LayFile を PIL 画像にレンダリングする。
 
@@ -799,6 +904,7 @@ def render_layout_to_image(
         lay: レンダリング対象のレイアウト
         dpi: 画像解像度 (default 150)
         for_print: True の場合、ページ外枠を描画しない（印刷用）。
+        layout_registry: MEIBO 参照解決用の {名前: LayFile} dict。
 
     Returns:
         PIL.Image.Image (RGB)
@@ -809,7 +915,7 @@ def render_layout_to_image(
     h = max(1, int(lay.page_height * scale))
     img = Image.new('RGB', (w, h), (255, 255, 255))
     backend = PILBackend(img, dpi, unit_mm=unit_mm)
-    renderer = LayRenderer(lay, backend)
+    renderer = LayRenderer(lay, backend, layout_registry=layout_registry)
     renderer.render_all(skip_page_outline=for_print)
     return img
 
@@ -1063,6 +1169,8 @@ def _scale_and_offset_object(
         prefix=obj.prefix,
         suffix=obj.suffix,
         table_columns=obj.table_columns,
+        meibo=obj.meibo,
+        image=obj.image,
     )
 
 
@@ -1098,6 +1206,8 @@ def _offset_object(obj: LayoutObject, dx: int, dy: int) -> LayoutObject:
         prefix=obj.prefix,
         suffix=obj.suffix,
         table_columns=obj.table_columns,
+        meibo=obj.meibo,
+        image=obj.image,
     )
 
 
@@ -1119,7 +1229,7 @@ def fill_layout(
     Returns:
         差込済み LayFile（コピー）
     """
-    from utils.address import build_address
+    from utils.address import build_address, build_guardian_address
     from utils.date_fmt import DATE_KEYS, format_date
     from utils.wareki import to_wareki
 
@@ -1136,7 +1246,7 @@ def fill_layout(
         original_key = key
 
         # 特殊キー
-        if key == '年度':
+        if key in ('年度', '年度1', '年度2'):
             return str(options.get('fiscal_year', ''))
         if key == '年度和暦':
             fy = options.get('fiscal_year', 2025)
@@ -1147,6 +1257,12 @@ def fill_layout(
             return options.get('teacher_name', '')
         if key == '住所':
             return build_address(data_row)
+        if key == '保護者住所':
+            return build_guardian_address(data_row)
+        if key == 'ページ番号':
+            return str(options.get('page_number', ''))
+        if key == '人数合計':
+            return str(options.get('total_count', ''))
 
         # name_display モード
         if mode == 'kanji' and key in _NAME_KANA_KEYS:

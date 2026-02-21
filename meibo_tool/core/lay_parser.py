@@ -39,9 +39,10 @@ _TAG_OBJ_LINE = 0x03E9      # 1001 (LINE object / style flag)
 _TAG_OBJ_CONTAINER = 0x03EA  # 1002 (GROUP/container / pen type)
 _TAG_OBJ_LABEL = 0x03EB     # 1003 (LABEL object / line pattern)
 _TAG_OBJ_FIELD = 0x03EC     # 1004 (FIELD object)
-_TAG_OBJ_PROP5 = 0x03ED     # 1005
+_TAG_OBJ_PROP5 = 0x03ED     # 1005 (IMAGE: 大ブロブ時は埋め込み画像)
 _TAG_OBJ_PROP6 = 0x03EE     # 1006
 _TAG_OBJ_TABLE = 0x03EF     # 1007 (TABLE / 名簿オブジェクト)
+_TAG_OBJ_MEIBO = 0x03F0     # 1008 (MEIBO: 繰り返しエリア)
 
 # TLV タグ定数 ── マルチレイアウトコンテナ
 _TAG_LAYOUT_ENTRY = 0x0640  # 1600: 追加レイアウトブロック
@@ -73,15 +74,25 @@ _GEO_UNIT_MM = 0.1  # ジオメトリタグの座標単位 (0.1mm = 10 units/mm)
 # ── フィールド ID マッピング ──────────────────────────────────────────────────
 
 FIELD_ID_MAP: dict[int, str] = {
-    # 基本情報
+    # 基本情報（スズキ校務 → C4th 対応）
+    100: '生徒コード',       # スズキ校務: Googleアカウント = C4th: 生徒コード
+    101: '年度1',
+    102: '年度2',
+    103: '在籍',
     104: '学年',
     105: '組',
     106: '出席番号',
     107: '性別',
     108: '氏名',
     109: '氏名かな',
+    110: '出席番号2',
+    111: '学校名',            # options.school_name から解決
+    113: '担任名',            # options.teacher_name から解決
     133: '行番号',
+    134: '年度和暦',
     137: '転出日',
+    138: 'ページ番号',
+    204: '人数合計',
     400: '写真',
     # 連絡先・住所
     601: '在校兄弟',
@@ -91,7 +102,12 @@ FIELD_ID_MAP: dict[int, str] = {
     607: '町番地',
     608: '緊急連絡先',
     610: '生年月日',
-    # 公簿名
+    612: '部活動・学童',
+    613: 'PTA役員',
+    # 保護者追加情報
+    682: '保護者名かな',
+    683: '保護者住所',
+    # 公簿名（C4th の「正式名前」に対応）
     685: '公簿名',
     686: '公簿名かな',
     # 学級編成
@@ -101,7 +117,26 @@ FIELD_ID_MAP: dict[int, str] = {
     1504: '学級配慮',
     1505: '不適児童',
     1506: '欠席',
+    1508: 'ピアノ',
+    1510: '要準要保護',
+    1511: '家庭環境メモ',
+    1513: '配慮児童',         # スズキ校務: 〇一緒にしたい生徒と理由
+    1514: '不適児童メモ',     # スズキ校務: ×別々にしたい生徒と理由
     1515: '新学級1',
+    1517: 'リーダー',
+    1518: '問題行動種別',
+    1519: '問題行動具体',
+    1523: 'アレルギー',
+    1534: '習い事',
+    1535: '引継事項1年',
+    1536: '引継事項2年',
+    1537: '引継事項3年',
+    1538: '引継事項4年',
+    1539: '引継事項5年',
+    1542: '健康面',
+    # 卒業台帳
+    1529: '進学先',
+    1531: '証書番号',
 }
 
 
@@ -120,6 +155,8 @@ class ObjectType(IntEnum):
     LABEL = 3
     FIELD = 4
     TABLE = 5
+    MEIBO = 6
+    IMAGE = 7
 
 
 @dataclass
@@ -162,6 +199,27 @@ class TableColumn:
     width: int = 1       # 相対幅
     h_align: int = 0     # 0=左, 1=中央, 2=右
     header: str = ''     # カラムヘッダー文字列
+
+
+@dataclass
+class MeiboArea:
+    """名簿（繰り返しエリア）: 別レイアウトを指定位置に繰り返し配置する。"""
+    origin_x: int = 0
+    origin_y: int = 0
+    cell_width: int = 0
+    cell_height: int = 0
+    row_count: int = 0
+    data_start_index: int = 0
+    ref_name: str = ''
+    direction: int = 0      # 0=横並び, 1=縦並び
+
+
+@dataclass
+class EmbeddedImage:
+    """埋め込み画像オブジェクト。"""
+    rect: tuple[int, int, int, int] = (0, 0, 0, 0)
+    image_data: bytes = b''
+    original_path: str = ''
 
 
 # ── 用紙・配置サイズ ────────────────────────────────────────────────────────
@@ -274,6 +332,8 @@ class LayoutObject:
     prefix: str = ''
     suffix: str = ''
     table_columns: list[TableColumn] = field(default_factory=list)
+    meibo: MeiboArea | None = None
+    image: EmbeddedImage | None = None
 
 
 @dataclass
@@ -513,12 +573,53 @@ def _parse_table_object(payload: bytes) -> LayoutObject:
     return obj
 
 
+def _parse_meibo_object(payload: bytes) -> LayoutObject:
+    """MEIBO オブジェクト (0x03F0) をパースする。"""
+    meibo = MeiboArea()
+    for tag, data in _iter_tlv(payload):
+        if tag == _TAG_GEO_RECT and len(data) >= 8:
+            meibo.origin_x, meibo.origin_y = struct.unpack_from('<II', data)
+        elif tag == _TAG_GEO_POINT2 and len(data) >= 8:
+            meibo.cell_width, meibo.cell_height = struct.unpack_from('<II', data)
+        elif tag == _TAG_GEO_PROP3 and len(data) >= 4:
+            meibo.row_count = struct.unpack_from('<I', data)[0]
+        elif tag == 0x07D5 and len(data) >= 1:
+            meibo.direction = data[0]
+        elif tag == 0x07D6 and len(data) >= 4:
+            meibo.data_start_index = struct.unpack_from('<I', data)[0]
+        elif tag == 0x07DB and len(data) >= 2:
+            meibo.ref_name = data.decode('utf-16-le', errors='replace').rstrip('\x00')
+    return LayoutObject(obj_type=ObjectType.MEIBO, meibo=meibo)
+
+
+def _parse_image_object(payload: bytes) -> LayoutObject:
+    """埋め込み画像オブジェクト (0x03ED 大ブロブ) をパースする。"""
+    img = EmbeddedImage()
+    for tag, data in _iter_tlv(payload):
+        if tag == _TAG_GEO_RECT and len(data) >= 16:
+            x1, y1, x2, y2 = struct.unpack_from('<IIII', data)
+            img.rect = (x1, y1, x2, y2)
+        elif tag == _TAG_VALIGN and len(data) > 4:
+            # TABLE コンテキスト外: 0x0BBB = 元ファイルパス
+            img.original_path = data.decode('utf-16-le', errors='replace').rstrip('\x00')
+        elif tag == _TAG_FONT and len(data) > 100:
+            # TABLE コンテキスト外: 0x0BBC = PNG バイナリ
+            img.image_data = bytes(data)
+    return LayoutObject(
+        obj_type=ObjectType.IMAGE,
+        rect=Rect(img.rect[0], img.rect[1], img.rect[2], img.rect[3]),
+        image=img,
+    )
+
+
 def _parse_object_list(payload: bytes) -> list[LayoutObject]:
     """タグ 1002 のオブジェクトリストをパースする。
 
     GROUP (CONTAINER) オブジェクトは再帰的に子要素を展開し、
     GROUP 自身の rect は外枠として 4 本の LINE に変換する。
     TABLE オブジェクトはカラム定義を含むテーブルとしてパースする。
+    MEIBO オブジェクトは繰り返しエリアとしてパースする。
+    IMAGE オブジェクト (0x03ED 大ブロブ) は埋め込み画像としてパースする。
     """
     objects: list[LayoutObject] = []
     for tag, data in _iter_tlv(payload):
@@ -543,6 +644,13 @@ def _parse_object_list(payload: bytes) -> list[LayoutObject]:
                     ))
         elif tag == _TAG_OBJ_TABLE:
             obj = _parse_table_object(data)
+            objects.append(obj)
+        elif tag == _TAG_OBJ_MEIBO:
+            obj = _parse_meibo_object(data)
+            objects.append(obj)
+        elif tag == _TAG_OBJ_PROP5 and len(data) > 100:
+            # 大きな 0x03ED ブロブ = 埋め込み画像
+            obj = _parse_image_object(data)
             objects.append(obj)
         elif tag in (_TAG_OBJ_LINE, _TAG_OBJ_LABEL, _TAG_OBJ_FIELD):
             obj = _parse_object_block(tag, data)

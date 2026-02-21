@@ -3,7 +3,13 @@
 import re
 
 # 日付型フィールド（YY/MM/DD にフォーマットする）
-DATE_KEYS: frozenset[str] = frozenset({'生年月日', '入学日', '転入日'})
+DATE_KEYS: frozenset[str] = frozenset({
+    '生年月日', '入学日',
+    '転入日', '転出日', '編入日',
+    '出身校在籍開始日', '出身校在籍終了日',
+    '転入前学校在籍開始日', '転入前学校在籍終了日',
+    '編入前学校在籍開始日', '編入前学校在籍終了日',
+})
 
 
 def format_date(s: str) -> str:

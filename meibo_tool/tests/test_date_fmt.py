@@ -75,5 +75,19 @@ class TestDateKeys:
     def test_contains_transfer(self):
         assert '転入日' in DATE_KEYS
 
+    def test_contains_transfer_out(self):
+        assert '転出日' in DATE_KEYS
+
+    def test_contains_transfer_enrollment(self):
+        assert '編入日' in DATE_KEYS
+
+    def test_contains_school_history_dates(self):
+        for key in [
+            '出身校在籍開始日', '出身校在籍終了日',
+            '転入前学校在籍開始日', '転入前学校在籍終了日',
+            '編入前学校在籍開始日', '編入前学校在籍終了日',
+        ]:
+            assert key in DATE_KEYS, f'{key} が DATE_KEYS に含まれていない'
+
     def test_is_frozenset(self):
         assert isinstance(DATE_KEYS, frozenset)

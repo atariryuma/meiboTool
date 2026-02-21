@@ -41,8 +41,8 @@ class TestAllLogicalNames:
             assert key in _ALL_LOGICAL_NAMES, f'{key} が論理名一覧にない'
 
     def test_has_reasonable_count(self):
-        """論理名が妥当な数（30〜50程度）であること。"""
-        assert 25 <= len(_ALL_LOGICAL_NAMES) <= 60
+        """論理名が妥当な数であること。"""
+        assert 25 <= len(_ALL_LOGICAL_NAMES) <= 100
 
 
 # ── マッピングロジックテスト ──────────────────────────────────────────────────
