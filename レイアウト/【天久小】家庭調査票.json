@@ -1,0 +1,1723 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】家庭調査票",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        350
+      ],
+      "line_end": [
+        1950,
+        350
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        740
+      ],
+      "line_end": [
+        1950,
+        740
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        350
+      ],
+      "line_end": [
+        250,
+        740
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1950,
+        350
+      ],
+      "line_end": [
+        1950,
+        740
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        250,
+        280,
+        2000,
+        350
+      ],
+      "text": "【児童】※記載されている内容について、加筆・修正がある場合は朱書きをお願いします。",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1455,
+        350,
+        1645,
+        400
+      ],
+      "text": "生年月日",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        400
+      ],
+      "line_end": [
+        1950,
+        400
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        280,
+        430,
+        390,
+        480
+      ],
+      "text": "氏名",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        240,
+        350,
+        430,
+        400
+      ],
+      "text": "ふりがな",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1790,
+        350,
+        1900,
+        400
+      ],
+      "text": "性別",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        260,
+        570,
+        410,
+        620
+      ],
+      "text": "現住所",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        250,
+        760,
+        1620,
+        830
+      ],
+      "text": "【家族構成】※本人を含めず、同居している方のみご記入ください。",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        830
+      ],
+      "line_end": [
+        1950,
+        830
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1190
+      ],
+      "line_end": [
+        1950,
+        1190
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        830
+      ],
+      "line_end": [
+        250,
+        1190
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1950,
+        830
+      ],
+      "line_end": [
+        1950,
+        1190
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        920
+      ],
+      "line_end": [
+        1950,
+        920
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1090,
+        830
+      ],
+      "line_end": [
+        1090,
+        1190
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1110,
+        830
+      ],
+      "line_end": [
+        1110,
+        1190
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        930,
+        830
+      ],
+      "line_end": [
+        930,
+        1190
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        250,
+        1210,
+        540,
+        1260
+      ],
+      "text": "【保健調査】",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1270
+      ],
+      "line_end": [
+        1090,
+        1270
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1550
+      ],
+      "line_end": [
+        1090,
+        1550
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1270
+      ],
+      "line_end": [
+        250,
+        1550
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1090,
+        1270
+      ],
+      "line_end": [
+        1090,
+        1550
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1340
+      ],
+      "line_end": [
+        1090,
+        1340
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        250,
+        1580,
+        1110,
+        1640
+      ],
+      "text": "【児童の性格、担任へ希望したいこと等】",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1640
+      ],
+      "line_end": [
+        1950,
+        1640
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1780
+      ],
+      "line_end": [
+        1950,
+        1780
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1640
+      ],
+      "line_end": [
+        250,
+        1780
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1950,
+        1640
+      ],
+      "line_end": [
+        1950,
+        1780
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        280,
+        1710
+      ],
+      "line_end": [
+        1920,
+        1710
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        420,
+        350
+      ],
+      "line_end": [
+        420,
+        740
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        510
+      ],
+      "line_end": [
+        1950,
+        510
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1740,
+        350
+      ],
+      "line_end": [
+        1740,
+        510
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        420,
+        520,
+        480,
+        570
+      ],
+      "text": "〒",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1270,
+        510
+      ],
+      "line_end": [
+        1270,
+        670
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1010
+      ],
+      "line_end": [
+        1950,
+        1010
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1100
+      ],
+      "line_end": [
+        1950,
+        1100
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        790,
+        830
+      ],
+      "line_end": [
+        790,
+        1190
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        445,
+        830,
+        635,
+        920
+      ],
+      "text": "ふりがな\r\n名　　前",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1660,
+        830
+      ],
+      "line_end": [
+        1660,
+        1190
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1305,
+        830,
+        1495,
+        920
+      ],
+      "text": "ふりがな\r\n名　　前",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1800,
+        830
+      ],
+      "line_end": [
+        1800,
+        1190
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1820,
+        840,
+        1940,
+        910
+      ],
+      "text": "職業",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1410
+      ],
+      "line_end": [
+        1090,
+        1410
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1480
+      ],
+      "line_end": [
+        1090,
+        1480
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        260,
+        1420,
+        1080,
+        1470
+      ],
+      "text": "持病、アレルギーの詳細、その他",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        260,
+        1280,
+        1080,
+        1330
+      ],
+      "text": "健康面（持病、アレルギーの有無、通院状況）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1110,
+        1210,
+        1440,
+        1260
+      ],
+      "text": "【児童の生活】",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1110,
+        1270
+      ],
+      "line_end": [
+        1950,
+        1270
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1110,
+        1550
+      ],
+      "line_end": [
+        1950,
+        1550
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1110,
+        1270
+      ],
+      "line_end": [
+        1110,
+        1550
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1950,
+        1270
+      ],
+      "line_end": [
+        1950,
+        1550
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1110,
+        1340
+      ],
+      "line_end": [
+        1950,
+        1340
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1110,
+        1410
+      ],
+      "line_end": [
+        1950,
+        1410
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1110,
+        1480
+      ],
+      "line_end": [
+        1950,
+        1480
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1110,
+        1280,
+        1390,
+        1330
+      ],
+      "text": "学習塾・習い事",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1110,
+        1350,
+        1390,
+        1400
+      ],
+      "text": "部活動・学童",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1110,
+        1420,
+        1390,
+        1470
+      ],
+      "text": "帰宅時の保護者",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1110,
+        1490,
+        1390,
+        1540
+      ],
+      "text": "仲の良い友だち",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1390,
+        1270
+      ],
+      "line_end": [
+        1390,
+        1550
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1860
+      ],
+      "line_end": [
+        1950,
+        1860
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        2520
+      ],
+      "line_end": [
+        1950,
+        2520
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        1860
+      ],
+      "line_end": [
+        250,
+        2520
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1950,
+        1860
+      ],
+      "line_end": [
+        1950,
+        2520
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        250,
+        210,
+        530,
+        260
+      ],
+      "field_id": 110,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1385,
+        1420,
+        1955,
+        1470
+      ],
+      "text": "いる・いない(カギ持参)・その他(　　　)",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 8.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1430,
+        210,
+        1950,
+        260
+      ],
+      "field_id": 111,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "h_align": 2,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        810,
+        850,
+        920,
+        900
+      ],
+      "text": "続柄",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1670,
+        850,
+        1790,
+        900
+      ],
+      "text": "続柄",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        950,
+        830,
+        1080,
+        920
+      ],
+      "text": "職業",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        430,
+        350,
+        1360,
+        400
+      ],
+      "field_id": 109,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1380,
+        420,
+        1720,
+        490
+      ],
+      "field_id": 610,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        430,
+        405,
+        1360,
+        505
+      ],
+      "field_id": 108,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 16.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1480,
+        510
+      ],
+      "line_end": [
+        1480,
+        670
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1280,
+        530,
+        1470,
+        580
+      ],
+      "text": "電話番号",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1260,
+        605,
+        1490,
+        655
+      ],
+      "text": "緊急連絡先",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1270,
+        590
+      ],
+      "line_end": [
+        1950,
+        590
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1360,
+        350
+      ],
+      "line_end": [
+        1360,
+        510
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1790,
+        410,
+        1900,
+        500
+      ],
+      "field_id": 107,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        925,
+        190,
+        1275,
+        280
+      ],
+      "text": "家庭調査票",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 18.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        250,
+        1800,
+        1960,
+        1850
+      ],
+      "text": "【各種便り・学校HP及びPTCAブログ・メディア対応に関する公開レベルの選択】",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        280,
+        1860,
+        1930,
+        1930
+      ],
+      "text": "本校では、教育活動の様子を以下の媒体で共有しています。",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        430,
+        580,
+        1270,
+        670
+      ],
+      "field_id": 604,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        460,
+        520,
+        1270,
+        570
+      ],
+      "field_id": 603,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1480,
+        510,
+        1950,
+        590
+      ],
+      "field_id": 607,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1480,
+        590,
+        1950,
+        670
+      ],
+      "field_id": 608,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        260,
+        1480,
+        1090,
+        1550
+      ],
+      "field_id": 1523,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        260,
+        960,
+        780,
+        1010
+      ],
+      "field_id": 602,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1120,
+        920,
+        1650,
+        1010
+      ],
+      "field_id": 601,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        260,
+        920,
+        780,
+        960
+      ],
+      "field_id": 682,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 8.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        260,
+        680,
+        410,
+        730
+      ],
+      "text": "保護者",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        300,
+        1920,
+        1920,
+        2260
+      ],
+      "text": "【レベル1：クラスルーム・スクールアプリ限定】\r\nクラスルームやスクールアプリ（例：Classroomやスクール連絡アプリ）など、クラスや学校内での限定公開に限ります。これらの情報は外部には一切公開しません。\r\n【レベル2：学校関連媒体のみ】\r\n学校HPやPTCAブログに公開します。ただし、児童の名前と写真が一致しないよう配慮します。報道機関などの外部メディアへの公開は含みません。\r\n【レベル3：報道機関を含む公開】\r\n学校関連媒体に加え、新聞・テレビ・ウェブメディアなどの報道機関にも公開します。この場合も、児童の個人情報が特定されないよう十分に配慮します。",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        280,
+        2270,
+        1930,
+        2500
+      ],
+      "text": "以下の中からご希望の公開レベルを選択し、該当する項目に✔を付けてください。\r\n　□限定的な公開においても、写真の掲載に同意しない。\r\n　□レベル１：クラスルーム・スクールアプリ限定\n\r\n\n　□レベル２：学校HP等、学校関連媒体のみ\r\n\n　□レベル３：報道機関を含む公開",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        260,
+        1340,
+        1090,
+        1410
+      ],
+      "field_id": 1542,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        670
+      ],
+      "line_end": [
+        1950,
+        670
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1400,
+        1340,
+        1950,
+        1410
+      ],
+      "field_id": 612,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        2610
+      ],
+      "line_end": [
+        1950,
+        2610
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        2720
+      ],
+      "line_end": [
+        1950,
+        2720
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        2610
+      ],
+      "line_end": [
+        250,
+        2720
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1950,
+        2610
+      ],
+      "line_end": [
+        1950,
+        2720
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        250,
+        2550,
+        1960,
+        2600
+      ],
+      "text": "【緊急時引き渡しサイン欄】※こちらの欄は、災害等の緊急時に使用します。",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        270,
+        2630,
+        1930,
+        2700
+      ],
+      "text": "日付：　　　年　　月　　日　　　迎えた方のサイン（続柄）：　　　　　　　　　",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        370,
+        2700
+      ],
+      "line_end": [
+        750,
+        2700
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1340,
+        2700
+      ],
+      "line_end": [
+        1880,
+        2700
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        430,
+        670,
+        790,
+        740
+      ],
+      "field_id": 602,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        790,
+        670
+      ],
+      "line_end": [
+        790,
+        740
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1000,
+        670
+      ],
+      "line_end": [
+        1000,
+        740
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        780,
+        680,
+        1010,
+        730
+      ],
+      "text": "保護者住所",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1010,
+        670,
+        1950,
+        740
+      ],
+      "field_id": 683,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1720,
+        2630,
+        1930,
+        2700
+      ],
+      "text": "（　　　）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1400,
+        1270,
+        1950,
+        1340
+      ],
+      "field_id": 1534,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        2720
+      ],
+      "line_end": [
+        1950,
+        2720
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        2830
+      ],
+      "line_end": [
+        1950,
+        2830
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        250,
+        2720
+      ],
+      "line_end": [
+        250,
+        2830
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1950,
+        2720
+      ],
+      "line_end": [
+        1950,
+        2830
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        270,
+        2740,
+        1930,
+        2810
+      ],
+      "text": "日付：　　　年　　月　　日　　　迎えた方のサイン（続柄）：　　　　　　　　　",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        370,
+        2810
+      ],
+      "line_end": [
+        750,
+        2810
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1340,
+        2810
+      ],
+      "line_end": [
+        1880,
+        2810
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1720,
+        2740,
+        1930,
+        2810
+      ],
+      "text": "（　　　）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1310,
+        2420,
+        1920,
+        2500
+      ],
+      "text": "※上位のレベルに同意いただいた場合、その下位のレベルにも同意したものと見なします。",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 8.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        530,
+        210,
+        640,
+        260
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        640,
+        210,
+        750,
+        260
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        750,
+        210,
+        860,
+        260
+      ],
+      "field_id": 103,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

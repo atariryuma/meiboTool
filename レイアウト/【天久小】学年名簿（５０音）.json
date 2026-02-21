@@ -1,0 +1,163 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】学年名簿（５０音）",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "TABLE",
+      "rect": [
+        160,
+        350,
+        1930,
+        2820
+      ],
+      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000d\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "table_columns": [
+        {
+          "field_id": 133,
+          "width": 20,
+          "header": "行番号"
+        },
+        {
+          "field_id": 104,
+          "width": 12,
+          "h_align": 1,
+          "header": "学年"
+        },
+        {
+          "field_id": 105,
+          "width": 14,
+          "h_align": 1,
+          "header": "学級"
+        },
+        {
+          "field_id": 686,
+          "width": 47,
+          "header": "公簿名のふりがな"
+        },
+        {
+          "field_id": 685,
+          "width": 48,
+          "header": "公簿名"
+        },
+        {
+          "field_id": 107,
+          "width": 14,
+          "header": "性別"
+        },
+        {
+          "field_id": 100,
+          "width": 22
+        }
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        110,
+        260,
+        920,
+        330
+      ],
+      "text": "校務支援システム　学年名簿（５０音順）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1620,
+        240,
+        1960,
+        330
+      ],
+      "field_id": 138,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        390,
+        170,
+        770,
+        240
+      ],
+      "field_id": 111,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        110,
+        170,
+        380,
+        240
+      ],
+      "field_id": 110,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1750,
+        100,
+        1970,
+        170
+      ],
+      "field_id": 204,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1,
+      "prefix": "計",
+      "suffix": "名"
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1770,
+        350,
+        1940,
+        420
+      ],
+      "text": "確認欄",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

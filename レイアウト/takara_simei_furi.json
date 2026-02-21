@@ -1,0 +1,171 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "takara_simei_furi",
+  "version": 1600,
+  "page_width": 700,
+  "page_height": 130,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        130,
+        50,
+        830,
+        130
+      ],
+      "field_id": 108,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 24.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        130,
+        0,
+        830,
+        50
+      ],
+      "field_id": 109,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        0,
+        0,
+        130,
+        130
+      ],
+      "field_id": 106,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 24.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        0
+      ],
+      "line_end": [
+        130,
+        0
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        130
+      ],
+      "line_end": [
+        130,
+        130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        0
+      ],
+      "line_end": [
+        0,
+        130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        130,
+        0
+      ],
+      "line_end": [
+        130,
+        130
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        130,
+        0
+      ],
+      "line_end": [
+        830,
+        0
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        130,
+        130
+      ],
+      "line_end": [
+        830,
+        130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        130,
+        0
+      ],
+      "line_end": [
+        130,
+        130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        830,
+        0
+      ],
+      "line_end": [
+        830,
+        130
+      ]
+    }
+  ],
+  "paper": {
+    "mode": 1,
+    "unit_mm": 0.1,
+    "item_width_mm": 70.0,
+    "item_height_mm": 13.0,
+    "cols": 1,
+    "rows": 20,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

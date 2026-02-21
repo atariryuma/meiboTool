@@ -144,11 +144,15 @@ class PrintDialog(ctk.CTkToplevel):
 
     def _update_progress(self, progress: float, current: int, total: int) -> None:
         """進捗を更新する（メインスレッドで実行）。"""
+        if not self.winfo_exists():
+            return
         self._progress.set(progress)
         self._status_label.configure(text=f'{current} / {total} ページ印刷中...')
 
     def _on_print_done(self, error: str | None) -> None:
         """印刷完了（メインスレッドで実行）。"""
+        if not self.winfo_exists():
+            return
         self._print_btn.configure(state='normal')
         if error:
             self._status_label.configure(text='印刷エラー')

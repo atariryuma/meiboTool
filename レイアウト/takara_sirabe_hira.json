@@ -1,0 +1,155 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "takara_sirabe_hira",
+  "version": 1600,
+  "page_width": 350,
+  "page_height": 300,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        80,
+        0,
+        350,
+        70
+      ],
+      "field_id": 109,
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 18.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        0,
+        0,
+        90,
+        70
+      ],
+      "field_id": 106,
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 18.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        0
+      ],
+      "line_end": [
+        350,
+        0
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        70
+      ],
+      "line_end": [
+        350,
+        70
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        0
+      ],
+      "line_end": [
+        0,
+        70
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        350,
+        0
+      ],
+      "line_end": [
+        350,
+        70
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        70
+      ],
+      "line_end": [
+        350,
+        70
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        300
+      ],
+      "line_end": [
+        350,
+        300
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        70
+      ],
+      "line_end": [
+        0,
+        300
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        350,
+        70
+      ],
+      "line_end": [
+        350,
+        300
+      ]
+    }
+  ],
+  "paper": {
+    "mode": 1,
+    "unit_mm": 0.1,
+    "item_width_mm": 35.0,
+    "item_height_mm": 30.0,
+    "cols": 5,
+    "rows": 8,
+    "margin_left_mm": 17.0,
+    "margin_top_mm": 44.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

@@ -1,18 +1,32 @@
 {
   "app_version": "1.0.0",
-  "school_name": "",
+  "school_name": "天久小学校",
   "school_type": "elementary",
   "template_dir": "./テンプレート",
   "output_dir": "./出力",
+  "layout_dir": "./レイアウト",
   "default_font": "IPAmj明朝",
   "fiscal_year": 2025,
   "graduation_cert_start_number": 1,
   "homeroom_teachers": {},
+  "last_loaded_file": "L:/マイドライブ/Inbox/2026年02月/meibo/meibo.xlsx",
   "update": {
-    "version_file_id": "",
+    "github_repo": "",
     "check_on_startup": true,
     "current_app_version": "1.0.0",
+    "last_check_time": "",
+    "skip_version": "",
+    "version_file_id": "",
     "current_template_version": "1.0.0"
+  },
+  "data_source": {
+    "mode": "manual",
+    "lan_path": "",
+    "gdrive_file_id": "",
+    "encryption_password": "",
+    "last_sync_hash": "",
+    "last_sync_time": "",
+    "cache_file": ""
   },
   "column_mappings": {
     "last_used": {}
@@ -22,5 +36,29 @@
     "mandatory": {},
     "optional": {}
   },
-  "recent_files": []
+  "recent_files": [],
+  "special_needs_assignments": {
+    "特別支援学級-スマイル１-1": "6-3",
+    "特別支援学級-スマイル１-2": "6-4",
+    "特別支援学級-スマイル１-3": "",
+    "特別支援学級-スマイル１-4": "",
+    "特別支援学級-スマイル１-5": "",
+    "特別支援学級-スマイル１-6": "",
+    "特別支援学級-スマイル２-1": "6-2",
+    "特別支援学級-スマイル２-2": "6-1",
+    "特別支援学級-スマイル２-3": "",
+    "特別支援学級-スマイル２-4": "",
+    "特別支援学級-スマイル２-5": "",
+    "特別支援学級-スマイル２-6": "",
+    "特別支援学級-スマイル２-7": "",
+    "特別支援学級-スマイル３-3": "",
+    "特別支援学級-スマイル３-4": "",
+    "特別支援学級-スマイル３-6": "",
+    "特別支援学級-スマイル３-7": "",
+    "特別支援学級-スマイル３-8": "",
+    "特別支援学級-スマイル４-4": "",
+    "特別支援学級-スマイル４-5": "",
+    "特別支援学級-スマイル４-6": ""
+  },
+  "special_needs_placement": "integrated"
 }

@@ -1,0 +1,375 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【次年度学級】複数学級名列表",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        200,
+        200,
+        320,
+        260
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        320,
+        200,
+        440,
+        260
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "TABLE",
+      "rect": [
+        200,
+        270,
+        950,
+        2370
+      ],
+      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000d\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "table_columns": [
+        {
+          "field_id": 106,
+          "width": 8,
+          "h_align": 1,
+          "header": "番"
+        },
+        {
+          "field_id": 108,
+          "width": 59,
+          "header": "氏名"
+        },
+        {
+          "field_id": 1515,
+          "width": 8,
+          "header": "新学級①"
+        }
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1030,
+        200,
+        1150,
+        260
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1150,
+        200,
+        1270,
+        260
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "TABLE",
+      "rect": [
+        1030,
+        270,
+        1780,
+        2370
+      ],
+      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000d\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "table_columns": [
+        {
+          "field_id": 106,
+          "width": 8,
+          "h_align": 1,
+          "header": "番"
+        },
+        {
+          "field_id": 108,
+          "width": 59,
+          "header": "氏名"
+        },
+        {
+          "field_id": 1515,
+          "width": 8,
+          "header": "新学級①"
+        }
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1860,
+        200,
+        1980,
+        260
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1980,
+        200,
+        2100,
+        260
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "TABLE",
+      "rect": [
+        1860,
+        270,
+        2610,
+        2370
+      ],
+      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000d\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "table_columns": [
+        {
+          "field_id": 106,
+          "width": 8,
+          "h_align": 1,
+          "header": "番"
+        },
+        {
+          "field_id": 108,
+          "width": 59,
+          "header": "氏名"
+        },
+        {
+          "field_id": 1515,
+          "width": 8,
+          "header": "新学級①"
+        }
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        2690,
+        200,
+        2810,
+        260
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        2810,
+        200,
+        2930,
+        260
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "TABLE",
+      "rect": [
+        2690,
+        270,
+        3440,
+        2370
+      ],
+      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000d\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "table_columns": [
+        {
+          "field_id": 106,
+          "width": 8,
+          "h_align": 1,
+          "header": "番"
+        },
+        {
+          "field_id": 108,
+          "width": 59,
+          "header": "氏名"
+        },
+        {
+          "field_id": 1515,
+          "width": 8,
+          "header": "新学級①"
+        }
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        550,
+        200,
+        680,
+        260
+      ],
+      "text": "担任：",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        670,
+        200,
+        950,
+        260
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1380,
+        200,
+        1510,
+        260
+      ],
+      "text": "担任：",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1500,
+        200,
+        1780,
+        260
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        2210,
+        200,
+        2340,
+        260
+      ],
+      "text": "担任：",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        2330,
+        200,
+        2610,
+        260
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        3040,
+        200,
+        3170,
+        260
+      ],
+      "text": "担任：",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        3160,
+        200,
+        3440,
+        260
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

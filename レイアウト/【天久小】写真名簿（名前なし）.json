@@ -1,0 +1,146 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】写真名簿（名前なし）",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 30,
+        "origin_y": 120,
+        "cell_width": 340,
+        "cell_height": 470,
+        "row_count": 6,
+        "data_start_index": 0,
+        "ref_name": "コピー：写真＋番号＋ふりがな",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 30,
+        "origin_y": 590,
+        "cell_width": 340,
+        "cell_height": 470,
+        "row_count": 6,
+        "data_start_index": 6,
+        "ref_name": "コピー：写真＋番号＋ふりがな",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 30,
+        "origin_y": 1060,
+        "cell_width": 340,
+        "cell_height": 470,
+        "row_count": 6,
+        "data_start_index": 12,
+        "ref_name": "コピー：写真＋番号＋ふりがな",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 30,
+        "origin_y": 1530,
+        "cell_width": 340,
+        "cell_height": 470,
+        "row_count": 6,
+        "data_start_index": 18,
+        "ref_name": "コピー：写真＋番号＋ふりがな",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 30,
+        "origin_y": 2000,
+        "cell_width": 340,
+        "cell_height": 470,
+        "row_count": 6,
+        "data_start_index": 24,
+        "ref_name": "コピー：写真＋番号＋ふりがな",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 30,
+        "origin_y": 2470,
+        "cell_width": 340,
+        "cell_height": 470,
+        "row_count": 6,
+        "data_start_index": 30,
+        "ref_name": "コピー：写真＋番号＋ふりがな",
+        "direction": 1
+      }
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        30,
+        30,
+        550,
+        120
+      ],
+      "field_id": 111,
+      "font": {
+        "name": "UD デジタル 教科書体 N-B",
+        "size_pt": 18.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        690,
+        30,
+        840,
+        120
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "UD デジタル 教科書体 N-B",
+        "size_pt": 18.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        550,
+        30,
+        690,
+        120
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "UD デジタル 教科書体 N-B",
+        "size_pt": 18.0
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

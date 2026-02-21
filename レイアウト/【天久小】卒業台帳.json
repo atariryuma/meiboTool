@@ -1,0 +1,560 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】卒業台帳",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        420,
+        320
+      ],
+      "line_end": [
+        760,
+        320
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        420,
+        440
+      ],
+      "line_end": [
+        760,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        420,
+        320
+      ],
+      "line_end": [
+        420,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        760,
+        320
+      ],
+      "line_end": [
+        760,
+        440
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        200,
+        320
+      ],
+      "line_end": [
+        420,
+        320
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        200,
+        440
+      ],
+      "line_end": [
+        420,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        200,
+        320
+      ],
+      "line_end": [
+        200,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        420,
+        320
+      ],
+      "line_end": [
+        420,
+        440
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        760,
+        320
+      ],
+      "line_end": [
+        1160,
+        320
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        760,
+        440
+      ],
+      "line_end": [
+        1160,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        760,
+        320
+      ],
+      "line_end": [
+        760,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1160,
+        320
+      ],
+      "line_end": [
+        1160,
+        440
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1160,
+        320
+      ],
+      "line_end": [
+        1960,
+        320
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1160,
+        440
+      ],
+      "line_end": [
+        1960,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1160,
+        320
+      ],
+      "line_end": [
+        1160,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1960,
+        320
+      ],
+      "line_end": [
+        1960,
+        440
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2300,
+        320
+      ],
+      "line_end": [
+        2610,
+        320
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2300,
+        440
+      ],
+      "line_end": [
+        2610,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2300,
+        320
+      ],
+      "line_end": [
+        2300,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2610,
+        320
+      ],
+      "line_end": [
+        2610,
+        440
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2610,
+        320
+      ],
+      "line_end": [
+        2860,
+        320
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2610,
+        440
+      ],
+      "line_end": [
+        2860,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2610,
+        320
+      ],
+      "line_end": [
+        2610,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2860,
+        320
+      ],
+      "line_end": [
+        2860,
+        440
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1960,
+        320
+      ],
+      "line_end": [
+        2300,
+        320
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1960,
+        440
+      ],
+      "line_end": [
+        2300,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1960,
+        320
+      ],
+      "line_end": [
+        1960,
+        440
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        2300,
+        320
+      ],
+      "line_end": [
+        2300,
+        440
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        200,
+        320,
+        420,
+        440
+      ],
+      "text": "証書番号",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        420,
+        320,
+        760,
+        440
+      ],
+      "text": "氏　名",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        760,
+        320,
+        1160,
+        440
+      ],
+      "text": "生年月日",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1160,
+        320,
+        1960,
+        440
+      ],
+      "text": "住所",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        2310,
+        320,
+        2610,
+        440
+      ],
+      "text": "進学先",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        2610,
+        320,
+        2860,
+        440
+      ],
+      "text": "担任名",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1960,
+        320,
+        2300,
+        440
+      ],
+      "text": "保護者名",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        200,
+        220,
+        420,
+        320
+      ],
+      "field_id": 110,
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 10.5
+      },
+      "h_align": 2,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        420,
+        220,
+        870,
+        320
+      ],
+      "text": "卒業生名簿",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        870,
+        220,
+        1090,
+        320
+      ],
+      "field_id": 134,
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 10.5
+      },
+      "h_align": 2,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1090,
+        220,
+        1750,
+        320
+      ],
+      "text": "３月３１日卒業　那覇市立天久小学校",
+      "font": {
+        "name": "メイリオ",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 200,
+        "origin_y": 440,
+        "cell_width": 2660,
+        "cell_height": 120,
+        "row_count": 13,
+        "data_start_index": 0,
+        "ref_name": "卒業台帳ラベル（長嶺）",
+        "direction": 0
+      }
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

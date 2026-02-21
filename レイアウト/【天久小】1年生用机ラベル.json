@@ -1,0 +1,36 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】1年生用机ラベル",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 80,
+        "origin_y": 100,
+        "cell_width": 350,
+        "cell_height": 4000,
+        "row_count": 8,
+        "data_start_index": 0,
+        "ref_name": "1nen",
+        "direction": 1
+      }
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

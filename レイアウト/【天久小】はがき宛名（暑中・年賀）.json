@@ -1,0 +1,145 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】はがき宛名（暑中・年賀）",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        290,
+        420,
+        550,
+        490
+      ],
+      "field_id": 603,
+      "font": {
+        "name": "ＭＳ ゴシック",
+        "size_pt": 16.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        290,
+        500,
+        900,
+        650
+      ],
+      "field_id": 604,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 16.0
+      }
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        290,
+        670,
+        870,
+        750
+      ],
+      "field_id": 108,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 18.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        340,
+        1070,
+        760,
+        1120
+      ],
+      "field_id": 111,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        590,
+        1130,
+        910,
+        1180
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        870,
+        670,
+        950,
+        750
+      ],
+      "text": "様",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 18.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        340,
+        950,
+        900,
+        1060
+      ],
+      "text": "900-0005\r\n沖縄県那覇市天久１丁目４番１号",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        340,
+        1130,
+        580,
+        1180
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1,
+      "suffix": "担任"
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

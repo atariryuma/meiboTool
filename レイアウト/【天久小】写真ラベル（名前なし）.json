@@ -1,0 +1,38 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】写真ラベル（名前なし）",
+  "version": 1600,
+  "page_width": 340,
+  "page_height": 470,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        10,
+        10,
+        330,
+        400
+      ],
+      "field_id": 400,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 28.0
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 1,
+    "unit_mm": 0.1,
+    "item_width_mm": 34.0,
+    "item_height_mm": 47.0,
+    "cols": 6,
+    "rows": 6,
+    "margin_left_mm": 3.0,
+    "margin_top_mm": 12.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

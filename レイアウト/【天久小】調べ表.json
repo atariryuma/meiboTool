@@ -1,0 +1,383 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】調べ表",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        360,
+        340,
+        590,
+        430
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 22.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1510,
+        340,
+        1920,
+        430
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 22.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        160,
+        340,
+        360,
+        430
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 22.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 430,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 0,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 730,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 5,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 1030,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 10,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 1330,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 15,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 1630,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 20,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 1930,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 25,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 2230,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 30,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 170,
+        "origin_y": 2530,
+        "cell_width": 350,
+        "cell_height": 300,
+        "row_count": 5,
+        "data_start_index": 35,
+        "ref_name": "sirabe",
+        "direction": 1
+      }
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        170,
+        130
+      ],
+      "line_end": [
+        1920,
+        130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        170,
+        430
+      ],
+      "line_end": [
+        1920,
+        430
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        170,
+        130
+      ],
+      "line_end": [
+        170,
+        430
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1920,
+        130
+      ],
+      "line_end": [
+        1920,
+        430
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        170,
+        130
+      ],
+      "line_end": [
+        1920,
+        130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        170,
+        2830
+      ],
+      "line_end": [
+        1920,
+        2830
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        170,
+        130
+      ],
+      "line_end": [
+        170,
+        2830
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1920,
+        130
+      ],
+      "line_end": [
+        1920,
+        2830
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1240,
+        130,
+        1590,
+        340
+      ],
+      "text": "調べ",
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 36.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1200,
+        340,
+        1520,
+        430
+      ],
+      "text": "担任：",
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 22.0
+      },
+      "h_align": 2,
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        180,
+        140
+      ],
+      "line_end": [
+        1240,
+        140
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        180,
+        330
+      ],
+      "line_end": [
+        1240,
+        330
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        180,
+        140
+      ],
+      "line_end": [
+        180,
+        330
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1240,
+        140
+      ],
+      "line_end": [
+        1240,
+        330
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1580,
+        140,
+        1730,
+        210
+      ],
+      "text": "期限",
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 16.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1890,
+        150
+      ],
+      "line_end": [
+        1720,
+        320
+      ]
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

@@ -8,6 +8,7 @@ Canvas 上でオブジェクトを選択・移動・リサイズし、
 from __future__ import annotations
 
 import dataclasses
+import os
 import tkinter as tk
 import tkinter.filedialog as fd
 import tkinter.messagebox as mb
@@ -51,6 +52,7 @@ class EditorWindow(ctk.CTkToplevel):
     def __init__(
         self, master: ctk.CTk,
         lay: LayFile | None = None,
+        layout_dir: str = '',
     ) -> None:
         super().__init__(master)
         self.title('レイアウトエディター')
@@ -67,9 +69,12 @@ class EditorWindow(ctk.CTkToplevel):
         self._undo_stack: list[_UndoEntry] = []
         self._redo_stack: list[_UndoEntry] = []
         self._add_mode: str | None = None  # 'label', 'field', 'line' or None
+        self._layout_registry = self._build_registry(layout_dir)
 
         self._build_ui()
-        self._canvas_panel.set_layout(self._lay)
+        self._canvas_panel.set_layout(
+            self._lay, layout_registry=self._layout_registry,
+        )
         self._object_list.set_layout(self._lay)
         self._update_status()
 
@@ -256,6 +261,23 @@ class EditorWindow(ctk.CTkToplevel):
             '変更が保存されていません。破棄しますか？',
             parent=self,
         )
+
+    @staticmethod
+    def _build_registry(layout_dir: str) -> dict[str, LayFile]:
+        """layout_dir 内の全レイアウトを {title: LayFile} dict に読み込む。"""
+        registry: dict[str, LayFile] = {}
+        if not layout_dir or not os.path.isdir(layout_dir):
+            return registry
+        for fname in os.listdir(layout_dir):
+            if not fname.lower().endswith('.json'):
+                continue
+            try:
+                lay = load_layout(os.path.join(layout_dir, fname))
+                if lay.title:
+                    registry[lay.title] = lay
+            except Exception:
+                pass
+        return registry
 
     # ── 編集操作 ─────────────────────────────────────────────────────────
 

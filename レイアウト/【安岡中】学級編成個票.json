@@ -1,0 +1,1003 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【安岡中】学級編成個票",
+  "version": 1600,
+  "page_width": 840,
+  "page_height": 2720,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        30,
+        180,
+        320,
+        490
+      ],
+      "field_id": 400,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        420,
+        300,
+        820,
+        370
+      ],
+      "field_id": 108,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        420,
+        240,
+        820,
+        290
+      ],
+      "field_id": 109,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        220,
+        550,
+        780,
+        630
+      ],
+      "field_id": 604,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        240,
+        640,
+        800,
+        720
+      ],
+      "field_id": 607,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        90
+      ],
+      "line_end": [
+        820,
+        90
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        2690
+      ],
+      "line_end": [
+        820,
+        2690
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        90
+      ],
+      "line_end": [
+        10,
+        2690
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        820,
+        90
+      ],
+      "line_end": [
+        820,
+        2690
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        490
+      ],
+      "line_end": [
+        280,
+        490
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        340,
+        490
+      ],
+      "line_end": [
+        340,
+        170
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        270,
+        490
+      ],
+      "line_end": [
+        820,
+        490
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        340,
+        370
+      ],
+      "line_end": [
+        820,
+        370
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        340,
+        240
+      ],
+      "line_end": [
+        820,
+        240
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        400,
+        240
+      ],
+      "line_end": [
+        400,
+        370
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        350,
+        240,
+        390,
+        370
+      ],
+      "text": "氏\r\n名",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        210,
+        490
+      ],
+      "line_end": [
+        210,
+        730
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        630
+      ],
+      "line_end": [
+        820,
+        630
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        50,
+        530,
+        200,
+        610
+      ],
+      "text": "住　所",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        220,
+        500,
+        600,
+        550
+      ],
+      "field_id": 603,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1,
+      "prefix": "〒"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        730
+      ],
+      "line_end": [
+        820,
+        730
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        390,
+        430,
+        770,
+        490
+      ],
+      "field_id": 610,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        340,
+        420
+      ],
+      "line_end": [
+        820,
+        420
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        470,
+        370,
+        680,
+        420
+      ],
+      "text": "生年月日",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        50,
+        650,
+        190,
+        710
+      ],
+      "text": "電　話",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        170
+      ],
+      "line_end": [
+        820,
+        170
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        500,
+        170
+      ],
+      "line_end": [
+        500,
+        240
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        20,
+        100,
+        160,
+        160
+      ],
+      "text": "学　級",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        370,
+        180,
+        490,
+        240
+      ],
+      "text": "性別",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        140,
+        90
+      ],
+      "line_end": [
+        140,
+        170
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        180,
+        100,
+        750,
+        160
+      ],
+      "text": "旧（　　　）　新（　　　　）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        500,
+        180,
+        820,
+        240
+      ],
+      "field_id": 107,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        270,
+        100,
+        360,
+        160
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 14.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        1130
+      ],
+      "line_end": [
+        820,
+        1130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        890
+      ],
+      "line_end": [
+        820,
+        890
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        970
+      ],
+      "line_end": [
+        820,
+        970
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        1050
+      ],
+      "line_end": [
+        820,
+        1050
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        20,
+        750,
+        250,
+        860
+      ],
+      "text": "１学期評定",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        1340
+      ],
+      "line_end": [
+        820,
+        1340
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        80,
+        1470
+      ],
+      "line_end": [
+        80,
+        1640
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        20,
+        900,
+        200,
+        970
+      ],
+      "text": "リーダー",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        20,
+        970,
+        240,
+        1050
+      ],
+      "text": "要・準要保護",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 9.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        240,
+        810
+      ],
+      "line_end": [
+        820,
+        810
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        100,
+        1170,
+        820,
+        1330
+      ],
+      "text": "・病　欠（　　　）日・事故欠（　　　）日\r\n\r\n・遅　刻（　　　）日・別室登校（あり　なし）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 9.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        30,
+        1980,
+        90,
+        2260
+      ],
+      "text": "その他特記事項",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        200,
+        890,
+        400,
+        970
+      ],
+      "field_id": 1517,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        600,
+        890,
+        810,
+        970
+      ],
+      "field_id": 1508,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        180,
+        890
+      ],
+      "line_end": [
+        180,
+        970
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        420,
+        890
+      ],
+      "line_end": [
+        420,
+        970
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        590,
+        890
+      ],
+      "line_end": [
+        590,
+        970
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        240,
+        970
+      ],
+      "line_end": [
+        240,
+        1050
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        240,
+        1040
+      ],
+      "line_end": [
+        240,
+        1130
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        80,
+        1130
+      ],
+      "line_end": [
+        80,
+        1470
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        20,
+        1130,
+        60,
+        1330
+      ],
+      "text": "欠席状況",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        80,
+        1640
+      ],
+      "line_end": [
+        80,
+        1940
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        80,
+        1490
+      ],
+      "line_end": [
+        820,
+        1490
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        10,
+        1640
+      ],
+      "line_end": [
+        820,
+        1640
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        20,
+        1340,
+        80,
+        1640
+      ],
+      "text": "学級編成上の配慮",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        260,
+        1340
+      ],
+      "line_end": [
+        260,
+        1640
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        80,
+        1940
+      ],
+      "line_end": [
+        80,
+        2690
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        90,
+        1360,
+        270,
+        1500
+      ],
+      "text": "同一学級\r\n配慮児童",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        90,
+        1480,
+        270,
+        1620
+      ],
+      "text": "同一学級\r\n不適児童",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        270,
+        1510,
+        820,
+        1620
+      ],
+      "field_id": 1514,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        260,
+        1060,
+        810,
+        1130
+      ],
+      "field_id": 1511,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        270,
+        800,
+        510,
+        900
+      ],
+      "text": "国語（　　）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 11.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        530,
+        810,
+        820,
+        890
+      ],
+      "text": "算数（　　　）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        240,
+        730
+      ],
+      "line_end": [
+        240,
+        890
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        20,
+        10,
+        810,
+        90
+      ],
+      "text": "　　　　小学校（新１年）",
+      "font": {
+        "name": "ＭＳ ゴシック",
+        "size_pt": 16.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        430,
+        890,
+        650,
+        970
+      ],
+      "text": "ピアノ",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        270,
+        980,
+        790,
+        1040
+      ],
+      "field_id": 1510,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        60,
+        1050,
+        280,
+        1130
+      ],
+      "text": "家庭環境",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 9.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        270,
+        1360,
+        820,
+        1480
+      ],
+      "field_id": 1513,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        330,
+        720,
+        760,
+        830
+      ],
+      "text": "４教科合計（　　　）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        100,
+        1630,
+        810,
+        1770
+      ],
+      "text": "問題行動・不登校・いじめ・学力不振等\r\n細かく記載してください。",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 1,
+    "unit_mm": 0.1,
+    "item_width_mm": 84.0,
+    "item_height_mm": 272.0,
+    "cols": 2,
+    "rows": 1,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 10.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

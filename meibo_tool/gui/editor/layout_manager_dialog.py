@@ -259,4 +259,7 @@ class LayoutManagerDialog(ctk.CTkToplevel):
         """Treeview のイベントバインドを解除してから破棄する。"""
         with contextlib.suppress(tk.TclError, AttributeError):
             self._tree.unbind('<Double-1>')
+        # 破棄後に focus が呼ばれても TclError にならないようにする
+        with contextlib.suppress(AttributeError):
+            self._tree.focus = lambda *_a, **_kw: ''
         super().destroy()

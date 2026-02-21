@@ -11,14 +11,17 @@ LayFile オブジェクトを人間可読な JSON 形式で保存・読込する
 
 from __future__ import annotations
 
+import base64
 import json
 import tempfile
 from pathlib import Path
 
 from core.lay_parser import (
+    EmbeddedImage,
     FontInfo,
     LayFile,
     LayoutObject,
+    MeiboArea,
     ObjectType,
     PaperLayout,
     Point,
@@ -88,6 +91,25 @@ def _object_to_dict(obj: LayoutObject) -> dict:
         d['suffix'] = obj.suffix
     if obj.table_columns:
         d['table_columns'] = [_table_column_to_dict(c) for c in obj.table_columns]
+    if obj.meibo is not None:
+        m = obj.meibo
+        d['meibo'] = {
+            'origin_x': m.origin_x,
+            'origin_y': m.origin_y,
+            'cell_width': m.cell_width,
+            'cell_height': m.cell_height,
+            'row_count': m.row_count,
+            'data_start_index': m.data_start_index,
+            'ref_name': m.ref_name,
+            'direction': m.direction,
+        }
+    if obj.image is not None:
+        img = obj.image
+        d['image'] = {
+            'rect': list(img.rect),
+            'image_data': base64.b64encode(img.image_data).decode('ascii'),
+            'original_path': img.original_path,
+        }
 
     return d
 
@@ -116,7 +138,8 @@ def layfile_to_dict(lay: LayFile) -> dict:
     paper または table_columns があれば v2 フォーマットで出力する。
     """
     has_v2_data = lay.paper is not None or any(
-        obj.table_columns for obj in lay.objects
+        obj.table_columns or obj.meibo is not None or obj.image is not None
+        for obj in lay.objects
     )
     fmt = _FORMAT_V2 if has_v2_data else _FORMAT_V1
 
@@ -215,6 +238,25 @@ def _dict_to_object(d: dict) -> LayoutObject:
         obj.table_columns = [
             _dict_to_table_column(c) for c in d['table_columns']
         ]
+    if 'meibo' in d:
+        m = d['meibo']
+        obj.meibo = MeiboArea(
+            origin_x=m.get('origin_x', 0),
+            origin_y=m.get('origin_y', 0),
+            cell_width=m.get('cell_width', 0),
+            cell_height=m.get('cell_height', 0),
+            row_count=m.get('row_count', 0),
+            data_start_index=m.get('data_start_index', 0),
+            ref_name=m.get('ref_name', ''),
+            direction=m.get('direction', 0),
+        )
+    if 'image' in d:
+        img = d['image']
+        obj.image = EmbeddedImage(
+            rect=tuple(img.get('rect', [0, 0, 0, 0])),
+            image_data=base64.b64decode(img.get('image_data', '')),
+            original_path=img.get('original_path', ''),
+        )
 
     return obj
 

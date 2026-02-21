@@ -1,0 +1,177 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】修了台帳",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "TABLE",
+      "rect": [
+        90,
+        240,
+        2860,
+        2040
+      ],
+      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000i\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "table_columns": [
+        {
+          "field_id": 137,
+          "width": 20,
+          "header": "学校を去った日"
+        },
+        {
+          "field_id": 106,
+          "width": 8,
+          "h_align": 2,
+          "header": "番"
+        },
+        {
+          "field_id": 108,
+          "width": 32,
+          "header": "氏名"
+        },
+        {
+          "field_id": 109,
+          "width": 40,
+          "header": "ふりがな"
+        },
+        {
+          "field_id": 107,
+          "width": 8,
+          "h_align": 1,
+          "header": "性別"
+        },
+        {
+          "field_id": 610,
+          "width": 24,
+          "header": "生年月日"
+        },
+        {
+          "field_id": 602,
+          "width": 24,
+          "header": "保護者名"
+        },
+        {
+          "field_id": 604,
+          "width": 74,
+          "header": "住所"
+        },
+        {
+          "field_id": 607,
+          "width": 32,
+          "header": "電話番号"
+        },
+        {
+          "field_id": 601,
+          "width": 15,
+          "header": "在校兄弟"
+        }
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        2540,
+        150,
+        2900,
+        210
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        2410,
+        150,
+        2570,
+        210
+      ],
+      "text": "担任：",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        360,
+        150,
+        460,
+        210
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        450,
+        150,
+        550,
+        210
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        570,
+        150,
+        770,
+        210
+      ],
+      "text": "修了台帳",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        80,
+        150,
+        360,
+        210
+      ],
+      "field_id": 110,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 12.0
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

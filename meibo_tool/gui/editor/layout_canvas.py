@@ -55,6 +55,8 @@ class LayoutCanvas(ctk.CTkFrame):
         self._lay: LayFile | None = None
         self._scale = 0.5
         self._selected_idx: int = -1
+        self._layout_registry: dict[str, LayFile] = {}
+        self._backend: CanvasBackend | None = None  # PhotoImage GC 防止
 
         # ドラッグ状態
         self._dragging = False
@@ -96,14 +98,23 @@ class LayoutCanvas(ctk.CTkFrame):
         self._canvas.bind('<B1-Motion>', self._on_drag)
         self._canvas.bind('<ButtonRelease-1>', self._on_release)
         self._canvas.bind('<Motion>', self._on_motion)
+        self._canvas.bind('<MouseWheel>', self._on_mousewheel)
+        self._canvas.bind('<Shift-MouseWheel>', self._on_shift_mousewheel)
+        self._canvas.bind('<Control-MouseWheel>', self._on_ctrl_mousewheel)
 
     # ── 公開メソッド ─────────────────────────────────────────────────────
 
-    def set_layout(self, lay: LayFile) -> None:
+    def set_layout(
+        self, lay: LayFile,
+        layout_registry: dict[str, LayFile] | None = None,
+    ) -> None:
         """レイアウトを設定して描画する。"""
         self._lay = lay
         self._selected_idx = -1
+        if layout_registry is not None:
+            self._layout_registry = layout_registry
         self.refresh()
+        self.zoom_to_fit()
 
     def refresh(self) -> None:
         """全オブジェクトを再描画する。"""
@@ -112,7 +123,11 @@ class LayoutCanvas(ctk.CTkFrame):
             return
 
         backend = self._make_backend()
-        renderer = LayRenderer(self._lay, backend)
+        self._backend = backend  # PhotoImage GC 防止
+        renderer = LayRenderer(
+            self._lay, backend,
+            layout_registry=self._layout_registry,
+        )
         renderer.render_all()
 
         # 選択中なら再描画
@@ -146,6 +161,21 @@ class LayoutCanvas(ctk.CTkFrame):
 
     def zoom_out(self) -> None:
         self.set_zoom(self._scale - _SCALE_STEP)
+
+    def zoom_to_fit(self) -> None:
+        """Canvas サイズに合わせてズームする。"""
+        if self._lay is None:
+            return
+        self.update_idletasks()
+        cw = self._canvas.winfo_width()
+        ch = self._canvas.winfo_height()
+        if cw <= 1 or ch <= 1:
+            return
+        pw = max(1, self._lay.page_width)
+        ph = max(1, self._lay.page_height)
+        sx = (cw - _CANVAS_MARGIN * 2) / pw
+        sy = (ch - _CANVAS_MARGIN * 2) / ph
+        self.set_zoom(min(sx, sy))
 
     @property
     def canvas(self) -> tk.Canvas:
@@ -346,3 +376,20 @@ class LayoutCanvas(ctk.CTkFrame):
             bottom = top + 4
 
         obj.rect = Rect(left, top, right, bottom)
+
+    # ── マウスホイール ───────────────────────────────────────────────────
+
+    def _on_mousewheel(self, event: tk.Event) -> None:
+        """垂直スクロール。"""
+        self._canvas.yview_scroll(-1 * (event.delta // 120), 'units')
+
+    def _on_shift_mousewheel(self, event: tk.Event) -> None:
+        """水平スクロール。"""
+        self._canvas.xview_scroll(-1 * (event.delta // 120), 'units')
+
+    def _on_ctrl_mousewheel(self, event: tk.Event) -> None:
+        """ズーム。"""
+        if event.delta > 0:
+            self.zoom_in()
+        else:
+            self.zoom_out()

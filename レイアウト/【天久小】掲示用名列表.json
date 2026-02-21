@@ -1,0 +1,395 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】掲示用名列表",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 220,
+        "origin_y": 280,
+        "cell_width": 700,
+        "cell_height": 130,
+        "row_count": 20,
+        "data_start_index": 0,
+        "ref_name": "gakkyu",
+        "direction": 0
+      }
+    },
+    {
+      "type": "MEIBO",
+      "meibo": {
+        "origin_x": 1050,
+        "origin_y": 280,
+        "cell_width": 700,
+        "cell_height": 130,
+        "row_count": 20,
+        "data_start_index": 20,
+        "ref_name": "gakkyu",
+        "direction": 0
+      }
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        750,
+        50,
+        1040,
+        160
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 28.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1060,
+        50,
+        1350,
+        160
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 28.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        350,
+        180
+      ],
+      "line_end": [
+        1050,
+        180
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        350,
+        280
+      ],
+      "line_end": [
+        1050,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        350,
+        180
+      ],
+      "line_end": [
+        350,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1050,
+        180
+      ],
+      "line_end": [
+        1050,
+        280
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        220,
+        180
+      ],
+      "line_end": [
+        350,
+        180
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        220,
+        280
+      ],
+      "line_end": [
+        350,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        220,
+        180
+      ],
+      "line_end": [
+        220,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        350,
+        180
+      ],
+      "line_end": [
+        350,
+        280
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1050,
+        180
+      ],
+      "line_end": [
+        1180,
+        180
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1050,
+        280
+      ],
+      "line_end": [
+        1180,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1050,
+        180
+      ],
+      "line_end": [
+        1050,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1180,
+        180
+      ],
+      "line_end": [
+        1180,
+        280
+      ]
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1180,
+        180
+      ],
+      "line_end": [
+        1880,
+        180
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1180,
+        280
+      ],
+      "line_end": [
+        1880,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1180,
+        180
+      ],
+      "line_end": [
+        1180,
+        280
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1880,
+        180
+      ],
+      "line_end": [
+        1880,
+        280
+      ]
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1190,
+        190,
+        1870,
+        270
+      ],
+      "text": "氏　　　　　　名",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 20.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        360,
+        190,
+        1040,
+        270
+      ],
+      "text": "氏　　　　　　名",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 20.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        220,
+        190,
+        350,
+        270
+      ],
+      "text": "No.",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 22.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        1050,
+        190,
+        1180,
+        270
+      ],
+      "text": "No.",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 22.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        220,
+        180
+      ],
+      "line_end": [
+        1880,
+        180
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        220,
+        2880
+      ],
+      "line_end": [
+        1880,
+        2880
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        220,
+        180
+      ],
+      "line_end": [
+        220,
+        2880
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1880,
+        180
+      ],
+      "line_end": [
+        1880,
+        2880
+      ]
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

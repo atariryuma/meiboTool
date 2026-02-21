@@ -31,6 +31,7 @@ class PrintPreviewDialog(ctk.CTkToplevel):
         self.title('印刷プレビュー')
         self.geometry('680x920')
         self.transient(master)
+        self.grab_set()
 
         self._layouts = layouts
         self._on_print = on_print

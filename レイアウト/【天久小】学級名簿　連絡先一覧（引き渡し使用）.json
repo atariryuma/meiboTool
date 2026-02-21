@@ -1,0 +1,131 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】学級名簿　連絡先一覧（引き渡し使用）",
+  "version": 1600,
+  "page_width": 2100,
+  "page_height": 2970,
+  "objects": [
+    {
+      "type": "TABLE",
+      "rect": [
+        250,
+        250,
+        1930,
+        2720
+      ],
+      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000d\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "table_columns": [
+        {
+          "field_id": 106,
+          "width": 7,
+          "h_align": 1,
+          "header": "番"
+        },
+        {
+          "field_id": 108,
+          "width": 28,
+          "header": "氏名"
+        },
+        {
+          "field_id": 109,
+          "width": 23,
+          "header": "ふりがな"
+        },
+        {
+          "field_id": 607,
+          "width": 33,
+          "header": "電話番号"
+        },
+        {
+          "field_id": 608,
+          "width": 34,
+          "header": "緊急連絡先"
+        },
+        {
+          "field_id": 602,
+          "width": 25,
+          "header": "保護者氏名"
+        },
+        {
+          "field_id": 601,
+          "width": 18,
+          "header": "在校兄弟"
+        }
+      ]
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        970,
+        140,
+        1150,
+        230
+      ],
+      "field_id": 101,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 20.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1170,
+        140,
+        1370,
+        230
+      ],
+      "field_id": 102,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 20.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        1400,
+        130,
+        1960,
+        230
+      ],
+      "field_id": 113,
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 20.0
+      },
+      "v_align": 1
+    },
+    {
+      "type": "LABEL",
+      "rect": [
+        220,
+        150,
+        1220,
+        230
+      ],
+      "text": "学級名簿（連絡先一覧＋引き渡し確認用）",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.0
+      },
+      "v_align": 1
+    }
+  ],
+  "paper": {
+    "mode": 0,
+    "unit_mm": 0.1,
+    "item_width_mm": 91.0,
+    "item_height_mm": 55.0,
+    "cols": 2,
+    "rows": 5,
+    "margin_left_mm": 14.0,
+    "margin_top_mm": 11.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A4",
+    "orientation": "portrait"
+  }
+}

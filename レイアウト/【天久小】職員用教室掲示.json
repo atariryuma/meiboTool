@@ -1,0 +1,105 @@
+{
+  "format": "meibo_layout_v2",
+  "title": "【天久小】職員用教室掲示",
+  "version": 1600,
+  "page_width": 1750,
+  "page_height": 900,
+  "objects": [
+    {
+      "type": "FIELD",
+      "rect": [
+        0,
+        0,
+        1750,
+        210
+      ],
+      "field_id": 109,
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 48.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "FIELD",
+      "rect": [
+        0,
+        210,
+        1750,
+        900
+      ],
+      "field_id": 108,
+      "font": {
+        "name": "ＤＦ特太ゴシック体",
+        "size_pt": 144.0
+      },
+      "h_align": 1,
+      "v_align": 1
+    },
+    {
+      "type": "LINE"
+    },
+    {
+      "type": "LABEL"
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        0
+      ],
+      "line_end": [
+        1750,
+        0
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        900
+      ],
+      "line_end": [
+        1750,
+        900
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        0,
+        0
+      ],
+      "line_end": [
+        0,
+        900
+      ]
+    },
+    {
+      "type": "LINE",
+      "line_start": [
+        1750,
+        0
+      ],
+      "line_end": [
+        1750,
+        900
+      ]
+    }
+  ],
+  "paper": {
+    "mode": 1,
+    "unit_mm": 0.1,
+    "item_width_mm": 175.0,
+    "item_height_mm": 90.0,
+    "cols": 2,
+    "rows": 3,
+    "margin_left_mm": 35.0,
+    "margin_top_mm": 12.0,
+    "spacing_h_mm": 0.0,
+    "spacing_v_mm": 0.0,
+    "paper_size": "A3",
+    "orientation": "landscape"
+  }
+}
