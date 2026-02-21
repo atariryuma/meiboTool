@@ -11,7 +11,6 @@ import dataclasses
 import tkinter as tk
 import tkinter.filedialog as fd
 import tkinter.messagebox as mb
-from typing import TYPE_CHECKING
 
 import customtkinter as ctk
 
@@ -28,9 +27,6 @@ from gui.editor.layout_canvas import LayoutCanvas
 from gui.editor.object_list import ObjectListPanel
 from gui.editor.properties_panel import PropertiesPanel
 from gui.editor.toolbar import EditorToolbar
-
-if TYPE_CHECKING:
-    pass
 
 # ── 定数 ─────────────────────────────────────────────────────────────────────
 
@@ -365,16 +361,12 @@ class EditorWindow(ctk.CTkToplevel):
 
         from core.config import get_layout_dir, load_config
         from core.lay_serializer import save_layout
+        from core.layout_registry import unique_path
 
         config = load_config()
         layout_dir = get_layout_dir(config)
-
         name = self._lay.title or '新規レイアウト'
-        dest = os.path.join(layout_dir, f'{name}.json')
-        counter = 1
-        while os.path.exists(dest):
-            dest = os.path.join(layout_dir, f'{name}_{counter}.json')
-            counter += 1
+        dest = unique_path(layout_dir, name)
 
         try:
             save_layout(self._lay, dest)

@@ -318,8 +318,8 @@ class PropertiesPanel(ctk.CTkFrame):
         if obj.rect is not None:
             left = self._safe_int(self._left_var.get(), obj.rect.left)
             top = self._safe_int(self._top_var.get(), obj.rect.top)
-            w = self._safe_int(self._width_var.get(), obj.rect.width)
-            h = self._safe_int(self._height_var.get(), obj.rect.height)
+            w = max(1, self._safe_int(self._width_var.get(), obj.rect.width))
+            h = max(1, self._safe_int(self._height_var.get(), obj.rect.height))
             obj.rect = Rect(left, top, left + w, top + h)
 
         # テキスト

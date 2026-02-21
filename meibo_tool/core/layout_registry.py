@@ -82,7 +82,7 @@ def import_lay_file(src_path: str, layout_dir: str) -> str:
     """
     lay = parse_lay(src_path)
     stem = Path(src_path).stem
-    dest_path = _unique_path(layout_dir, stem)
+    dest_path = unique_path(layout_dir, stem)
     save_layout(lay, dest_path)
     return dest_path
 
@@ -98,7 +98,7 @@ def import_json_file(src_path: str, layout_dir: str) -> str:
     """
     load_layout(src_path)  # バリデーション（ValueError on invalid format）
     stem = Path(src_path).stem
-    dest_path = _unique_path(layout_dir, stem)
+    dest_path = unique_path(layout_dir, stem)
     shutil.copy2(src_path, dest_path)
     return dest_path
 
@@ -137,7 +137,7 @@ def rename_layout(path: str, new_name: str) -> str:
     return new_path
 
 
-def _unique_path(layout_dir: str, stem: str) -> str:
+def unique_path(layout_dir: str, stem: str) -> str:
     """名前衝突を回避したファイルパスを返す。"""
     dest = os.path.join(layout_dir, f'{stem}.json')
     counter = 1

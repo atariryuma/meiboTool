@@ -15,7 +15,6 @@ from __future__ import annotations
 import os
 import tkinter as tk
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
 from core.lay_parser import (
     LayFile,
@@ -29,9 +28,6 @@ try:
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
-
-if TYPE_CHECKING:
-    pass
 
 # ── 定数 ─────────────────────────────────────────────────────────────────────
 
@@ -112,6 +108,7 @@ class RenderBackend(ABC):
         text: str, font_name: str, font_size: float,
         h_align: int = 0, v_align: int = 0,
         color: str = '#000000',
+        bold: bool = False, italic: bool = False,
     ) -> None:
         """テキストを描画する。"""
 
