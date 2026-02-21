@@ -1,7 +1,6 @@
-"""ListGenerator / IndividualGenerator のテスト
+"""IndividualGenerator のテスト
 
 テスト対象:
-  - ListGenerator: テンプレート行の検出・展開・プレースホルダー置換
   - IndividualGenerator: シート複製・プレースホルダー置換
 """
 
@@ -15,20 +14,10 @@ from openpyxl import Workbook, load_workbook
 
 from core.generator import (
     IndividualGenerator,
-    ListGenerator,
     copy_sheet_with_images,
 )
-from templates.generators import gen_daicho
 
 # ── フィクスチャ ──────────────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def tmpl_shuuryo(tmp_path) -> str:
-    """修了台帳テンプレートを生成して返す。"""
-    out = str(tmp_path / '修了台帳.xlsx')
-    gen_daicho.generate(out, mode='shuuryo')
-    return out
 
 
 @pytest.fixture
@@ -46,34 +35,6 @@ def tmpl_individual(tmp_path) -> str:
     out = str(tmp_path / '家庭調査票.xlsx')
     wb.save(out)
     return out
-
-
-@pytest.fixture
-def list_data() -> pd.DataFrame:
-    """ListGenerator 用の 3 名データ。"""
-    return pd.DataFrame([
-        {
-            '出席番号': '1', '正式氏名': '山田 太郎', '正式氏名かな': 'やまだ たろう',
-            '性別': '男', '生年月日': '2018-06-15', '転入日': '',
-            '保護者正式名': '山田 幸子', '電話番号1': '098-123-4567',
-            '都道府県': '沖縄県', '市区町村': '那覇市', '町番地': '天久1-2-3', '建物名': '',
-            '学年': '1', '組': '1',
-        },
-        {
-            '出席番号': '2', '正式氏名': '田中 花子', '正式氏名かな': 'たなか はなこ',
-            '性別': '女', '生年月日': '2018-04-03', '転入日': '2019-09-01',
-            '保護者正式名': '田中 美穂', '電話番号1': '098-234-5678',
-            '都道府県': '沖縄県', '市区町村': '那覇市', '町番地': '古島2-3-4', '建物名': 'コーポA',
-            '学年': '1', '組': '1',
-        },
-        {
-            '出席番号': '3', '正式氏名': '鈴木 健太', '正式氏名かな': 'すずき けんた',
-            '性別': '男', '生年月日': '2018-09-20', '転入日': '',
-            '保護者正式名': '鈴木 典子', '電話番号1': '098-345-6789',
-            '都道府県': '沖縄県', '市区町村': '那覇市', '町番地': '真地3-4-5', '建物名': '',
-            '学年': '1', '組': '1',
-        },
-    ])
 
 
 @pytest.fixture
@@ -112,66 +73,6 @@ def _default_options(tmpl_path: str) -> dict:
         'template_dir': os.path.dirname(tmpl_path),
         'name_display': 'furigana',
     }
-
-
-# ── ListGenerator ─────────────────────────────────────────────────────────────
-
-
-class TestListGenerator:
-    def test_output_file_created(self, tmpl_shuuryo, list_data, tmp_path):
-        out = str(tmp_path / 'output.xlsx')
-        gen = ListGenerator(tmpl_shuuryo, out, list_data, _default_options(tmpl_shuuryo))
-        result = gen.generate()
-        assert result == out
-        assert os.path.isfile(out)
-
-    def test_data_rows_expanded(self, tmpl_shuuryo, list_data, tmp_path):
-        """3名分のデータ行が展開されている。"""
-        out = str(tmp_path / 'output.xlsx')
-        ListGenerator(tmpl_shuuryo, out, list_data, _default_options(tmpl_shuuryo)).generate()
-        ws = load_workbook(out).active
-        # Row 1: title, Row 2: header, Rows 3-5: data (3名)
-        # 正式氏名は列3
-        assert ws.cell(row=3, column=3).value == '山田 太郎'
-        assert ws.cell(row=4, column=3).value == '田中 花子'
-        assert ws.cell(row=5, column=3).value == '鈴木 健太'
-
-    def test_header_placeholders_filled(self, tmpl_shuuryo, list_data, tmp_path):
-        """タイトル行のプレースホルダーが置換されている。"""
-        out = str(tmp_path / 'output.xlsx')
-        opts = _default_options(tmpl_shuuryo)
-        ListGenerator(tmpl_shuuryo, out, list_data, opts).generate()
-        ws = load_workbook(out).active
-        title = ws.cell(row=1, column=1).value or ''
-        assert '{{年度和暦}}' not in title
-        assert '山田先生' in title
-
-    def test_address_combined(self, tmpl_shuuryo, list_data, tmp_path):
-        """住所プレースホルダーが結合値に置換されている。"""
-        out = str(tmp_path / 'output.xlsx')
-        ListGenerator(tmpl_shuuryo, out, list_data, _default_options(tmpl_shuuryo)).generate()
-        ws = load_workbook(out).active
-        # 住所列を探す
-        for col_idx in range(1, ws.max_column + 1):
-            if ws.cell(row=2, column=col_idx).value == '住所':
-                addr_col = col_idx
-                break
-        else:
-            pytest.fail('住所列が見つかりません')
-        # 1名目の住所
-        addr = ws.cell(row=3, column=addr_col).value
-        assert '沖縄県' in addr
-        assert '那覇市' in addr
-        # 2名目は建物名を含む
-        addr2 = ws.cell(row=4, column=addr_col).value
-        assert 'コーポA' in addr2
-
-    def test_empty_data_no_error(self, tmpl_shuuryo, tmp_path):
-        """空データフレームでもエラーにならない。"""
-        out = str(tmp_path / 'output.xlsx')
-        empty_df = pd.DataFrame(columns=['正式氏名', '正式氏名かな'])
-        ListGenerator(tmpl_shuuryo, out, empty_df, _default_options(tmpl_shuuryo)).generate()
-        assert os.path.isfile(out)
 
 
 # ── IndividualGenerator ───────────────────────────────────────────────────────

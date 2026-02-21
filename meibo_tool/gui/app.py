@@ -18,7 +18,7 @@ import customtkinter as ctk
 import pandas as pd
 from PIL import Image as PILImage
 
-from core.config import get_output_dir, get_template_dir, load_config, save_config
+from core.config import get_layout_dir, get_output_dir, get_template_dir, load_config, save_config
 from core.mapper import ensure_fallback_columns
 from gui.frames.class_select_panel import ClassSelectPanel
 from gui.frames.import_frame import ImportFrame
@@ -91,6 +91,10 @@ class App(ctk.CTk):
         ctk.set_default_color_theme('blue')
 
         self.config = load_config()
+
+        # レイアウトライブラリが空なら同梱 .lay から自動インポート
+        from core.layout_registry import ensure_default_layouts
+        ensure_default_layouts(get_layout_dir(self.config))
 
         # データ状態
         self.df_mapped: pd.DataFrame | None = None

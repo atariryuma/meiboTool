@@ -240,20 +240,6 @@ class TestStyleRendering:
 class TestTemplateIntegration:
     """テンプレート生成 → レンダリングの一気通貫テスト。"""
 
-    def test_meireihyo_template_renders(self, tmp_path):
-        """掲示用名列表テンプレートをレンダリングできる。"""
-        from templates.generators import gen_meireihyo
-        out = str(tmp_path / '名列表.xlsx')
-        gen_meireihyo.generate(out)
-
-        from openpyxl import load_workbook
-        wb = load_workbook(out)
-        ws = wb.active
-        img = render_worksheet(ws, scale=1.5)
-        assert isinstance(img, Image.Image)
-        assert img.width > 100
-        assert img.height > 100
-
     def test_nafuda_template_renders(self, tmp_path):
         """名札テンプレートをレンダリングできる。"""
         from templates.generators import gen_nafuda
@@ -266,14 +252,3 @@ class TestTemplateIntegration:
         img = render_worksheet(ws, scale=1.5)
         assert isinstance(img, Image.Image)
 
-    def test_daicho_template_renders(self, tmp_path):
-        """台帳テンプレートをレンダリングできる。"""
-        from templates.generators import gen_daicho
-        out = str(tmp_path / '台帳.xlsx')
-        gen_daicho.generate(out, mode='shuuryo')
-
-        from openpyxl import load_workbook
-        wb = load_workbook(out)
-        ws = wb.active
-        img = render_worksheet(ws, scale=1.0)
-        assert isinstance(img, Image.Image)

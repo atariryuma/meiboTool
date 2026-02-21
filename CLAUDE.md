@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## プロジェクト概要
 
 那覇市立小中学校向けの **名簿帳票自動生成 Windows デスクトップアプリ**。
-C4th（EDUCOM 校務支援システム）の Excel エクスポートを読み込み、名札・名列表・台帳・個票など 15 種の帳票を自動生成する。Python 3.11 + CustomTkinter + openpyxl。
+C4th（EDUCOM 校務支援システム）の Excel エクスポートを読み込み、名札・ラベル・名簿など 9 種の Excel テンプレート帳票 + 27 種の .lay レイアウト帳票を自動生成する。Python 3.11 + CustomTkinter + openpyxl。
 
 ## コマンド
 
@@ -107,17 +107,20 @@ App (CTk) — 2カラムレイアウト
 7. **IPAmj明朝フォント** — 正式名前列に IVS 付き異体字を含むため必須。`font_helper.apply_font()` で全セルに適用
 8. **IndividualGenerator のシート複製は fill 前に行う** — fill 後にコピーするとプレースホルダーが消失する
 
-## テンプレート 15 種（カテゴリ別）
+## Excel テンプレート 9 種（カテゴリ別）
 
 | カテゴリ | テンプレートファイル名 | タイプ | 状態 |
 | -------- | ---------------------- | ------ | ---- |
 | 名札・ラベル | ラベル_色付き.xlsx / サンプル_名札.xlsx / 名札_1年生用.xlsx | grid | ✅ |
 | 名札・ラベル | ラベル_大2.xlsx / ラベル_小.xlsx / ラベル_特大.xlsx | grid | ✅ |
-| 名簿・出欠表 | 掲示用名列表.xlsx / 調べ表.xlsx | grid | ✅ |
 | 名簿・出欠表 | 横名簿.xlsx / 縦一週間.xlsx | grid | ✅ |
 | 名簿・出欠表 | 男女一覧.xlsx | grid | ✅ sort_by=性別 |
-| 台帳 | 修了台帳.xlsx / 卒業台帳.xlsx | list | ✅ |
-| 個票 | 家庭調査票.xlsx / 学級編成用個票.xlsx | individual | ✅ |
+
+## .lay レイアウト 27 種（デフォルト同梱）
+
+初回起動時に `resources/default_layouts.lay` から自動インポートされる。
+掲示用名列表・調べ表・修了台帳・卒業台帳・家庭調査票・学級編成用個票 等を含む。
+英語名のレイアウト（takara_simei 等）はパーツ（部品）として他レイアウトから参照される。
 
 ## C4th データの重要な仕様
 
@@ -166,14 +169,9 @@ App (CTk) — 2カラムレイアウト
 | `core/crypto.py` | AES-256-GCM 暗号化/復号 + DPAPI パスワード保護 | ✅ 17 |
 | `core/data_sync.py` | 名簿データ自動同期（LAN/GDrive/手動） | ✅ 15 |
 | `core/updater.py` | GitHub Releases ベースのアプリ更新 | ✅ 20 |
-| `templates/template_registry.py` | テンプレート 15 種メタデータ + カテゴリ別表示 | ✅ 30 |
+| `templates/template_registry.py` | テンプレート 9 種メタデータ + カテゴリ別表示 | ✅ 30 |
 | `templates/template_scanner.py` | テンプレート自動検出（.xlsx スキャン → メタデータ推定） | ✅ 13 |
-| `templates/generators/gen_meireihyo.py` | 掲示用名列表テンプレート生成 | ✅ 12 |
-| `templates/generators/gen_nafuda.py` | 名札3種テンプレート生成 | ✅ 16 |
-| `templates/generators/gen_daicho.py` | 台帳2種テンプレート生成 | ✅ 14 |
-| `templates/generators/gen_shirabehyo.py` | 調べ表テンプレート生成 | ✅ 12 |
-| `templates/generators/gen_katei_chousahyo.py` | 家庭調査票テンプレート生成 | ✅ 19 |
-| `templates/generators/gen_gakkyuu_kojihyo.py` | 学級編成用個票テンプレート生成 | ✅ 19 |
+| `templates/generators/gen_nafuda.py` | 名札テンプレート生成 | ✅ 16 |
 | `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
 | `templates/generators/generate_all.py` | 全テンプレート一括生成 | — |
 | `core/special_needs.py` | 特別支援学級判定・検出・統合・交流学級割り当てロジック | ✅ 36 |
@@ -210,7 +208,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **667 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **615 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 

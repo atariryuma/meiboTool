@@ -65,15 +65,7 @@ class TestTemplatesDict:
 
     def test_grid_templates_count(self):
         grids = [n for n, m in TEMPLATES.items() if m['type'] == 'grid']
-        assert len(grids) >= 10
-
-    def test_list_templates_count(self):
-        lists = [n for n, m in TEMPLATES.items() if m['type'] == 'list']
-        assert len(lists) == 2
-
-    def test_individual_templates_count(self):
-        individuals = [n for n, m in TEMPLATES.items() if m['type'] == 'individual']
-        assert len(individuals) == 2
+        assert len(grids) >= 8
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -87,7 +79,7 @@ class TestFileToKey:
         assert len(_FILE_TO_KEY) == len(TEMPLATES)
 
     def test_lookup(self):
-        assert _FILE_TO_KEY['修了台帳.xlsx'] == '修了台帳'
+        assert _FILE_TO_KEY['ラベル_色付き.xlsx'] == 'ラベル_色付き'
 
     def test_reverse_consistency(self):
         for name, meta in TEMPLATES.items():
@@ -222,8 +214,6 @@ class TestGetDisplayGroups:
         cat_names = {cat for cat, _ in groups}
         assert '名札・ラベル' in cat_names
         assert '名簿・出欠表' in cat_names
-        assert '台帳' in cat_names
-        assert '個票' in cat_names
 
 
 # ────────────────────────────────────────────────────────────────────────────

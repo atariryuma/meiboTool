@@ -21,6 +21,7 @@ datas = collect_data_files('customtkinter')
 datas += [('テンプレート', 'テンプレート')]
 datas += [('config.json', '.')]
 datas += [('レイアウト', 'レイアウト')]
+datas += [('meibo_tool/resources', 'resources')]
 
 a = Analysis(
     ['meibo_tool/main.py'],

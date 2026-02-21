@@ -1,7 +1,6 @@
-"""core/generator.py と templates/generators/gen_meireihyo.py のテスト
+"""core/generator.py のテスト
 
 テスト対象:
-  - gen_meireihyo.generate() が正しい構造の xlsx を生成すること
   - GridGenerator が番号付きプレースホルダーを実データに置換すること
   - fill_placeholders / setup_print の基本動作
   - name_display モード（furigana/kanji/kana）の差込動作
@@ -13,122 +12,50 @@ import os
 
 import pandas as pd
 import pytest
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from core.generator import (
     GridGenerator,
     fill_placeholders,
     setup_print,
 )
-from templates.generators import gen_meireihyo
+from templates.generators import gen_nafuda
 
 # ────────────────────────────────────────────────────────────────────────────
 # フィクスチャ
 # ────────────────────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def tmpl_meireihyo(tmp_path) -> str:
-    """掲示用名列表テンプレート（単一・全モード共通）を一時ディレクトリに生成して返す。"""
-    out = str(tmp_path / '掲示用名列表.xlsx')
-    gen_meireihyo.generate(out)
+def tmpl_nafuda(tmp_path) -> str:
+    """名札_1年生用テンプレートを一時ディレクトリに生成して返す。"""
+    out = str(tmp_path / '名札_1年生用.xlsx')
+    gen_nafuda.generate(out, mode='1年生')
     return out
 
 
 @pytest.fixture
-def large_df() -> pd.DataFrame:
-    """GridGenerator 用の 25 名データ（右列に 5 名入る）。"""
-    rows = []
-    for i in range(1, 26):
-        rows.append({
-            '生徒コード': f'S{i:06d}',
-            '学年': '3',
-            '組': '2',
-            '出席番号': str(i),
-            '氏名': f'テスト 太郎{i}',
-            '氏名かな': f'てすと たろう{i}',
-            '正式氏名': f'テスト 太郎{i}',
-            '正式氏名かな': f'てすと たろう{i}',
-            '性別': '男',
-            '生年月日': '2015-04-01',
-        })
-    return pd.DataFrame(rows)
+def tmpl_grid_simple(tmp_path) -> str:
+    """GridGenerator テスト用の簡易グリッドテンプレートを生成して返す。"""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'テスト'
+    ws['A1'] = '{{学年}}年{{組}}組 {{担任名}}'
+    for i in range(1, 9):
+        ws.cell(row=i + 1, column=1, value=f'{{{{出席番号_{i}}}}}')
+        ws.cell(row=i + 1, column=2, value=f'{{{{氏名かな_{i}}}}}')
+        ws.cell(row=i + 1, column=3, value=f'{{{{氏名_{i}}}}}')
+    out = str(tmp_path / 'テスト_グリッド.xlsx')
+    wb.save(out)
+    wb.close()
+    return out
 
 
 # ────────────────────────────────────────────────────────────────────────────
-# gen_meireihyo: テンプレート生成構造テスト
+# GridGenerator: 基本動作テスト
 # ────────────────────────────────────────────────────────────────────────────
 
-class TestGenMeireihyo:
-    """単一テンプレートの共通構造テスト。"""
-
-    def test_generates_file(self, tmpl_meireihyo):
-        assert os.path.isfile(tmpl_meireihyo)
-        assert os.path.getsize(tmpl_meireihyo) > 0
-
-    def test_sheet_name(self, tmpl_meireihyo):
-        wb = load_workbook(tmpl_meireihyo)
-        assert '名列表' in wb.sheetnames
-
-    def test_title_has_placeholders(self, tmpl_meireihyo):
-        wb = load_workbook(tmpl_meireihyo)
-        title = wb.active['A1'].value or ''
-        assert '{{学年}}' in title
-        assert '{{組}}' in title
-        assert '{{担任名}}' in title
-
-    def test_portrait_a4(self, tmpl_meireihyo):
-        ws = load_workbook(tmpl_meireihyo).active
-        assert ws.page_setup.orientation == 'portrait'
-        assert ws.page_setup.paperSize == 9
-
-    def test_row_count(self, tmpl_meireihyo):
-        """Row 1: title, Row 2: header, Rows 3–42: 20 pairs × 2 = 40 data rows"""
-        ws = load_workbook(tmpl_meireihyo).active
-        assert ws.max_row == 42
-
-    def test_kana_row_placeholder(self, tmpl_meireihyo):
-        """かな行（Row 3）に {{氏名かな_1}} があること。"""
-        ws = load_workbook(tmpl_meireihyo).active
-        assert ws['B3'].value == '{{氏名かな_1}}'    # 左かな行
-        assert ws['E3'].value == '{{氏名かな_21}}'   # 右かな行
-
-    def test_name_row_placeholder(self, tmpl_meireihyo):
-        """氏名行（Row 4）に {{氏名_1}} があること。"""
-        ws = load_workbook(tmpl_meireihyo).active
-        assert ws['B4'].value == '{{氏名_1}}'    # 左氏名行
-        assert ws['E4'].value == '{{氏名_21}}'   # 右氏名行
-
-    def test_no_col_placeholder(self, tmpl_meireihyo):
-        """番号列 A3（2行マージ）に {{出席番号_1}} があること。"""
-        ws = load_workbook(tmpl_meireihyo).active
-        assert ws['A3'].value == '{{出席番号_1}}'
-        assert ws['A4'].value is None  # マージ下側セルは None
-
-    def test_last_student_placeholders(self, tmpl_meireihyo):
-        """20 番目の学生（Rows 41–42）のプレースホルダーが正しいこと。"""
-        ws = load_workbook(tmpl_meireihyo).active
-        assert ws['B41'].value == '{{氏名かな_20}}'
-        assert ws['B42'].value == '{{氏名_20}}'
-        assert ws['E41'].value == '{{氏名かな_40}}'
-        assert ws['E42'].value == '{{氏名_40}}'
-
-    def test_kana_row_height_small(self, tmpl_meireihyo):
-        """かな行の行高が 15pt 以下（9pt フォントが収まり空白時も目立たないサイズ）であること。"""
-        ws = load_workbook(tmpl_meireihyo).active
-        assert ws.row_dimensions[3].height <= 15  # KANA_HEIGHT = 11
-
-
-# ────────────────────────────────────────────────────────────────────────────
-# GridGenerator: name_display モード別の差込テスト
-# ────────────────────────────────────────────────────────────────────────────
-
-class TestGridGeneratorMeireihyo:
-    """掲示用名列表テンプレートへの GridGenerator 差込テスト。
-
-    行構成（2行/人）:
-      Person n: かな行 = row 3 + (n-1)*2
-                氏名行 = row 4 + (n-1)*2
-    """
+class TestGridGeneratorBasic:
+    """簡易グリッドテンプレートへの GridGenerator 差込テスト。"""
 
     def _options(self, tmpl_path: str, name_display: str = 'furigana') -> dict:
         return {
@@ -139,116 +66,37 @@ class TestGridGeneratorMeireihyo:
             'name_display': name_display,
         }
 
-    def test_output_file_created(self, tmpl_meireihyo, dummy_df, tmp_path):
+    def test_output_file_created(self, tmpl_grid_simple, dummy_df, tmp_path):
         out = str(tmp_path / 'output.xlsx')
-        gen = GridGenerator(tmpl_meireihyo, out, dummy_df,
-                            self._options(tmpl_meireihyo))
+        gen = GridGenerator(tmpl_grid_simple, out, dummy_df,
+                            self._options(tmpl_grid_simple))
         assert gen.generate() == out
         assert os.path.isfile(out)
 
-    # ── furigana モード ──────────────────────────────────────────────────────
-
-    def test_furigana_kana_row_filled(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """furigana: かな行 B3 にかな値が入ること。"""
+    def test_header_placeholders_filled(self, tmpl_grid_simple, dummy_df, tmp_path):
         out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo, 'furigana')).generate()
-        ws = load_workbook(out).active
-        assert ws['B3'].value == dummy_df.iloc[0]['氏名かな']
-
-    def test_furigana_name_row_filled(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """furigana: 氏名行 B4 に漢字値が入ること。"""
-        out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo, 'furigana')).generate()
-        ws = load_workbook(out).active
-        assert ws['B4'].value == dummy_df.iloc[0]['氏名']
-
-    # ── kanji モード ─────────────────────────────────────────────────────────
-
-    def test_kanji_kana_row_blank(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """kanji: かな行 B3 が空白になること。"""
-        out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo, 'kanji')).generate()
-        ws = load_workbook(out).active
-        assert ws['B3'].value in (None, '')
-
-    def test_kanji_name_row_filled(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """kanji: 氏名行 B4 に漢字値が入ること。"""
-        out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo, 'kanji')).generate()
-        ws = load_workbook(out).active
-        assert ws['B4'].value == dummy_df.iloc[0]['氏名']
-
-    # ── kana モード ──────────────────────────────────────────────────────────
-
-    def test_kana_kana_row_blank(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """kana: かな行 B3 が空白になること（かな値は下段に転写）。"""
-        out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo, 'kana')).generate()
-        ws = load_workbook(out).active
-        assert ws['B3'].value in (None, '')
-
-    def test_kana_name_row_shows_kana(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """kana: 氏名行 B4 にかな値が転写されること。"""
-        out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo, 'kana')).generate()
-        ws = load_workbook(out).active
-        assert ws['B4'].value == dummy_df.iloc[0]['氏名かな']
-
-    # ── 共通：ヘッダー・未使用スロット・右列 ─────────────────────────────────
-
-    def test_header_placeholders_filled(self, tmpl_meireihyo, dummy_df, tmp_path):
-        out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo)).generate()
+        GridGenerator(tmpl_grid_simple, out, dummy_df,
+                      self._options(tmpl_grid_simple)).generate()
         title = load_workbook(out).active['A1'].value or ''
         assert '{{学年}}' not in title
         assert '{{組}}' not in title
         assert '山田先生' in title
 
-    def test_no_col_filled(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """番号列 A3 に出席番号が入ること。"""
+    def test_data_filled(self, tmpl_grid_simple, dummy_df, tmp_path):
         out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo)).generate()
+        GridGenerator(tmpl_grid_simple, out, dummy_df,
+                      self._options(tmpl_grid_simple)).generate()
         ws = load_workbook(out).active
-        assert ws['A3'].value == dummy_df.iloc[0]['出席番号']
+        assert ws['C2'].value == dummy_df.iloc[0]['氏名']
 
-    def test_unused_slots_blank(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """5名データでは No.6 のかな行 B13 が空になること。"""
+    def test_unused_slots_blank(self, tmpl_grid_simple, dummy_df, tmp_path):
+        """5名データでは No.6 の氏名セルが空になること。"""
         out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo)).generate()
+        GridGenerator(tmpl_grid_simple, out, dummy_df,
+                      self._options(tmpl_grid_simple)).generate()
         ws = load_workbook(out).active
-        # Person5 → B11(kana), B12(name);  Person6 → B13(kana) = 空
-        assert ws['B13'].value in (None, '')
-
-    def test_right_column_blank_for_small_data(self, tmpl_meireihyo, dummy_df, tmp_path):
-        """5名データでは右列 E3（No.21 のかな行）が空になること。"""
-        out = str(tmp_path / 'output.xlsx')
-        GridGenerator(tmpl_meireihyo, out, dummy_df,
-                      self._options(tmpl_meireihyo)).generate()
-        ws = load_workbook(out).active
-        assert ws['E3'].value in (None, '')
-
-    def test_25_students_right_column_filled(self, tmpl_meireihyo, large_df, tmp_path):
-        """25名データでは右列 No.21–25 の氏名行が差し込まれること。"""
-        out = str(tmp_path / 'output_25.xlsx')
-        GridGenerator(tmpl_meireihyo, out, large_df,
-                      self._options(tmpl_meireihyo, 'kanji')).generate()
-        ws = load_workbook(out).active
-        # kanji モード: かな行=空, 氏名行=漢字値
-        # No.21 → E3(kana=blank), E4(name=iloc[20])
-        # No.25 → E11(kana=blank), E12(name=iloc[24])
-        assert ws['E3'].value in (None, '')           # No.21 かな行（kanji→空）
-        assert ws['E4'].value == large_df.iloc[20]['氏名']   # No.21 氏名行
-        assert ws['E12'].value == large_df.iloc[24]['氏名']  # No.25 氏名行
-        assert ws['E13'].value in (None, '')          # No.26 かな行（空データ）
+        # Person 6 → row 7, col 3
+        assert ws.cell(row=7, column=3).value in (None, '')
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -470,7 +318,7 @@ class TestGridGeneratorGenderSort:
         assert ws.cell(row=6, column=2).value == '山田 凛'     # 女・出席番号5
         wb.close()
 
-    def test_no_sort_without_sort_by(self, tmpl_meireihyo, tmp_path):
+    def test_no_sort_without_sort_by(self, tmpl_grid_simple, tmp_path):
         """sort_by がないテンプレートではソートしない（出席番号順のまま）。"""
         df = pd.DataFrame([
             {'出席番号': '1', '氏名': '佐藤 花子', '氏名かな': 'さとう はなこ',
@@ -478,7 +326,7 @@ class TestGridGeneratorGenderSort:
             {'出席番号': '2', '氏名': '田中 太郎', '氏名かな': 'たなか たろう',
              '性別': '男', '学年': '3', '組': '1'},
         ])
-        output = str(tmp_path / 'output_meireihyo.xlsx')
+        output = str(tmp_path / 'output_grid.xlsx')
 
         options = {
             'template_dir': str(tmp_path),
@@ -487,11 +335,11 @@ class TestGridGeneratorGenderSort:
             'teacher_name': 'テスト先生',
             'name_display': 'furigana',
         }
-        gen = GridGenerator(tmpl_meireihyo, output, df, options)
+        gen = GridGenerator(tmpl_grid_simple, output, df, options)
         gen.generate()
 
         wb = load_workbook(output)
         ws = wb.active
-        # B4 = {{氏名_1}} が佐藤 花子（出席番号1）のまま
-        assert ws.cell(row=4, column=2).value == '佐藤 花子'
+        # 出席番号順で佐藤 花子が先
+        assert ws.cell(row=2, column=3).value == '佐藤 花子'
         wb.close()

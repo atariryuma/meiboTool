@@ -9,11 +9,14 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
 
 from core.lay_parser import parse_lay, parse_lay_multi
 from core.lay_serializer import load_layout, save_layout
+
+_DEFAULT_LAY_NAME = 'default_layouts.lay'
 
 
 def scan_layout_dir(layout_dir: str) -> list[dict[str, Any]]:
@@ -157,6 +160,38 @@ def rename_layout(path: str, new_name: str) -> str:
     if os.path.abspath(new_path) != os.path.abspath(path):
         os.remove(path)
     return new_path
+
+
+def _find_bundled_lay() -> str | None:
+    """同梱の default_layouts.lay を探す。frozen / dev 両対応。"""
+    # 開発時: meibo_tool/resources/
+    here = os.path.dirname(os.path.abspath(__file__))
+    dev_path = os.path.join(here, '..', 'resources', _DEFAULT_LAY_NAME)
+    if os.path.isfile(dev_path):
+        return os.path.normpath(dev_path)
+    # frozen 時: sys._MEIPASS/resources/
+    if getattr(sys, 'frozen', False):
+        meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+        frozen_path = os.path.join(meipass, 'resources', _DEFAULT_LAY_NAME)
+        if os.path.isfile(frozen_path):
+            return frozen_path
+    return None
+
+
+def ensure_default_layouts(layout_dir: str) -> int:
+    """レイアウトライブラリが空なら同梱 .lay から全件インポートする。
+
+    Returns:
+        インポートされたレイアウト数。既にデータがある場合は 0。
+    """
+    existing = scan_layout_dir(layout_dir)
+    if existing:
+        return 0
+    lay_path = _find_bundled_lay()
+    if lay_path is None:
+        return 0
+    results = import_lay_file_multi(lay_path, layout_dir)
+    return len(results)
 
 
 def unique_path(layout_dir: str, stem: str) -> str:
