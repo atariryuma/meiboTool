@@ -182,7 +182,12 @@ class SettingsDialog(ctk.CTkToplevel):
         """LAN パスのファイル選択。"""
         path = fd.askopenfilename(
             title='名簿ファイルを選択',
-            filetypes=[('Excel ファイル', '*.xlsx *.xls'), ('すべて', '*.*')],
+            filetypes=[
+                ('名簿ファイル', '*.xlsx *.xls *.csv'),
+                ('Excel', '*.xlsx *.xls'),
+                ('CSV', '*.csv'),
+                ('すべて', '*.*'),
+            ],
         )
         if path:
             self._lan_entry.delete(0, 'end')
@@ -197,7 +202,11 @@ class SettingsDialog(ctk.CTkToplevel):
 
         source = fd.askopenfilename(
             title='暗号化する名簿ファイルを選択',
-            filetypes=[('Excel ファイル', '*.xlsx *.xls')],
+            filetypes=[
+                ('名簿ファイル', '*.xlsx *.xls *.csv'),
+                ('Excel', '*.xlsx *.xls'),
+                ('CSV', '*.csv'),
+            ],
         )
         if not source:
             return

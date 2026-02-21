@@ -22,7 +22,7 @@ import pandas as pd
 from PIL import Image as PILImage
 
 from core.config import get_layout_dir
-from core.importer import import_c4th_excel
+from core.importer import import_file
 from core.lay_parser import LayFile
 from core.lay_renderer import (
     calculate_page_arrangement,
@@ -141,7 +141,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         ctk.CTkButton(
             data_frame, text='Excel 読込', width=100,
-            command=self._on_load_excel,
+            command=self._on_load_file,
         ).grid(row=1, column=0, padx=3, pady=2)
 
         self._file_label = ctk.CTkLabel(
@@ -430,17 +430,22 @@ class RosterPrintPanel(ctk.CTkFrame):
 
     # ── データ読込 ─────────────────────────────────────────────────────
 
-    def _on_load_excel(self) -> None:
-        """C4th Excel ファイルを読み込む。"""
+    def _on_load_file(self) -> None:
+        """名簿ファイル（Excel/CSV）を読み込む。"""
         path = fd.askopenfilename(
-            title='C4th Excel を選択',
-            filetypes=[('Excel ファイル', '*.xlsx *.xls'), ('すべて', '*.*')],
+            title='名簿ファイルを選択',
+            filetypes=[
+                ('名簿ファイル', '*.xlsx *.xls *.csv'),
+                ('Excel', '*.xlsx *.xls'),
+                ('CSV', '*.csv'),
+                ('すべて', '*.*'),
+            ],
         )
         if not path:
             return
 
         try:
-            df, unmapped = import_c4th_excel(path)
+            df, unmapped = import_file(path)
 
             if self._on_import is not None:
                 # App のインポートパイプラインに委譲

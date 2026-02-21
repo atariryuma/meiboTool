@@ -11,7 +11,7 @@ from collections.abc import Callable
 
 import customtkinter as ctk
 
-from core.importer import import_c4th_excel
+from core.importer import import_file
 
 
 class ImportFrame(ctk.CTkFrame):
@@ -65,15 +65,20 @@ class ImportFrame(ctk.CTkFrame):
 
     def _pick_file(self) -> None:
         path = fd.askopenfilename(
-            title='名簿 Excel を選択',
-            filetypes=[('Excel ファイル', '*.xlsx *.xls'), ('すべて', '*.*')],
+            title='名簿ファイルを選択',
+            filetypes=[
+                ('名簿ファイル', '*.xlsx *.xls *.csv'),
+                ('Excel', '*.xlsx *.xls'),
+                ('CSV', '*.csv'),
+                ('すべて', '*.*'),
+            ],
         )
         if path:
             self._load(path)
 
     def _load(self, path: str) -> None:
         try:
-            df_mapped, unmapped = import_c4th_excel(path)
+            df_mapped, unmapped = import_file(path)
             n = len(df_mapped)
             self._path_label.configure(text=os.path.basename(path), text_color='black')
             self._count_label.configure(

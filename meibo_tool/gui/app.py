@@ -19,6 +19,7 @@ import pandas as pd
 from PIL import Image as PILImage
 
 from core.config import get_layout_dir, get_output_dir, get_template_dir, load_config, save_config
+from core.data_model import EditableDataModel
 from core.mapper import ensure_fallback_columns
 from gui.frames.class_select_panel import ClassSelectPanel
 from gui.frames.import_frame import ImportFrame
@@ -53,15 +54,15 @@ def _validate_required_columns(meta: dict, df: pd.DataFrame) -> None:
 
 
 def _sort_by_attendance(df: pd.DataFrame) -> pd.DataFrame:
-    """出席番号で数値ソートして返す。"""
+    """出席番号で数値ソートして返す。元の DataFrame インデックスは保持する。"""
     if '出席番号' not in df.columns:
-        return df.reset_index(drop=True)
+        return df
     result = df.copy()
     result['_sort_key'] = pd.to_numeric(
         result['出席番号'], errors='coerce',
     ).fillna(0)
     result = result.sort_values('_sort_key').drop(columns='_sort_key')
-    return result.reset_index(drop=True)
+    return result
 
 
 class _BatchGenerator:
@@ -98,6 +99,7 @@ class App(ctk.CTk):
 
         # データ状態
         self.df_mapped: pd.DataFrame | None = None
+        self._data_model: EditableDataModel | None = None
 
         self._build_layout()
         self._check_update_bg()
@@ -148,7 +150,7 @@ class App(ctk.CTk):
         self._left.grid_columnconfigure(0, weight=1)
 
         # 右パネル
-        self._right = _PreviewPanel(tab_excel)
+        self._right = _PreviewPanel(tab_excel, on_data_edit=self._on_data_edited)
         self._right.grid(row=0, column=1, sticky='nsew', padx=(2, 0))
 
         # セクション配置
@@ -250,7 +252,8 @@ class App(ctk.CTk):
         # 正式氏名 ↔ 氏名 等のフォールバック列を自動補完
         ensure_fallback_columns(df_mapped)
 
-        self.df_mapped = df_mapped
+        self._data_model = EditableDataModel(df_mapped)
+        self.df_mapped = self._data_model.df
 
         # パスを config に保存
         self.config['last_loaded_file'] = source_path
@@ -275,7 +278,7 @@ class App(ctk.CTk):
                 self._show_exchange_class_dialog()
 
         # プレビュー更新
-        self._right.show_data(df_mapped)
+        self._right.show_data(df_mapped, model=self._data_model)
 
         # 名簿印刷タブにもデータを共有
         self._roster_print.set_data(df_mapped)
@@ -297,7 +300,7 @@ class App(ctk.CTk):
 
         # プレビューをフィルタリングして更新（割り当て済み特支児童を自動含む）
         df_preview = self._filter_df(g, k)
-        self._right.show_data(df_preview)
+        self._right.show_data(df_preview, model=self._data_model)
 
         # 帳票プレビューも更新
         self._request_preview()
@@ -340,7 +343,7 @@ class App(ctk.CTk):
             # プレビューを更新（割り当て反映）
             f = self.class_select.get_filter()
             df_preview = self._filter_df(f.get('学年'), f.get('組'))
-            self._right.show_data(df_preview)
+            self._right.show_data(df_preview, model=self._data_model)
             self._request_preview()
 
         ExchangeClassDialog(
@@ -406,6 +409,10 @@ class App(ctk.CTk):
             generators.append(create_generator(actual, output_path, df_filtered, opts))
 
         return _BatchGenerator(generators, output_dir) if generators else None
+
+    def _on_data_edited(self) -> None:
+        """_PreviewPanel でデータが編集された時に呼ばれる。"""
+        self._request_preview()
 
     # ────────────────────────────────────────────────────────────────────────
     # ヘルパー
@@ -522,16 +529,19 @@ class App(ctk.CTk):
     def _open_editor_with_file(self, path: str) -> None:
         """指定ファイルでレイアウトエディターを開く。空パスなら新規。"""
         from gui.editor.editor_window import EditorWindow
+        layout_dir = get_layout_dir(self.config)
         if path:
             if path.lower().endswith('.lay'):
                 from core.lay_parser import parse_lay
-                EditorWindow(self, lay=parse_lay(path))
+                EditorWindow(self, lay=parse_lay(path), layout_dir=layout_dir)
             else:
                 from core.lay_serializer import load_layout
-                ew = EditorWindow(self, lay=load_layout(path))
+                ew = EditorWindow(
+                    self, lay=load_layout(path), layout_dir=layout_dir,
+                )
                 ew._current_file = path
         else:
-            EditorWindow(self)
+            EditorWindow(self, layout_dir=layout_dir)
 
     def _on_tab_change(self) -> None:
         """タブ切り替え時にデータとレイアウト一覧を同期する。"""
@@ -671,14 +681,22 @@ def _fmt_cell(col: str, value) -> str:
 
 
 class _PreviewPanel(ctk.CTkFrame):
-    """右パネル: データ一覧 + 帳票プレビュー（CTkTabview）。"""
+    """右パネル: データ一覧（編集可能） + 帳票プレビュー（CTkTabview）。"""
 
     _PRIORITY_COLS = ('出席番号', '組', '学年', '氏名', '氏名かな', '性別', '生年月日')
 
-    def __init__(self, master) -> None:
+    def __init__(self, master, on_data_edit: callable | None = None) -> None:
         super().__init__(master, corner_radius=6)
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
+
+        self._on_data_edit = on_data_edit
+        self._model: EditableDataModel | None = None
+        self._show_cols: list[str] = []
+        self._tree: ttk.Treeview | None = None
+        self._edit_entry: tk.Entry | None = None
+        self._edit_item: str | None = None
+        self._edit_col_idx: int = -1
 
         # タブビュー
         self._tabview = ctk.CTkTabview(self, corner_radius=6)
@@ -688,22 +706,51 @@ class _PreviewPanel(ctk.CTkFrame):
         self._tab_preview = self._tabview.add('プレビュー')
 
         # ── データタブ ─────────────────────────────────────────────────────
-        self._tab_data.grid_rowconfigure(1, weight=1)
+        self._tab_data.grid_rowconfigure(2, weight=1)
         self._tab_data.grid_columnconfigure(0, weight=1)
 
+        # ツールバー（ヘッダー + 検索 + エクスポート）
+        toolbar = ctk.CTkFrame(self._tab_data, fg_color='transparent')
+        toolbar.grid(row=0, column=0, sticky='ew', padx=4, pady=(4, 0))
+        toolbar.grid_columnconfigure(1, weight=1)
+
         self._header = ctk.CTkLabel(
-            self._tab_data,
-            text='データプレビュー',
+            toolbar,
+            text='データ編集',
             font=ctk.CTkFont(size=13, weight='bold'),
         )
-        self._header.grid(row=0, column=0, sticky='w', padx=6, pady=(4, 2))
+        self._header.grid(row=0, column=0, sticky='w', padx=2)
+
+        self._export_btn = ctk.CTkButton(
+            toolbar, text='エクスポート', width=90, height=26,
+            command=self._on_export, state='disabled',
+        )
+        self._export_btn.grid(row=0, column=2, padx=(4, 2))
+
+        # 検索バー
+        search_frame = ctk.CTkFrame(self._tab_data, fg_color='transparent')
+        search_frame.grid(row=1, column=0, sticky='ew', padx=4, pady=(2, 0))
+        search_frame.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(search_frame, text='検索:', font=ctk.CTkFont(size=11)).grid(
+            row=0, column=0, padx=(2, 4),
+        )
+        self._search_var = tk.StringVar()
+        self._search_entry = ctk.CTkEntry(
+            search_frame, textvariable=self._search_var,
+            placeholder_text='氏名・かな等で絞り込み…', height=26,
+        )
+        self._search_entry.grid(row=0, column=1, sticky='ew', padx=2)
+        self._search_var.trace_add('write', self._on_search_changed)
+
+        self._current_df: pd.DataFrame | None = None
 
         self._data_placeholder = ctk.CTkLabel(
             self._tab_data,
             text='名簿ファイルを読み込むと\nここにプレビューが表示されます',
             text_color='gray',
         )
-        self._data_placeholder.grid(row=1, column=0, padx=20, pady=40)
+        self._data_placeholder.grid(row=2, column=0, padx=20, pady=40)
 
         self._tree_container: ctk.CTkFrame | None = None
 
@@ -729,19 +776,27 @@ class _PreviewPanel(ctk.CTkFrame):
 
     # ── データタブ API ─────────────────────────────────────────────────────
 
-    def show_data(self, df: pd.DataFrame) -> None:
-        """DataFrame を Treeview に表示する。"""
+    def show_data(
+        self, df: pd.DataFrame, *, model: EditableDataModel | None = None,
+    ) -> None:
+        """DataFrame を Treeview に表示する。model を渡すとセル編集が有効になる。"""
+        self._cancel_edit()
         if self._tree_container:
             self._tree_container.destroy()
             self._tree_container = None
         self._data_placeholder.grid_remove()
+        self._model = model
+        self._current_df = df
+        self._search_var.set('')
+        self._export_btn.configure(state='normal')
 
         show_cols = [c for c in self._PRIORITY_COLS if c in df.columns]
         if not show_cols:
             show_cols = list(df.columns[:10])
+        self._show_cols = show_cols
 
         container = ctk.CTkFrame(self._tab_data, corner_radius=0, fg_color='transparent')
-        container.grid(row=1, column=0, sticky='nsew', padx=2, pady=2)
+        container.grid(row=2, column=0, sticky='nsew', padx=2, pady=2)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
         self._tree_container = container
@@ -757,15 +812,26 @@ class _PreviewPanel(ctk.CTkFrame):
             height=25,
             style='Roster.Treeview',
         )
+        tree.tag_configure('edited', background='#FFFACD')
+        tree.tag_configure('warning', background='#FFE4E1')
+
+        # 必須フィールド（空欄の場合に警告ハイライトする）
+        required_fields = {'氏名', '性別', '生年月日'}
+
         for col in show_cols:
             w = 70 if col in ('出席番号', '組', '学年', '性別') else 110
             tree.heading(col, text=col)
             tree.column(col, width=w, minwidth=50, anchor='center')
 
-        for _, row in df.iterrows():
-            tree.insert('', 'end', values=[
-                _fmt_cell(c, row.get(c, '')) for c in show_cols
-            ])
+        for idx, row in df.iterrows():
+            values = [_fmt_cell(c, row.get(c, '')) for c in show_cols]
+            # 必須フィールドに空欄があれば警告タグ
+            tags: tuple[str, ...] = ()
+            for i, col in enumerate(show_cols):
+                if col in required_fields and not values[i]:
+                    tags = ('warning',)
+                    break
+            tree.insert('', 'end', iid=str(idx), values=values, tags=tags)
 
         vsb = ttk.Scrollbar(container, orient='vertical', command=tree.yview)
         hsb = ttk.Scrollbar(container, orient='horizontal', command=tree.xview)
@@ -775,7 +841,217 @@ class _PreviewPanel(ctk.CTkFrame):
         vsb.grid(row=0, column=1, sticky='ns')
         hsb.grid(row=1, column=0, sticky='ew')
 
-        self._header.configure(text=f'データプレビュー — {len(df)} 名')
+        self._tree = tree
+
+        # ダブルクリックでセル編集
+        if model is not None:
+            tree.bind('<Double-1>', self._on_double_click)
+            tree.bind('<Control-z>', lambda _e: self._undo())
+            tree.bind('<Control-y>', lambda _e: self._redo())
+
+        self._update_header(len(df))
+
+    # ── インライン編集 ─────────────────────────────────────────────────────
+
+    def _update_header(self, count: int, *, filtered: int | None = None) -> None:
+        """データタブのヘッダーを更新する。"""
+        if filtered is not None:
+            text = f'データ編集 — {filtered}/{count} 名'
+        else:
+            text = f'データ編集 — {count} 名'
+        if self._model and self._model.is_modified():
+            text += '  (*変更あり)'
+        self._header.configure(text=text)
+
+    def _on_double_click(self, event: tk.Event) -> None:
+        """Treeview セルのダブルクリックで編集を開始する。"""
+        tree = self._tree
+        if tree is None:
+            return
+        item = tree.identify_row(event.y)
+        col_id = tree.identify_column(event.x)
+        if not item or not col_id:
+            return
+        # col_id は '#1', '#2', ... 形式
+        col_idx = int(col_id.replace('#', '')) - 1
+        if col_idx < 0 or col_idx >= len(self._show_cols):
+            return
+        self._start_edit(item, col_idx)
+
+    def _start_edit(self, item: str, col_idx: int) -> None:
+        """指定セルの編集を開始する。"""
+        tree = self._tree
+        if tree is None or self._model is None:
+            return
+
+        self._cancel_edit()
+
+        col_name = self._show_cols[col_idx]
+        row_idx = int(item)
+        current_value = self._model.get_value(row_idx, col_name)
+
+        # セルの位置を取得
+        bbox = tree.bbox(item, column=self._show_cols[col_idx])
+        if not bbox:
+            return
+        x, y, w, h = bbox
+
+        entry = tk.Entry(tree, font=('メイリオ', 9), justify='center')
+        entry.place(x=x, y=y, width=w, height=h)
+        entry.insert(0, current_value)
+        entry.select_range(0, 'end')
+        entry.focus_set()
+
+        entry.bind('<Return>', lambda _e: self._commit_edit())
+        entry.bind('<Escape>', lambda _e: self._cancel_edit())
+        entry.bind('<FocusOut>', lambda _e: self._commit_edit())
+
+        self._edit_entry = entry
+        self._edit_item = item
+        self._edit_col_idx = col_idx
+
+    def _commit_edit(self) -> None:
+        """編集を確定する。"""
+        if self._edit_entry is None or self._model is None:
+            return
+
+        new_value = self._edit_entry.get()
+        item = self._edit_item
+        col_idx = self._edit_col_idx
+        col_name = self._show_cols[col_idx]
+        row_idx = int(item)
+
+        # Entry を先に破棄（FocusOut の再帰防止）
+        entry = self._edit_entry
+        self._edit_entry = None
+        self._edit_item = None
+        entry.destroy()
+
+        # モデルに反映
+        self._model.set_value(row_idx, col_name, new_value)
+
+        # Treeview の表示を更新
+        if self._tree is not None:
+            values = list(self._tree.item(str(row_idx), 'values'))
+            values[col_idx] = _fmt_cell(col_name, new_value)
+            self._tree.item(str(row_idx), values=values, tags=('edited',))
+
+        # ヘッダー更新
+        tree = self._tree
+        if tree:
+            self._update_header(len(tree.get_children()))
+
+        # コールバック（帳票プレビュー更新等）
+        if self._on_data_edit:
+            self._on_data_edit()
+
+    def _cancel_edit(self) -> None:
+        """編集をキャンセルする。"""
+        if self._edit_entry is not None:
+            entry = self._edit_entry
+            self._edit_entry = None
+            self._edit_item = None
+            entry.destroy()
+
+    def _undo(self) -> None:
+        """Undo: 直前の編集を取り消す。"""
+        if self._model is None:
+            return
+        op = self._model.undo()
+        if op is None:
+            return
+        self._refresh_cell(op.row, op.col, op.old_value)
+        if self._on_data_edit:
+            self._on_data_edit()
+
+    def _redo(self) -> None:
+        """Redo: 取り消した編集をやり直す。"""
+        if self._model is None:
+            return
+        op = self._model.redo()
+        if op is None:
+            return
+        self._refresh_cell(op.row, op.col, op.new_value)
+        if self._on_data_edit:
+            self._on_data_edit()
+
+    def _refresh_cell(self, row_idx: int, col_name: str, value: str) -> None:
+        """Treeview の特定セルを更新する。"""
+        tree = self._tree
+        if tree is None:
+            return
+        item = str(row_idx)
+        if not tree.exists(item):
+            return
+        col_idx = self._show_cols.index(col_name) if col_name in self._show_cols else -1
+        if col_idx < 0:
+            return
+        values = list(tree.item(item, 'values'))
+        values[col_idx] = _fmt_cell(col_name, value)
+        tags = ('edited',) if self._model and self._model.is_modified() else ()
+        tree.item(item, values=values, tags=tags)
+        self._update_header(len(tree.get_children()))
+
+    # ── 検索・フィルタ ─────────────────────────────────────────────────────
+
+    def _on_search_changed(self, *_args: object) -> None:
+        """検索文字列の変更時にフィルタを適用する。"""
+        tree = self._tree
+        if tree is None or self._current_df is None:
+            return
+
+        query = self._search_var.get().strip().lower()
+
+        for item in tree.get_children():
+            tree.delete(item)
+
+        for idx, row in self._current_df.iterrows():
+            values = [_fmt_cell(c, row.get(c, '')) for c in self._show_cols]
+            if query and not any(query in str(v).lower() for v in values):
+                continue
+            tree.insert('', 'end', iid=str(idx), values=values)
+
+        visible = len(tree.get_children())
+        total = len(self._current_df)
+        if query:
+            self._update_header(total, filtered=visible)
+        else:
+            self._update_header(total)
+
+    # ── エクスポート ───────────────────────────────────────────────────────
+
+    def _on_export(self) -> None:
+        """編集済みデータをファイルにエクスポートする。"""
+        import tkinter.filedialog as fd
+
+        if self._model is None and self._current_df is None:
+            return
+
+        df = self._model.get_df() if self._model else self._current_df
+
+        path = fd.asksaveasfilename(
+            title='データをエクスポート',
+            defaultextension='.csv',
+            filetypes=[
+                ('CSV (UTF-8)', '*.csv'),
+                ('Excel', '*.xlsx'),
+            ],
+        )
+        if not path:
+            return
+
+        from core.exporter import export_csv, export_excel
+        try:
+            if path.lower().endswith('.xlsx'):
+                export_excel(df, path)
+            else:
+                export_csv(df, path)
+            if self._model:
+                self._model.reset_modified()
+                self._update_header(len(df))
+        except Exception as e:
+            import tkinter.messagebox as _mb
+            _mb.showerror('エクスポートエラー', str(e))
 
     # ── プレビュータブ API ─────────────────────────────────────────────────
 

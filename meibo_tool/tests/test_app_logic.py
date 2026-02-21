@@ -224,14 +224,15 @@ class TestSortByAttendance:
         result = _sort_by_attendance(df)
         assert list(result['氏名']) == ['B', 'A']
 
-    def test_index_reset(self):
-        """結果のインデックスが 0 始まりにリセットされる。"""
+    def test_index_preserved(self):
+        """ソート後も元のインデックスが保持される（セル編集のマッピング用）。"""
         df = pd.DataFrame([
             {'出席番号': '3', '氏名': 'A'},
             {'出席番号': '1', '氏名': 'B'},
         ])
         result = _sort_by_attendance(df)
-        assert list(result.index) == [0, 1]
+        # 出席番号順: B(idx=1), A(idx=0)
+        assert list(result.index) == [1, 0]
 
 
 # ────────────────────────────────────────────────────────────────────────────
