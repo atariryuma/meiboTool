@@ -20,6 +20,7 @@ from core.layout_registry import (
     delete_layout,
     import_json_file,
     import_lay_file,
+    import_lay_file_multi,
     rename_layout,
     scan_layout_dir,
 )
@@ -131,7 +132,10 @@ class LayoutManagerDialog(ctk.CTkToplevel):
     # ── ボタン操作 ─────────────────────────────────────────────────────
 
     def _on_import(self) -> None:
-        """レイアウトファイルをインポートする。"""
+        """レイアウトファイルをインポートする。
+
+        .lay ファイルの場合、マルチレイアウトを検出して一括インポートを提案する。
+        """
         path = fd.askopenfilename(
             parent=self,
             title='レイアウトファイルを選択',
@@ -146,13 +150,41 @@ class LayoutManagerDialog(ctk.CTkToplevel):
 
         try:
             if path.lower().endswith('.lay'):
-                import_lay_file(path, self._layout_dir)
+                self._import_lay(path)
             else:
                 import_json_file(path, self._layout_dir)
-            self._refresh_list()
-            mb.showinfo('完了', 'レイアウトをインポートしました。', parent=self)
+                self._refresh_list()
+                mb.showinfo('完了', 'レイアウトをインポートしました。', parent=self)
         except Exception as e:
             mb.showerror('インポートエラー', str(e), parent=self)
+
+    def _import_lay(self, path: str) -> None:
+        """マルチレイアウト対応の .lay インポート。"""
+        from core.lay_parser import parse_lay_multi
+
+        layouts = parse_lay_multi(path)
+        count = len(layouts)
+
+        if count <= 1:
+            # 単一レイアウト: 従来のインポート
+            import_lay_file(path, self._layout_dir)
+            self._refresh_list()
+            mb.showinfo('完了', 'レイアウトをインポートしました。', parent=self)
+        else:
+            # マルチレイアウト: 確認ダイアログ
+            if mb.askyesno(
+                '一括インポート',
+                f'このファイルには {count} 件のレイアウトが含まれています。\n'
+                f'すべてインポートしますか？',
+                parent=self,
+            ):
+                results = import_lay_file_multi(path, self._layout_dir)
+                self._refresh_list()
+                mb.showinfo(
+                    '完了',
+                    f'{len(results)} 件のレイアウトをインポートしました。',
+                    parent=self,
+                )
 
     def _on_open_click(self) -> None:
         """選択中のレイアウトをエディターで開く。"""

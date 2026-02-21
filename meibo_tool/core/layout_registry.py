@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from core.lay_parser import parse_lay
+from core.lay_parser import parse_lay, parse_lay_multi
 from core.lay_serializer import load_layout, save_layout
 
 
@@ -48,7 +48,7 @@ def _read_layout_meta(path: str) -> dict[str, Any] | None:
     except (json.JSONDecodeError, OSError):
         return None
 
-    if data.get('format') != 'meibo_layout_v1':
+    if data.get('format') not in ('meibo_layout_v1', 'meibo_layout_v2'):
         return None
 
     objects = data.get('objects', [])
@@ -58,8 +58,10 @@ def _read_layout_meta(path: str) -> dict[str, Any] | None:
 
     pw = data.get('page_width', 840)
     ph = data.get('page_height', 1188)
-    pw_mm = pw * 0.25
-    ph_mm = ph * 0.25
+    paper = data.get('paper', {})
+    unit_mm = paper.get('unit_mm', 0.25)
+    pw_mm = pw * unit_mm
+    ph_mm = ph * unit_mm
 
     return {
         'name': Path(path).stem,
@@ -85,6 +87,25 @@ def import_lay_file(src_path: str, layout_dir: str) -> str:
     dest_path = unique_path(layout_dir, stem)
     save_layout(lay, dest_path)
     return dest_path
+
+
+def import_lay_file_multi(src_path: str, layout_dir: str) -> list[dict[str, str]]:
+    """マルチレイアウト .lay から全レイアウトをインポートする。
+
+    Returns:
+        [{'title': ..., 'path': ...}, ...] インポートされたレイアウトのリスト。
+    """
+    layouts = parse_lay_multi(src_path)
+    os.makedirs(layout_dir, exist_ok=True)
+
+    results: list[dict[str, str]] = []
+    for lay in layouts:
+        stem = lay.title or Path(src_path).stem
+        dest_path = unique_path(layout_dir, stem)
+        save_layout(lay, dest_path)
+        results.append({'title': lay.title, 'path': dest_path})
+
+    return results
 
 
 def import_json_file(src_path: str, layout_dir: str) -> str:
@@ -130,6 +151,7 @@ def rename_layout(path: str, new_name: str) -> str:
         page_width=lay.page_width,
         page_height=lay.page_height,
         objects=lay.objects,
+        paper=lay.paper,
     )
     save_layout(updated, new_path)
     if os.path.abspath(new_path) != os.path.abspath(path):

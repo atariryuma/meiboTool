@@ -13,7 +13,9 @@ from core.lay_parser import (
     LayFile,
     LayoutObject,
     ObjectType,
+    PaperLayout,
     Rect,
+    TableColumn,
     new_field,
     new_label,
     new_line,
@@ -21,6 +23,7 @@ from core.lay_parser import (
 from core.lay_renderer import (
     canvas_to_model,
     fill_layout,
+    get_page_arrangement,
     model_to_canvas,
     model_to_printer,
 )
@@ -429,3 +432,232 @@ class TestFillLayoutWithRealLay:
             1 for obj in result.objects if obj.obj_type == ObjectType.FIELD
         )
         assert field_count == 0
+
+
+# ── TABLE 描画テスト ───────────────────────────────────────────────────────
+
+
+class TestTableRendering:
+    """_render_table の描画テスト（PILBackend 使用）。"""
+
+    def _make_table_layout(self) -> LayFile:
+        cols = [
+            TableColumn(field_id=108, width=32, h_align=0, header='氏名'),
+            TableColumn(field_id=610, width=24, h_align=1, header='生年月日'),
+            TableColumn(field_id=107, width=8, h_align=1, header='性別'),
+        ]
+        return LayFile(
+            title='テーブルテスト',
+            page_width=840,
+            page_height=1188,
+            objects=[
+                LayoutObject(
+                    obj_type=ObjectType.TABLE,
+                    rect=Rect(10, 100, 800, 1100),
+                    table_columns=cols,
+                ),
+            ],
+        )
+
+    def test_table_renders_without_error(self) -> None:
+        """TABLE オブジェクトが PIL レンダリングでエラーにならない。"""
+        pytest.importorskip('PIL')
+        from core.lay_renderer import render_layout_to_image
+
+        lay = self._make_table_layout()
+        img = render_layout_to_image(lay, dpi=72)
+        assert img.size[0] > 0
+        assert img.size[1] > 0
+
+    def test_table_in_render_all(self) -> None:
+        """render_all が TABLE を含むレイアウトを処理できる。"""
+        pytest.importorskip('PIL')
+        from PIL import Image
+
+        from core.lay_renderer import LayRenderer, PILBackend
+
+        lay = self._make_table_layout()
+        img = Image.new('RGB', (400, 600), (255, 255, 255))
+        backend = PILBackend(img, dpi=72)
+        renderer = LayRenderer(lay, backend)
+        renderer.render_all()  # should not raise
+
+    def test_table_with_labels_and_lines(self) -> None:
+        """TABLE + LABEL + LINE の混合レイアウトが描画できる。"""
+        pytest.importorskip('PIL')
+        from core.lay_renderer import render_layout_to_image
+
+        lay = LayFile(
+            page_width=840,
+            page_height=1188,
+            objects=[
+                new_label(10, 10, 200, 40, text='修了台帳'),
+                LayoutObject(
+                    obj_type=ObjectType.TABLE,
+                    rect=Rect(10, 50, 800, 1100),
+                    table_columns=[
+                        TableColumn(field_id=108, width=32, header='氏名'),
+                    ],
+                ),
+                new_line(10, 1150, 800, 1150),
+            ],
+        )
+        img = render_layout_to_image(lay, dpi=72)
+        assert img.size[0] > 0
+
+    def test_empty_table_columns_skipped(self) -> None:
+        """カラムなしの TABLE は描画をスキップする。"""
+        pytest.importorskip('PIL')
+        from PIL import Image
+
+        from core.lay_renderer import LayRenderer, PILBackend
+
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.TABLE,
+                rect=Rect(0, 0, 100, 100),
+                table_columns=[],
+            ),
+        ])
+        img = Image.new('RGB', (100, 100), (255, 255, 255))
+        backend = PILBackend(img, dpi=72)
+        renderer = LayRenderer(lay, backend)
+        renderer.render_all()  # should not raise
+
+
+# ── PaperLayout 配置テスト ────────────────────────────────────────────────
+
+
+class TestGetPageArrangement:
+    """get_page_arrangement のテスト。"""
+
+    def test_mode0_returns_1x1(self) -> None:
+        """mode=0（全面）は 1×1 を返す。"""
+        lay = LayFile(
+            paper=PaperLayout(mode=0, cols=1, rows=1),
+        )
+        cols, rows, per_page, scale = get_page_arrangement(lay)
+        assert cols == 1
+        assert rows == 1
+        assert per_page == 1
+
+    def test_mode1_uses_paper_cols_rows(self) -> None:
+        """mode=1（ラベル）は PaperLayout の cols/rows を返す。"""
+        lay = LayFile(
+            paper=PaperLayout(mode=1, cols=2, rows=3),
+        )
+        cols, rows, per_page, scale = get_page_arrangement(lay)
+        assert cols == 2
+        assert rows == 3
+        assert per_page == 6
+
+    def test_no_paper_fallback(self) -> None:
+        """paper=None のときは calculate_page_arrangement にフォールバック。"""
+        lay = LayFile(page_width=840, page_height=1188)
+        cols, rows, per_page, scale = get_page_arrangement(lay)
+        assert per_page >= 1
+
+    def test_scale_is_1(self) -> None:
+        """PaperLayout 使用時のスケールは常に 1.0。"""
+        lay = LayFile(
+            paper=PaperLayout(mode=1, cols=2, rows=1),
+        )
+        _cols, _rows, _per_page, scale = get_page_arrangement(lay)
+        assert scale == 1.0
+
+
+# ── fill_layout TABLE テスト ─────────────────────────────────────────────
+
+
+class TestFillLayoutTable:
+    """fill_layout の TABLE 対応テスト。"""
+
+    def test_table_preserved_after_fill(self) -> None:
+        """fill_layout 後も TABLE オブジェクトが保持される。"""
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.TABLE,
+                rect=Rect(10, 100, 800, 1100),
+                table_columns=[
+                    TableColumn(field_id=108, width=32, header='氏名'),
+                ],
+            ),
+        ])
+        result = fill_layout(lay, {'氏名': '山田太郎'})
+        assert len(result.objects) == 1
+        assert result.objects[0].obj_type == ObjectType.TABLE
+        assert len(result.objects[0].table_columns) == 1
+
+    def test_table_column_filled_with_data(self) -> None:
+        """TABLE カラムの header がデータ値に置換される。"""
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.TABLE,
+                rect=Rect(10, 100, 800, 1100),
+                table_columns=[
+                    TableColumn(field_id=108, width=32, header='氏名'),
+                    TableColumn(field_id=107, width=8, header='性別'),
+                ],
+            ),
+        ])
+        result = fill_layout(lay, {'氏名': '山田太郎', '性別': '男'})
+        table = result.objects[0]
+        assert table.table_columns[0].header == '山田太郎'
+        assert table.table_columns[1].header == '男'
+
+    def test_table_column_no_data_keeps_header(self) -> None:
+        """データがない場合はヘッダーを維持する。"""
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.TABLE,
+                rect=Rect(10, 100, 800, 1100),
+                table_columns=[
+                    TableColumn(field_id=108, width=32, header='氏名'),
+                ],
+            ),
+        ])
+        result = fill_layout(lay, {})
+        assert result.objects[0].table_columns[0].header == '氏名'
+
+    def test_paper_preserved_in_fill(self) -> None:
+        """fill_layout 後も paper が保持される。"""
+        paper = PaperLayout(mode=1, cols=2, rows=1, paper_size='A4')
+        lay = LayFile(
+            paper=paper,
+            objects=[new_field(0, 0, 100, 30, field_id=108)],
+        )
+        result = fill_layout(lay, {'氏名': 'テスト'})
+        assert result.paper is not None
+        assert result.paper.paper_size == 'A4'
+
+
+# ── render_layout_to_image unit_mm テスト ────────────────────────────────
+
+
+class TestRenderWithUnitMm:
+    """unit_mm による画像サイズの検証。"""
+
+    def test_unit_mm_025_default(self) -> None:
+        """paper=None → 旧形式 0.25mm/unit で画像生成。"""
+        pytest.importorskip('PIL')
+        from core.lay_renderer import render_layout_to_image
+
+        lay = LayFile(page_width=840, page_height=1188)
+        img = render_layout_to_image(lay, dpi=150)
+        expected_w = int(840 * 0.25 * 150 / 25.4)
+        assert abs(img.size[0] - expected_w) <= 1
+
+    def test_unit_mm_01_with_paper(self) -> None:
+        """paper.unit_mm=0.1 → 新形式で画像生成。"""
+        pytest.importorskip('PIL')
+        from core.lay_renderer import render_layout_to_image
+
+        lay = LayFile(
+            page_width=2100,
+            page_height=2970,
+            paper=PaperLayout(unit_mm=0.1),
+        )
+        img = render_layout_to_image(lay, dpi=150)
+        # 2100 * 0.1mm = 210mm → 210 * 150 / 25.4 ≈ 1240px
+        expected_w = int(2100 * 0.1 * 150 / 25.4)
+        assert abs(img.size[0] - expected_w) <= 1

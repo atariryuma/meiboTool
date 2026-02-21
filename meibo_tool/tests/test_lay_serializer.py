@@ -18,8 +18,10 @@ from core.lay_parser import (
     LayFile,
     LayoutObject,
     ObjectType,
+    PaperLayout,
     Point,
     Rect,
+    TableColumn,
     new_field,
     new_label,
     new_line,
@@ -386,3 +388,278 @@ class TestDeserializationEdgeCases:
             f.write('{broken json}')
         with pytest.raises(json.JSONDecodeError):
             load_layout(path)
+
+
+# ── V2 フォーマット テスト ───────────────────────────────────────────────────
+
+
+class TestV2FormatDetection:
+    """v1/v2 フォーマット自動判定のテスト。"""
+
+    def test_no_paper_no_table_emits_v1(self):
+        lay = LayFile(objects=[new_label(0, 0, 100, 30, text='test')])
+        d = layfile_to_dict(lay)
+        assert d['format'] == 'meibo_layout_v1'
+
+    def test_paper_emits_v2(self):
+        lay = LayFile(paper=PaperLayout(mode=0))
+        d = layfile_to_dict(lay)
+        assert d['format'] == 'meibo_layout_v2'
+
+    def test_table_columns_emits_v2(self):
+        obj = LayoutObject(
+            obj_type=ObjectType.TABLE,
+            rect=Rect(0, 0, 800, 600),
+            table_columns=[TableColumn(field_id=108, header='氏名')],
+        )
+        lay = LayFile(objects=[obj])
+        d = layfile_to_dict(lay)
+        assert d['format'] == 'meibo_layout_v2'
+
+    def test_v2_readable_by_dict_to_layfile(self):
+        data = {
+            'format': 'meibo_layout_v2',
+            'title': 'v2テスト',
+            'objects': [],
+        }
+        lay = dict_to_layfile(data)
+        assert lay.title == 'v2テスト'
+
+
+class TestPaperLayoutRoundTrip:
+    """PaperLayout の JSON ラウンドトリップテスト。"""
+
+    def test_paper_preserved(self):
+        paper = PaperLayout(
+            mode=1,
+            unit_mm=0.1,
+            item_width_mm=84.0,
+            item_height_mm=272.0,
+            cols=2,
+            rows=1,
+            margin_left_mm=14.0,
+            margin_top_mm=11.0,
+            spacing_h_mm=10.0,
+            spacing_v_mm=0.0,
+            paper_size='A4',
+            orientation='portrait',
+        )
+        lay = LayFile(paper=paper)
+        d = layfile_to_dict(lay)
+        restored = dict_to_layfile(d)
+
+        assert restored.paper is not None
+        p = restored.paper
+        assert p.mode == 1
+        assert p.unit_mm == 0.1
+        assert p.item_width_mm == 84.0
+        assert p.item_height_mm == 272.0
+        assert p.cols == 2
+        assert p.rows == 1
+        assert p.margin_left_mm == 14.0
+        assert p.margin_top_mm == 11.0
+        assert p.spacing_h_mm == 10.0
+        assert p.spacing_v_mm == 0.0
+        assert p.paper_size == 'A4'
+        assert p.orientation == 'portrait'
+
+    def test_no_paper_returns_none(self):
+        lay = LayFile()
+        d = layfile_to_dict(lay)
+        restored = dict_to_layfile(d)
+        assert restored.paper is None
+
+    def test_paper_json_keys(self):
+        lay = LayFile(paper=PaperLayout(mode=0, paper_size='A3'))
+        d = layfile_to_dict(lay)
+        assert 'paper' in d
+        assert d['paper']['paper_size'] == 'A3'
+
+    def test_paper_file_roundtrip(self, tmp_path):
+        paper = PaperLayout(
+            mode=0,
+            unit_mm=0.1,
+            item_width_mm=210.0,
+            item_height_mm=297.0,
+            paper_size='A4',
+            orientation='portrait',
+        )
+        lay = LayFile(title='用紙テスト', paper=paper)
+        path = str(tmp_path / 'paper.json')
+        save_layout(lay, path)
+        restored = load_layout(path)
+        assert restored.paper.paper_size == 'A4'
+        assert restored.paper.unit_mm == 0.1
+
+
+class TestTableColumnRoundTrip:
+    """TABLE オブジェクト + カラムの JSON ラウンドトリップテスト。"""
+
+    def test_table_columns_preserved(self):
+        cols = [
+            TableColumn(field_id=108, width=32, h_align=0, header='氏名'),
+            TableColumn(field_id=610, width=24, h_align=1, header='生年月日'),
+            TableColumn(field_id=603, width=16, h_align=2, header='都道府県'),
+        ]
+        obj = LayoutObject(
+            obj_type=ObjectType.TABLE,
+            rect=Rect(10, 100, 800, 1100),
+            table_columns=cols,
+        )
+        lay = LayFile(objects=[obj])
+        d = layfile_to_dict(lay)
+        restored = dict_to_layfile(d)
+
+        table = restored.tables[0]
+        assert len(table.table_columns) == 3
+        assert table.table_columns[0].field_id == 108
+        assert table.table_columns[0].header == '氏名'
+        assert table.table_columns[1].h_align == 1
+        assert table.table_columns[2].width == 16
+
+    def test_table_type_preserved(self):
+        obj = LayoutObject(
+            obj_type=ObjectType.TABLE,
+            rect=Rect(0, 0, 100, 100),
+            table_columns=[TableColumn(field_id=108)],
+        )
+        lay = LayFile(objects=[obj])
+        restored = dict_to_layfile(layfile_to_dict(lay))
+        assert restored.objects[0].obj_type == ObjectType.TABLE
+
+    def test_empty_columns_not_in_json(self):
+        obj = LayoutObject(
+            obj_type=ObjectType.LABEL,
+            rect=Rect(0, 0, 100, 30),
+            text='no cols',
+        )
+        lay = LayFile(objects=[obj])
+        d = layfile_to_dict(lay)
+        assert 'table_columns' not in d['objects'][0]
+
+    def test_table_json_structure(self):
+        obj = LayoutObject(
+            obj_type=ObjectType.TABLE,
+            rect=Rect(10, 20, 800, 600),
+            table_columns=[
+                TableColumn(field_id=108, width=32, h_align=0, header='氏名'),
+            ],
+        )
+        lay = LayFile(objects=[obj])
+        d = layfile_to_dict(lay)
+        obj_d = d['objects'][0]
+        assert obj_d['type'] == 'TABLE'
+        assert len(obj_d['table_columns']) == 1
+        col_d = obj_d['table_columns'][0]
+        assert col_d['field_id'] == 108
+        assert col_d['width'] == 32
+        assert col_d['header'] == '氏名'
+
+    def test_table_column_h_align_zero_omitted(self):
+        """h_align=0 は JSON に含まれない（デフォルト値）。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.TABLE,
+            rect=Rect(0, 0, 100, 100),
+            table_columns=[TableColumn(field_id=108, h_align=0, header='氏名')],
+        )
+        d = layfile_to_dict(LayFile(objects=[obj]))
+        assert 'h_align' not in d['objects'][0]['table_columns'][0]
+
+    def test_full_v2_file_roundtrip(self, tmp_path):
+        """v2: paper + TABLE 含む完全なファイルラウンドトリップ。"""
+        paper = PaperLayout(
+            mode=0, unit_mm=0.1,
+            item_width_mm=297.0, item_height_mm=210.0,
+            paper_size='A4', orientation='landscape',
+        )
+        cols = [
+            TableColumn(field_id=108, width=32, header='氏名'),
+            TableColumn(field_id=610, width=24, h_align=1, header='生年月日'),
+        ]
+        lay = LayFile(
+            title='修了台帳',
+            version=1600,
+            page_width=2970,
+            page_height=2100,
+            objects=[
+                new_label(10, 20, 200, 50, text='修了台帳'),
+                LayoutObject(
+                    obj_type=ObjectType.TABLE,
+                    rect=Rect(10, 100, 2900, 2000),
+                    table_columns=cols,
+                ),
+                new_line(10, 2050, 2900, 2050),
+            ],
+            paper=paper,
+        )
+
+        path = str(tmp_path / 'v2_full.json')
+        save_layout(lay, path)
+
+        # JSON が v2 フォーマットであること
+        with open(path, encoding='utf-8') as f:
+            raw = json.load(f)
+        assert raw['format'] == 'meibo_layout_v2'
+        assert 'paper' in raw
+
+        # ラウンドトリップ
+        restored = load_layout(path)
+        assert restored.title == '修了台帳'
+        assert restored.paper.paper_size == 'A4'
+        assert restored.paper.orientation == 'landscape'
+        assert len(restored.objects) == 3
+        assert restored.tables[0].table_columns[0].header == '氏名'
+        assert restored.tables[0].table_columns[1].h_align == 1
+
+
+# ── マルチレイアウト実ファイル → JSON ラウンドトリップ ─────────────────────
+
+_MULTI_LAY = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    '名簿レイアウト_20260221.lay',
+)
+
+
+@pytest.mark.skipif(
+    not os.path.isfile(_MULTI_LAY),
+    reason='マルチレイアウト .lay ファイルが見つかりません',
+)
+class TestMultiLayoutRoundTrip:
+    """マルチレイアウト .lay → JSON → LayFile ラウンドトリップ。"""
+
+    def test_roundtrip_preserves_paper(self, tmp_path):
+        from core.lay_parser import parse_lay_multi
+
+        layouts = parse_lay_multi(_MULTI_LAY)
+        lay = layouts[0]
+        path = str(tmp_path / 'multi_rt.json')
+        save_layout(lay, path)
+        restored = load_layout(path)
+
+        assert restored.paper is not None
+        assert restored.paper.paper_size == lay.paper.paper_size
+        assert restored.paper.orientation == lay.paper.orientation
+
+    def test_roundtrip_preserves_table_columns(self, tmp_path):
+        from core.lay_parser import parse_lay_multi
+
+        layouts = parse_lay_multi(_MULTI_LAY)
+        # 修了台帳（最初のテーブルを含むレイアウト）を探す
+        table_lay = None
+        for lay in layouts:
+            if lay.tables:
+                table_lay = lay
+                break
+        assert table_lay is not None, 'テーブルを含むレイアウトが見つかりません'
+
+        path = str(tmp_path / 'table_rt.json')
+        save_layout(table_lay, path)
+        restored = load_layout(path)
+
+        orig_cols = table_lay.tables[0].table_columns
+        rest_cols = restored.tables[0].table_columns
+        assert len(rest_cols) == len(orig_cols)
+        for orig, rest in zip(orig_cols, rest_cols, strict=True):
+            assert rest.field_id == orig.field_id
+            assert rest.header == orig.header
+            assert rest.width == orig.width

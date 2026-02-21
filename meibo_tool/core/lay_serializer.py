@@ -20,13 +20,17 @@ from core.lay_parser import (
     LayFile,
     LayoutObject,
     ObjectType,
+    PaperLayout,
     Point,
     Rect,
+    TableColumn,
 )
 
 # ── 定数 ─────────────────────────────────────────────────────────────────────
 
-_FORMAT_KEY = 'meibo_layout_v1'
+_FORMAT_V1 = 'meibo_layout_v1'
+_FORMAT_V2 = 'meibo_layout_v2'
+_SUPPORTED_FORMATS = {_FORMAT_V1, _FORMAT_V2}
 
 
 # ── シリアライズ ─────────────────────────────────────────────────────────────
@@ -46,6 +50,15 @@ def _font_to_dict(f: FontInfo) -> dict:
         d['bold'] = True
     if f.italic:
         d['italic'] = True
+    return d
+
+
+def _table_column_to_dict(col: TableColumn) -> dict:
+    d: dict = {'field_id': col.field_id, 'width': col.width}
+    if col.h_align:
+        d['h_align'] = col.h_align
+    if col.header:
+        d['header'] = col.header
     return d
 
 
@@ -73,20 +86,53 @@ def _object_to_dict(obj: LayoutObject) -> dict:
         d['prefix'] = obj.prefix
     if obj.suffix:
         d['suffix'] = obj.suffix
+    if obj.table_columns:
+        d['table_columns'] = [_table_column_to_dict(c) for c in obj.table_columns]
 
     return d
 
 
-def layfile_to_dict(lay: LayFile) -> dict:
-    """LayFile を JSON 互換の dict に変換する。"""
+def _paper_to_dict(p: PaperLayout) -> dict:
+    """PaperLayout を JSON 互換の dict に変換する。"""
     return {
-        'format': _FORMAT_KEY,
+        'mode': p.mode,
+        'unit_mm': p.unit_mm,
+        'item_width_mm': p.item_width_mm,
+        'item_height_mm': p.item_height_mm,
+        'cols': p.cols,
+        'rows': p.rows,
+        'margin_left_mm': p.margin_left_mm,
+        'margin_top_mm': p.margin_top_mm,
+        'spacing_h_mm': p.spacing_h_mm,
+        'spacing_v_mm': p.spacing_v_mm,
+        'paper_size': p.paper_size,
+        'orientation': p.orientation,
+    }
+
+
+def layfile_to_dict(lay: LayFile) -> dict:
+    """LayFile を JSON 互換の dict に変換する。
+
+    paper または table_columns があれば v2 フォーマットで出力する。
+    """
+    has_v2_data = lay.paper is not None or any(
+        obj.table_columns for obj in lay.objects
+    )
+    fmt = _FORMAT_V2 if has_v2_data else _FORMAT_V1
+
+    d: dict = {
+        'format': fmt,
         'title': lay.title,
         'version': lay.version,
         'page_width': lay.page_width,
         'page_height': lay.page_height,
         'objects': [_object_to_dict(obj) for obj in lay.objects],
     }
+
+    if lay.paper is not None:
+        d['paper'] = _paper_to_dict(lay.paper)
+
+    return d
 
 
 # ── デシリアライズ ───────────────────────────────────────────────────────────
@@ -106,6 +152,32 @@ def _dict_to_font(data: dict) -> FontInfo:
         size_pt=data.get('size_pt', 10.0),
         bold=data.get('bold', False),
         italic=data.get('italic', False),
+    )
+
+
+def _dict_to_table_column(d: dict) -> TableColumn:
+    return TableColumn(
+        field_id=d.get('field_id', 0),
+        width=d.get('width', 1),
+        h_align=d.get('h_align', 0),
+        header=d.get('header', ''),
+    )
+
+
+def _dict_to_paper(d: dict) -> PaperLayout:
+    return PaperLayout(
+        mode=d.get('mode', 0),
+        unit_mm=d.get('unit_mm', 0.25),
+        item_width_mm=d.get('item_width_mm', 0.0),
+        item_height_mm=d.get('item_height_mm', 0.0),
+        cols=d.get('cols', 1),
+        rows=d.get('rows', 1),
+        margin_left_mm=d.get('margin_left_mm', 0.0),
+        margin_top_mm=d.get('margin_top_mm', 0.0),
+        spacing_h_mm=d.get('spacing_h_mm', 0.0),
+        spacing_v_mm=d.get('spacing_v_mm', 0.0),
+        paper_size=d.get('paper_size', ''),
+        orientation=d.get('orientation', ''),
     )
 
 
@@ -139,17 +211,25 @@ def _dict_to_object(d: dict) -> LayoutObject:
         obj.prefix = d['prefix']
     if 'suffix' in d:
         obj.suffix = d['suffix']
+    if 'table_columns' in d:
+        obj.table_columns = [
+            _dict_to_table_column(c) for c in d['table_columns']
+        ]
 
     return obj
 
 
 def dict_to_layfile(data: dict) -> LayFile:
-    """dict から LayFile を復元する。"""
+    """dict から LayFile を復元する。v1 / v2 両対応。"""
     fmt = data.get('format', '')
-    if fmt != _FORMAT_KEY:
+    if fmt not in _SUPPORTED_FORMATS:
         raise ValueError(
-            f"Unknown format: {fmt!r} (expected '{_FORMAT_KEY}')"
+            f"Unknown format: {fmt!r} (expected one of {_SUPPORTED_FORMATS})"
         )
+
+    paper = None
+    if 'paper' in data:
+        paper = _dict_to_paper(data['paper'])
 
     return LayFile(
         title=data.get('title', ''),
@@ -157,6 +237,7 @@ def dict_to_layfile(data: dict) -> LayFile:
         page_width=data.get('page_width', 840),
         page_height=data.get('page_height', 1188),
         objects=[_dict_to_object(o) for o in data.get('objects', [])],
+        paper=paper,
     )
 
 

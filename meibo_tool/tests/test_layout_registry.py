@@ -13,12 +13,23 @@ import os
 
 import pytest
 
-from core.lay_parser import LayFile, new_field, new_label, new_line
+from core.lay_parser import (
+    LayFile,
+    LayoutObject,
+    ObjectType,
+    PaperLayout,
+    Rect,
+    TableColumn,
+    new_field,
+    new_label,
+    new_line,
+)
 from core.lay_serializer import save_layout
 from core.layout_registry import (
     delete_layout,
     import_json_file,
     import_lay_file,
+    import_lay_file_multi,
     rename_layout,
     scan_layout_dir,
 )
@@ -240,3 +251,120 @@ class TestUniquePath:
                 str(tmp_path / 'no_such.json'),
                 str(tmp_path / 'lib'),
             )
+
+
+# ── マルチインポートテスト ────────────────────────────────────────────────
+
+
+_MULTI_LAY = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    '名簿レイアウト_20260221.lay',
+)
+
+
+@pytest.mark.skipif(
+    not os.path.isfile(_MULTI_LAY),
+    reason='マルチレイアウト .lay ファイルが見つかりません',
+)
+class TestImportMulti:
+    """import_lay_file_multi のテスト。"""
+
+    def test_import_all_layouts(self, tmp_path):
+        lib_dir = str(tmp_path / 'layouts')
+        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
+        assert len(results) == 27
+
+    def test_all_files_created(self, tmp_path):
+        lib_dir = str(tmp_path / 'layouts')
+        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
+        for r in results:
+            assert os.path.isfile(r['path'])
+
+    def test_each_has_title(self, tmp_path):
+        lib_dir = str(tmp_path / 'layouts')
+        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
+        for r in results:
+            assert r['title']
+
+    def test_scanned_after_import(self, tmp_path):
+        lib_dir = str(tmp_path / 'layouts')
+        import_lay_file_multi(_MULTI_LAY, lib_dir)
+        scanned = scan_layout_dir(lib_dir)
+        assert len(scanned) == 27
+
+    def test_unique_file_names(self, tmp_path):
+        lib_dir = str(tmp_path / 'layouts')
+        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
+        paths = [r['path'] for r in results]
+        assert len(paths) == len(set(paths))
+
+
+# ── v2 メタデータ読み取りテスト ──────────────────────────────────────────
+
+
+class TestV2MetaData:
+    """v2 フォーマットのスキャン・メタデータ読み取りテスト。"""
+
+    def test_v2_layout_scanned(self, tmp_path):
+        """v2 JSON がスキャンで検出される。"""
+        paper = PaperLayout(mode=1, unit_mm=0.1, paper_size='A4')
+        lay = LayFile(
+            title='v2テスト',
+            page_width=2100,
+            page_height=2970,
+            objects=[new_label(0, 0, 100, 30, text='test')],
+            paper=paper,
+        )
+        save_layout(lay, str(tmp_path / 'v2.json'))
+        results = scan_layout_dir(str(tmp_path))
+        assert len(results) == 1
+        assert results[0]['title'] == 'v2テスト'
+
+    def test_v2_page_size_mm_uses_unit_mm(self, tmp_path):
+        """v2 の page_size_mm が unit_mm=0.1 を使って計算される。"""
+        paper = PaperLayout(unit_mm=0.1)
+        lay = LayFile(
+            page_width=2100,
+            page_height=2970,
+            paper=paper,
+        )
+        save_layout(lay, str(tmp_path / 'v2.json'))
+        results = scan_layout_dir(str(tmp_path))
+        # 2100 * 0.1 = 210mm, 2970 * 0.1 = 297mm
+        assert results[0]['page_size_mm'] == '210x297mm'
+
+    def test_rename_preserves_paper(self, tmp_path):
+        """リネーム後も paper が保持される。"""
+        paper = PaperLayout(mode=1, paper_size='A4', orientation='portrait')
+        lay = LayFile(
+            title='元の名前',
+            objects=[new_label(0, 0, 100, 30, text='test')],
+            paper=paper,
+        )
+        path = str(tmp_path / 'original.json')
+        save_layout(lay, path)
+        new_path = rename_layout(path, '新しい名前')
+
+        from core.lay_serializer import load_layout
+        restored = load_layout(new_path)
+        assert restored.paper is not None
+        assert restored.paper.paper_size == 'A4'
+
+    def test_table_in_meta_count(self, tmp_path):
+        """TABLE オブジェクトが object_count に含まれる。"""
+        lay = LayFile(
+            objects=[
+                new_label(0, 0, 100, 30, text='test'),
+                LayoutObject(
+                    obj_type=ObjectType.TABLE,
+                    rect=Rect(0, 30, 800, 600),
+                    table_columns=[
+                        TableColumn(field_id=108, header='氏名'),
+                    ],
+                ),
+            ],
+            paper=PaperLayout(unit_mm=0.1),
+        )
+        save_layout(lay, str(tmp_path / 'table.json'))
+        results = scan_layout_dir(str(tmp_path))
+        assert results[0]['object_count'] == 2

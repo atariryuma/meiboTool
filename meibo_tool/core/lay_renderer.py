@@ -23,6 +23,7 @@ from core.lay_parser import (
     ObjectType,
     Point,
     Rect,
+    TableColumn,
     resolve_field_name,
 )
 
@@ -46,6 +47,13 @@ _FIELD_OUTLINE = '#B0C4DE' # 薄い点線枠（編集時の目印）
 _LINE_COLOR = '#000000'
 _TEXT_COLOR = '#000000'
 _FIELD_TEXT_COLOR = '#4A7AB5'
+
+# テーブル色
+_TABLE_HEADER_BG = '#F0F0F0'
+_TABLE_DATA_BG = '#FFE0E0'
+_TABLE_BORDER = '#000000'
+_TABLE_HEADER_TEXT = '#000000'
+_TABLE_DATA_TEXT = '#4A7AB5'
 
 # 選択表示
 _SELECT_OUTLINE = '#1A73E8'
@@ -80,7 +88,7 @@ def model_to_canvas(
     x: int, y: int, scale: float,
     offset_x: float = 0, offset_y: float = 0,
 ) -> tuple[float, float]:
-    """モデル座標 (0.25mm単位) → Canvas ピクセル。"""
+    """モデル座標 → Canvas ピクセル。"""
     return x * scale + offset_x, y * scale + offset_y
 
 
@@ -88,13 +96,13 @@ def canvas_to_model(
     cx: float, cy: float, scale: float,
     offset_x: float = 0, offset_y: float = 0,
 ) -> tuple[int, int]:
-    """Canvas ピクセル → モデル座標 (0.25mm単位)。"""
+    """Canvas ピクセル → モデル座標。"""
     return round((cx - offset_x) / scale), round((cy - offset_y) / scale)
 
 
-def model_to_printer(x: int, dpi: int) -> int:
+def model_to_printer(x: int, dpi: int, unit_mm: float = 0.25) -> int:
     """モデル座標 → プリンタドット。"""
-    return round(x * 0.25 * dpi / 25.4)
+    return round(x * unit_mm * dpi / 25.4)
 
 
 # ── 抽象バックエンド ─────────────────────────────────────────────────────────
@@ -369,11 +377,15 @@ class CanvasBackend(RenderBackend):
 class PILBackend(RenderBackend):
     """PIL (Pillow) への描画バックエンド。印刷プレビュー用。"""
 
-    def __init__(self, image: Image.Image, dpi: int = 150) -> None:
+    def __init__(
+        self, image: Image.Image, dpi: int = 150,
+        unit_mm: float = 0.25,
+    ) -> None:
         self._img = image
         self._draw = ImageDraw.Draw(image)
         self._dpi = dpi
-        self._scale = 0.25 * dpi / 25.4  # model unit → pixels
+        self._unit_mm = unit_mm
+        self._scale = unit_mm * dpi / 25.4  # model unit → pixels
 
     def _to_px(self, x: int, y: int) -> tuple[float, float]:
         """モデル座標を画像ピクセルに変換する。"""
@@ -562,16 +574,20 @@ class LayRenderer:
     def render_all(self, *, skip_page_outline: bool = False) -> None:
         """ページ外枠 + 全オブジェクトを描画する。
 
-        罫線（LINE）は最前面に描画する。
+        描画順: TABLE → LABEL/FIELD → LINE（最前面）
 
         Args:
             skip_page_outline: True の場合、ページ背景・外枠を描画しない（印刷用）。
         """
         if not skip_page_outline:
             self._render_page_outline()
-        # LABEL / FIELD を先に描画
+        # TABLE を最背面に描画
         for i, obj in enumerate(self._lay.objects):
-            if obj.obj_type != ObjectType.LINE:
+            if obj.obj_type == ObjectType.TABLE:
+                self.render_object(obj, index=i)
+        # LABEL / FIELD を描画
+        for i, obj in enumerate(self._lay.objects):
+            if obj.obj_type not in (ObjectType.LINE, ObjectType.TABLE):
                 self.render_object(obj, index=i)
         # LINE を最前面に描画
         for i, obj in enumerate(self._lay.objects):
@@ -602,6 +618,8 @@ class LayRenderer:
             self._render_field(obj, tag)
         elif obj.obj_type == ObjectType.LINE:
             self._render_line(obj, tag)
+        elif obj.obj_type == ObjectType.TABLE:
+            self._render_table(obj, tag)
 
     def _render_label(self, obj: LayoutObject, tag: str) -> None:
         """LABEL オブジェクトを描画する（透明背景）。"""
@@ -666,6 +684,105 @@ class LayRenderer:
             tags=(tag, 'line'),
         )
 
+    def _render_table(self, obj: LayoutObject, tag: str) -> None:
+        """TABLE オブジェクトを描画する。
+
+        テーブル rect 内をカラム幅の比率で分割し、
+        ヘッダー行（灰色背景）+ データ行（ピンク背景）を描画する。
+        """
+        if obj.rect is None or not obj.table_columns:
+            return
+
+        r = obj.rect
+        px1, py1 = self._b._to_px(r.left, r.top)
+        px2, py2 = self._b._to_px(r.right, r.bottom)
+        table_w = px2 - px1
+        table_h = py2 - py1
+
+        cols = obj.table_columns
+        total_width = sum(c.width for c in cols) or 1
+
+        # ヘッダー行の高さ: フォントサイズベースまたはテーブル高さの一定割合
+        font_size = obj.font.size_pt if obj.font.size_pt > 0 else 9.0
+        header_h = min(table_h * 0.08, font_size * 2.5)
+        if header_h < 10:
+            header_h = min(table_h * 0.15, 20)
+
+        # データ行高さ = ヘッダーと同じ
+        data_row_h = header_h
+        n_data_rows = max(1, int((table_h - header_h) / data_row_h))
+
+        # 最初のデータ行のみ薄いピンク背景を描画（テキストより先に描画）
+        if n_data_rows > 0:
+            self._b.draw_rect(
+                px1, py1 + header_h, px2,
+                min(py1 + header_h + data_row_h, py2),
+                fill=_TABLE_DATA_BG, outline='', width=0,
+                tags=(tag, 'table_data_bg'),
+            )
+
+        # 外枠
+        self._b.draw_rect(
+            px1, py1, px2, py2,
+            fill='', outline=_TABLE_BORDER, width=1,
+            tags=(tag, 'table'),
+        )
+
+        # ヘッダー行背景
+        self._b.draw_rect(
+            px1, py1, px2, py1 + header_h,
+            fill=_TABLE_HEADER_BG, outline=_TABLE_BORDER, width=1,
+            tags=(tag, 'table_header'),
+        )
+
+        # カラムの描画
+        col_x = px1
+        for col in cols:
+            col_w = table_w * col.width / total_width
+
+            # ヘッダーテキスト
+            if col.header:
+                self._b.draw_text(
+                    col_x, py1, col_w, header_h,
+                    col.header, '', font_size,
+                    h_align=1, v_align=1,
+                    color=_TABLE_HEADER_TEXT,
+                    tags=(tag, 'table_header_text'),
+                )
+
+            # 縦罫線
+            if col_x > px1:
+                self._b.draw_line(
+                    col_x, py1, col_x, py2,
+                    color=_TABLE_BORDER, width=1,
+                    tags=(tag, 'table_vline'),
+                )
+
+            # データ行のプレースホルダー（最初の行のみ）
+            data_y = py1 + header_h
+            field_name = resolve_field_name(col.field_id)
+            self._b.draw_text(
+                col_x, data_y, col_w, data_row_h,
+                f'{{{{{field_name}}}}}',
+                '', font_size * 0.9,
+                h_align=col.h_align, v_align=1,
+                color=_TABLE_DATA_TEXT,
+                tags=(tag, 'table_data_text'),
+            )
+
+            col_x += col_w
+
+        # データ行の横罫線
+        for i in range(n_data_rows + 1):
+            line_y = py1 + header_h + i * data_row_h
+            if line_y <= py2:
+                self._b.draw_line(
+                    px1, line_y, px2, line_y,
+                    color=_TABLE_BORDER, width=1,
+                    tags=(tag, 'table_hline'),
+                )
+
+
 
 # ── PIL レンダリング ──────────────────────────────────────────────────────────
 
@@ -675,6 +792,9 @@ def render_layout_to_image(
 ) -> Image.Image:
     """LayFile を PIL 画像にレンダリングする。
 
+    PaperLayout が設定されていれば unit_mm を使い、
+    なければ旧形式の 0.25mm/unit を使用する。
+
     Args:
         lay: レンダリング対象のレイアウト
         dpi: 画像解像度 (default 150)
@@ -683,11 +803,12 @@ def render_layout_to_image(
     Returns:
         PIL.Image.Image (RGB)
     """
-    scale = 0.25 * max(1, dpi) / 25.4
+    unit_mm = lay.paper.unit_mm if lay.paper else 0.25
+    scale = unit_mm * max(1, dpi) / 25.4
     w = max(1, int(lay.page_width * scale))
     h = max(1, int(lay.page_height * scale))
     img = Image.new('RGB', (w, h), (255, 255, 255))
-    backend = PILBackend(img, dpi)
+    backend = PILBackend(img, dpi, unit_mm=unit_mm)
     renderer = LayRenderer(lay, backend)
     renderer.render_all(skip_page_outline=for_print)
     return img
@@ -749,9 +870,34 @@ def clear_selection_handles(canvas: tk.Canvas) -> None:
 
 # ── タイル配置 ───────────────────────────────────────────────────────────────
 
-# A4 用紙サイズ（0.25mm 単位）
-A4_WIDTH = 840     # 210mm
-A4_HEIGHT = 1188   # 297mm
+# A4 用紙サイズ（0.25mm/unit の旧形式でのデフォルト値）
+A4_WIDTH = 840     # 210mm / 0.25
+A4_HEIGHT = 1188   # 297mm / 0.25
+
+
+def get_page_arrangement(
+    lay: LayFile,
+) -> tuple[int, int, int, float]:
+    """LayFile の PaperLayout から配置情報を返す。
+
+    PaperLayout があればそのまま cols/rows を使用する。
+    なければ calculate_page_arrangement() にフォールバック。
+
+    Returns:
+        (cols, rows, per_page, scale) タプル。
+    """
+    p = lay.paper
+    if p is None:
+        return calculate_page_arrangement(lay)
+
+    if p.mode == 0:
+        # 全面モード: 1 アイテム/ページ
+        return 1, 1, 1, 1.0
+    else:
+        # ラベルモード: PaperLayout の cols×rows をそのまま使う
+        cols = max(1, p.cols)
+        rows = max(1, p.rows)
+        return cols, rows, cols * rows, 1.0
 
 
 def calculate_page_arrangement(
@@ -765,8 +911,8 @@ def calculate_page_arrangement(
 
     Args:
         lay: レイアウト
-        paper_width: 用紙幅（0.25mm 単位）
-        paper_height: 用紙高さ（0.25mm 単位）
+        paper_width: 用紙幅（モデル座標単位）
+        paper_height: 用紙高さ（モデル座標単位）
 
     Returns:
         (cols, rows, per_page, scale) タプル。
@@ -816,8 +962,8 @@ def tile_layouts(
         layouts: 差込済みの個別レイアウト
         cols: 列数
         rows: 行数
-        paper_width: 用紙幅（0.25mm 単位）
-        paper_height: 用紙高さ（0.25mm 単位）
+        paper_width: 用紙幅（モデル座標単位）
+        paper_height: 用紙高さ（モデル座標単位）
         scale: 縮小率（1.0 = 等倍）
 
     Returns:
@@ -830,7 +976,7 @@ def tile_layouts(
     cell_w = int(layouts[0].page_width * scale)
     cell_h = int(layouts[0].page_height * scale)
 
-    # カード間ガター (0.25mm 単位, 上限 20 = 5mm)
+    # カード間ガター (モデル座標単位)
     _MAX_GUTTER = 20
     spare_x = paper_width - cols * cell_w
     spare_y = paper_height - rows * cell_h
@@ -916,6 +1062,7 @@ def _scale_and_offset_object(
         v_align=obj.v_align,
         prefix=obj.prefix,
         suffix=obj.suffix,
+        table_columns=obj.table_columns,
     )
 
 
@@ -950,6 +1097,7 @@ def _offset_object(obj: LayoutObject, dx: int, dy: int) -> LayoutObject:
         v_align=obj.v_align,
         prefix=obj.prefix,
         suffix=obj.suffix,
+        table_columns=obj.table_columns,
     )
 
 
@@ -1042,6 +1190,26 @@ def fill_layout(
                 v_align=obj.v_align,
             )
             filled_objects.append(filled_obj)
+        elif obj.obj_type == ObjectType.TABLE:
+            # TABLE: 各カラムの field_id で1行分のデータを解決した
+            # テーブルカラムを生成する（ヘッダー → データ値に置換）
+            filled_cols = []
+            for col in obj.table_columns:
+                logical_name = resolve_field_name(col.field_id)
+                value = _resolve(logical_name)
+                filled_cols.append(TableColumn(
+                    field_id=col.field_id,
+                    width=col.width,
+                    h_align=col.h_align,
+                    header=value if value else col.header,
+                ))
+            filled_obj = LayoutObject(
+                obj_type=ObjectType.TABLE,
+                rect=obj.rect,
+                font=obj.font,
+                table_columns=filled_cols,
+            )
+            filled_objects.append(filled_obj)
         else:
             filled_objects.append(obj)
 
@@ -1051,4 +1219,5 @@ def fill_layout(
         page_width=lay.page_width,
         page_height=lay.page_height,
         objects=filled_objects,
+        paper=lay.paper,
     )

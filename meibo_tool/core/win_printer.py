@@ -78,11 +78,32 @@ def get_default_printer() -> str | None:
 # ── DevMode 作成 ──────────────────────────────────────────────────────────────
 
 
-def _create_devmode(printer_name: str) -> object | None:
+# 用紙サイズ名 → win32con 定数マッピング
+PAPER_SIZE_MAP: dict[str, int] = {}
+if HAS_WIN32:
+    PAPER_SIZE_MAP = {
+        'A3': win32con.DMPAPER_A3,
+        'A4': win32con.DMPAPER_A4,
+        'A5': win32con.DMPAPER_A5,
+        'B4': win32con.DMPAPER_B4,
+        'B5': win32con.DMPAPER_B5,
+    }
+
+
+def _create_devmode(
+    printer_name: str,
+    paper_size: str = 'A4',
+    orientation: str = 'portrait',
+) -> object | None:
     """ドライバプライベートデータ付きの DevMode を正しく作成する。
 
     DocumentProperties で完全なバッファサイズを取得し、ドライバ固有データも含めた
     DevMode を構築する。GetPrinter(2) より信頼性が高い。
+
+    Args:
+        printer_name: プリンター名
+        paper_size: 用紙サイズ ('A3', 'A4', 'B4', 'B5' 等)
+        orientation: 'portrait' or 'landscape'
     """
     hprinter = win32print.OpenPrinter(printer_name)
     try:
@@ -102,12 +123,18 @@ def _create_devmode(printer_name: str) -> object | None:
             win32con.DM_OUT_BUFFER,
         )
 
-        # A4 縦に設定し、Fields ビットマスクで変更箇所を明示
+        # 用紙サイズと向きを動的に設定
         devmode.Fields |= (
             win32con.DM_PAPERSIZE | win32con.DM_ORIENTATION
         )
-        devmode.PaperSize = win32con.DMPAPER_A4
-        devmode.Orientation = win32con.DMORIENT_PORTRAIT
+        devmode.PaperSize = PAPER_SIZE_MAP.get(
+            paper_size, win32con.DMPAPER_A4,
+        )
+        devmode.Orientation = (
+            win32con.DMORIENT_LANDSCAPE
+            if orientation == 'landscape'
+            else win32con.DMORIENT_PORTRAIT
+        )
 
         # ドライバに検証させる（無効な組み合わせを自動補正）
         win32print.DocumentProperties(
@@ -213,13 +240,24 @@ class PrintJob:
         self._dpi_y = 300
         self._started = False
 
-    def start(self, doc_name: str = '名簿印刷') -> None:
+    def start(
+        self, doc_name: str = '名簿印刷',
+        paper_size: str = 'A4',
+        orientation: str = 'portrait',
+    ) -> None:
         """印刷ジョブを開始する。
 
         DocumentProperties で正しい DevMode を構築し、
         win32gui.CreateDC で DevMode 付き DC を作成する。
+
+        Args:
+            doc_name: ドキュメント名
+            paper_size: 用紙サイズ ('A3', 'A4', 'B4', 'B5' 等)
+            orientation: 'portrait' or 'landscape'
         """
-        devmode = _create_devmode(self._printer_name)
+        devmode = _create_devmode(
+            self._printer_name, paper_size, orientation,
+        )
 
         if devmode is not None:
             # DevMode 付きで DC を作成（用紙サイズ・方向が確実に反映される）
