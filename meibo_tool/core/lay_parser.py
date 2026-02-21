@@ -224,26 +224,37 @@ class PaperLayout:
 
 
 def _detect_paper(p: PaperLayout) -> None:
-    """ジオメトリから用紙サイズと向きを自動判定する。"""
-    total_w = p.paper_width_mm
-    total_h = p.paper_height_mm
+    """ジオメトリから用紙サイズと向きを自動判定する。
+
+    余白は左右/上下非対称の場合があるため、左余白+コンテンツ幅が
+    用紙幅に収まる最小の標準用紙を選択する。
+    """
+    content_w = (p.cols * p.item_width_mm
+                 + max(0, p.cols - 1) * p.spacing_h_mm)
+    content_h = (p.rows * p.item_height_mm
+                 + max(0, p.rows - 1) * p.spacing_v_mm)
+    need_w = p.margin_left_mm + content_w
+    need_h = p.margin_top_mm + content_h
 
     best_name = ''
     best_orient = ''
-    best_diff = float('inf')
+    best_area = float('inf')
+
+    _TOLERANCE = 5  # 5mm のはみ出しは許容
 
     for name, (short, long) in _PAPER_SIZES.items():
         for orient, pw, ph in [
             ('portrait', short, long),
             ('landscape', long, short),
         ]:
-            diff = abs(total_w - pw) + abs(total_h - ph)
-            if diff < best_diff:
-                best_diff = diff
-                best_name = name
-                best_orient = orient
+            if need_w <= pw + _TOLERANCE and need_h <= ph + _TOLERANCE:
+                area = pw * ph
+                if area < best_area:
+                    best_area = area
+                    best_name = name
+                    best_orient = orient
 
-    if best_diff < 20:  # 20mm 以内の誤差で一致とみなす
+    if best_name:
         p.paper_size = best_name
         p.orientation = best_orient
 

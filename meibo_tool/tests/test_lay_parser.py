@@ -363,10 +363,10 @@ class TestPaperLayout:
         # Height: 11 + 272 + 11 = 294mm
         assert p.paper_height_mm == pytest.approx(294.0)
 
-    def test_no_match_within_tolerance(self):
-        """20mm 以上の誤差は検出しない。"""
+    def test_no_match_too_large(self):
+        """標準用紙に収まらない巨大サイズは検出しない。"""
         p = PaperLayout(
-            item_width_mm=50.0, item_height_mm=50.0,
+            item_width_mm=500.0, item_height_mm=500.0,
             cols=1, rows=1,
             margin_left_mm=5.0, margin_top_mm=5.0,
         )
