@@ -321,11 +321,33 @@ def _parse_object_block(outer_tag: int, payload: bytes) -> LayoutObject:
 
 
 def _parse_object_list(payload: bytes) -> list[LayoutObject]:
-    """タグ 1002 のオブジェクトリストをパースする。"""
+    """タグ 1002 のオブジェクトリストをパースする。
+
+    GROUP (CONTAINER) オブジェクトは再帰的に子要素を展開し、
+    GROUP 自身の rect は外枠として 4 本の LINE に変換する。
+    """
     objects: list[LayoutObject] = []
     for tag, data in _iter_tlv(payload):
-        if tag in (_TAG_OBJ_LINE, _TAG_OBJ_CONTAINER, _TAG_OBJ_LABEL,
-                   _TAG_OBJ_FIELD):
+        if tag == _TAG_OBJ_CONTAINER:
+            # GROUP: 子オブジェクトを再帰的に展開
+            children = _parse_object_list(data)
+            objects.extend(children)
+            # GROUP 自身の rect を外枠 LINE に変換
+            obj = _parse_object_block(tag, data)
+            if obj.rect is not None:
+                r = obj.rect
+                for x1, y1, x2, y2 in [
+                    (r.left, r.top, r.right, r.top),       # 上辺
+                    (r.left, r.bottom, r.right, r.bottom),  # 下辺
+                    (r.left, r.top, r.left, r.bottom),      # 左辺
+                    (r.right, r.top, r.right, r.bottom),    # 右辺
+                ]:
+                    objects.append(LayoutObject(
+                        obj_type=ObjectType.LINE,
+                        line_start=Point(x1, y1),
+                        line_end=Point(x2, y2),
+                    ))
+        elif tag in (_TAG_OBJ_LINE, _TAG_OBJ_LABEL, _TAG_OBJ_FIELD):
             obj = _parse_object_block(tag, data)
             objects.append(obj)
     return objects

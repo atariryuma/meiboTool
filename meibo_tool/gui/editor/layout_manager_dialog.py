@@ -211,10 +211,20 @@ class LayoutManagerDialog(ctk.CTkToplevel):
             self._on_open('')  # 空パス = 新規
         self.destroy()
 
+    def focus_set(self) -> None:
+        """CTkToplevel の after(150, focus_set) による TclError を防止する。
+
+        tkinter.Misc で ``focus = focus_set`` というエイリアスが定義されているため、
+        focus_set だけオーバーライドしても CTkToplevel が ``.focus`` 経由で呼ぶと
+        元の Misc.focus_set が使われてしまう。focus も同時にオーバーライドする。
+        """
+        if self.winfo_exists():
+            super().focus_set()
+
+    focus = focus_set
+
     def destroy(self) -> None:
         """Treeview のイベントバインドを解除してから破棄する。"""
         with contextlib.suppress(tk.TclError, AttributeError):
-            self._tree.focus = lambda *_a: None
             self._tree.unbind('<Double-1>')
-        self.focus_set = lambda: None  # スケジュール済み focus コールバック無効化
         super().destroy()

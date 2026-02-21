@@ -14,6 +14,7 @@ import tkinter as tk
 import tkinter.filedialog as fd
 import tkinter.messagebox as mb
 import tkinter.ttk as ttk
+from collections.abc import Callable
 from typing import Any
 
 import customtkinter as ctk
@@ -60,9 +61,11 @@ class RosterPrintPanel(ctk.CTkFrame):
     def __init__(
         self, master: ctk.CTkBaseClass,
         config: dict[str, Any],
+        on_import: Callable | None = None,
     ) -> None:
         super().__init__(master, corner_radius=0, fg_color='transparent')
         self._config = config
+        self._on_import = on_import
         self._layout_dir = get_layout_dir(config)
         self._layouts: list[dict[str, Any]] = []
         self._selected_lay: LayFile | None = None
@@ -250,6 +253,22 @@ class RosterPrintPanel(ctk.CTkFrame):
         """レイアウト一覧を再読み込みする（外部から呼び出し可能）。"""
         self._refresh_layouts()
 
+    def set_data(self, df: pd.DataFrame) -> None:
+        """外部からデータをセットする（帳票生成タブとの共有用）。"""
+        if self._df is not None and self._df is df:
+            return  # 同一データなら何もしない
+        self._df = df
+        self._filtered_df = df
+
+        self._file_label.configure(
+            text=f'{len(df)} 名読込済み',
+            text_color=ctk.ThemeManager.theme['CTkLabel']['text_color'],
+        )
+
+        self._class_panel.set_data(df)
+        self._update_count_label(df)
+        self._render_preview()
+
     def _refresh_layouts(self) -> None:
         """レイアウト一覧を再読み込みする。"""
         for item in self._tree.get_children():
@@ -301,7 +320,9 @@ class RosterPrintPanel(ctk.CTkFrame):
             self._arrangement_label.configure(text='')
             return
 
-        cols, rows, per_page = calculate_page_arrangement(self._selected_lay)
+        cols, rows, per_page, scale = calculate_page_arrangement(
+            self._selected_lay,
+        )
         w_mm = self._selected_lay.page_width * 0.25
         h_mm = self._selected_lay.page_height * 0.25
 
@@ -312,6 +333,8 @@ class RosterPrintPanel(ctk.CTkFrame):
                 f'{w_mm:.0f}×{h_mm:.0f}mm'
                 f' → A4に{cols}×{rows}={per_page}名/ページ'
             )
+            if scale < 1.0:
+                text += f'（{scale:.0%}縮小）'
         self._arrangement_label.configure(text=text)
 
     # ── プレビュー ─────────────────────────────────────────────────────
@@ -324,7 +347,9 @@ class RosterPrintPanel(ctk.CTkFrame):
         if self._selected_lay is None:
             return
 
-        cols, rows, per_page = calculate_page_arrangement(self._selected_lay)
+        cols, rows, per_page, scale = calculate_page_arrangement(
+            self._selected_lay,
+        )
 
         df = self._filtered_df if self._filtered_df is not None else self._df
         if df is not None and not df.empty:
@@ -340,8 +365,8 @@ class RosterPrintPanel(ctk.CTkFrame):
                 except Exception:
                     filled.append(self._selected_lay)
 
-            if per_page > 1 and filled:
-                pages = tile_layouts(filled, cols, rows)
+            if (per_page > 1 or scale < 1.0) and filled:
+                pages = tile_layouts(filled, cols, rows, scale=scale)
                 preview_lay = pages[0] if pages else self._selected_lay
             elif filled:
                 preview_lay = filled[0]
@@ -413,7 +438,15 @@ class RosterPrintPanel(ctk.CTkFrame):
             return
 
         try:
-            df, _unmapped = import_c4th_excel(path)
+            df, unmapped = import_c4th_excel(path)
+
+            if self._on_import is not None:
+                # App のインポートパイプラインに委譲
+                # （マッピングダイアログ・fallback 列補完対応）
+                self._on_import(df, unmapped, path)
+                return
+
+            # フォールバック（単体テスト等、App 不在時）
             self._df = df
             self._filtered_df = df
 
@@ -421,13 +454,8 @@ class RosterPrintPanel(ctk.CTkFrame):
                 text=os.path.basename(path),
                 text_color=ctk.ThemeManager.theme['CTkLabel']['text_color'],
             )
-
-            # クラス選択パネルにデータを反映
             self._class_panel.set_data(df)
-
             self._update_count_label(self._filtered_df)
-
-            # プレビュー更新（データ差込あり）
             self._render_preview()
 
         except Exception as e:
@@ -486,7 +514,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         # レイアウト選択済みならページ数も表示
         if self._selected_lay is not None:
-            _cols, _rows, per_page = calculate_page_arrangement(
+            _cols, _rows, per_page, _scale = calculate_page_arrangement(
                 self._selected_lay,
             )
             n_pages = math.ceil(total / max(1, per_page))
@@ -545,10 +573,12 @@ class RosterPrintPanel(ctk.CTkFrame):
         """差込済みレイアウトをタイル配置する（per_page > 1 の場合）。"""
         if not filled or self._selected_lay is None:
             return filled
-        cols, rows, per_page = calculate_page_arrangement(self._selected_lay)
-        if per_page <= 1:
+        cols, rows, per_page, scale = calculate_page_arrangement(
+            self._selected_lay,
+        )
+        if per_page <= 1 and scale >= 1.0:
             return filled
-        return tile_layouts(filled, cols, rows)
+        return tile_layouts(filled, cols, rows, scale=scale)
 
     def _on_preview(self) -> None:
         """プレビューボタン押下時。"""

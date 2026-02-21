@@ -1,8 +1,13 @@
 """Windows GDI 印刷エンジン
 
-LayFile をベクター品質で Windows プリンターに直接印刷する。
-pywin32 (win32print / win32ui) を使用し、テキストはフォント指定付き DrawText、
-罫線は MoveTo/LineTo で描画する。
+LayFile を PILBackend で高解像度画像にレンダリングし、
+GDI StretchDIBits でプリンター DC に転送する方式を採用。
+プレビュー (PILBackend) と印刷結果が同一コードパスで生成されるため、
+表示と印刷が完全に一致する。
+
+DC 作成は win32gui.CreateDC("WINSPOOL", ..., devmode) で DevMode を直接適用し、
+win32ui.CreateDCFromHandle() で PyCDC にラップする方式を採用。
+これにより用紙サイズ・印刷方向が確実に反映される。
 
 条件付きインポートにより、Windows 以外の環境でもインポートエラーにならない。
 """
@@ -10,10 +15,11 @@ pywin32 (win32print / win32ui) を使用し、テキストはフォント指定�
 from __future__ import annotations
 
 import contextlib
+import ctypes
+import struct
 from typing import TYPE_CHECKING
 
-from core.lay_parser import LayoutObject, ObjectType, resolve_field_name
-from core.lay_renderer import model_to_printer
+from core.lay_renderer import render_layout_to_image
 
 if TYPE_CHECKING:
     from core.lay_parser import LayFile
@@ -21,26 +27,15 @@ if TYPE_CHECKING:
 # ── 条件付きインポート ────────────────────────────────────────────────────────
 
 try:
+    import pywintypes
     import win32con
+    import win32gui
     import win32print
     import win32ui
 
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
-
-# ── 定数 ─────────────────────────────────────────────────────────────────────
-
-# DrawText フラグマッピング
-_H_ALIGN_FLAGS = {
-    0: 0,  # DT_LEFT = 0
-    1: 1,  # DT_CENTER = 1
-    2: 2,  # DT_RIGHT = 2
-}
-
-_V_ALIGN_TOP = 0
-_V_ALIGN_CENTER = 1
-_V_ALIGN_BOTTOM = 2
 
 
 # ── プリンター列挙 ───────────────────────────────────────────────────────────
@@ -80,6 +75,120 @@ def get_default_printer() -> str | None:
     return None
 
 
+# ── DevMode 作成 ──────────────────────────────────────────────────────────────
+
+
+def _create_devmode(printer_name: str) -> object | None:
+    """ドライバプライベートデータ付きの DevMode を正しく作成する。
+
+    DocumentProperties で完全なバッファサイズを取得し、ドライバ固有データも含めた
+    DevMode を構築する。GetPrinter(2) より信頼性が高い。
+    """
+    hprinter = win32print.OpenPrinter(printer_name)
+    try:
+        # ドライバが必要とする DevMode バッファサイズを取得
+        dmsize = win32print.DocumentProperties(
+            0, hprinter, printer_name, None, None, 0,
+        )
+        if dmsize <= 0:
+            return None
+
+        driverextra = max(0, dmsize - pywintypes.DEVMODEType().Size)
+        devmode = pywintypes.DEVMODEType(driverextra)
+
+        # 現在のデフォルト設定を取得
+        win32print.DocumentProperties(
+            0, hprinter, printer_name, devmode, None,
+            win32con.DM_OUT_BUFFER,
+        )
+
+        # A4 縦に設定し、Fields ビットマスクで変更箇所を明示
+        devmode.Fields |= (
+            win32con.DM_PAPERSIZE | win32con.DM_ORIENTATION
+        )
+        devmode.PaperSize = win32con.DMPAPER_A4
+        devmode.Orientation = win32con.DMORIENT_PORTRAIT
+
+        # ドライバに検証させる（無効な組み合わせを自動補正）
+        win32print.DocumentProperties(
+            0, hprinter, printer_name, devmode, devmode,
+            win32con.DM_IN_BUFFER | win32con.DM_OUT_BUFFER,
+        )
+
+        return devmode
+    except Exception:
+        return None
+    finally:
+        win32print.ClosePrinter(hprinter)
+
+
+# ── PIL Image → GDI DC 転送 ──────────────────────────────────────────────────
+
+
+def _blit_pil_image(
+    dc: object, img: object, dpi_x: int, dpi_y: int,
+) -> None:
+    """PIL Image を GDI DC に StretchDIBits で描画する。
+
+    Args:
+        dc: PyCDC オブジェクト
+        img: PIL.Image.Image (RGB)
+        dpi_x: プリンターの水平 DPI
+        dpi_y: プリンターの垂直 DPI
+    """
+    img_rgb = img.convert('RGB')
+    w, h = img_rgb.size
+
+    # BITMAPINFOHEADER (40 bytes)
+    bih = struct.pack(
+        '<IiiHHIIiiII',
+        40,         # biSize
+        w,          # biWidth
+        -h,         # biHeight (負値=トップダウン)
+        1,          # biPlanes
+        24,         # biBitCount
+        0,          # biCompression (BI_RGB)
+        0,          # biSizeImage
+        round(dpi_x * 39.3701),  # biXPelsPerMeter
+        round(dpi_y * 39.3701),  # biYPelsPerMeter
+        0, 0,       # biClrUsed, biClrImportant
+    )
+
+    # ピクセルデータ (RGB → BGR 変換 + 各行4バイト境界アライメント)
+    # PIL の tobytes('raw', 'BGR') で BGR 順に取得
+    stride = (w * 3 + 3) & ~3
+    padding = stride - w * 3
+
+    if padding == 0:
+        bits = img_rgb.tobytes('raw', 'BGR')
+    else:
+        # 行ごとにパディング追加
+        raw = img_rgb.tobytes('raw', 'BGR')
+        rows = []
+        for y_row in range(h):
+            row_data = raw[y_row * w * 3:(y_row + 1) * w * 3]
+            rows.append(row_data + b'\x00' * padding)
+        bits = b''.join(rows)
+
+    hdc = dc.GetSafeHdc()
+
+    # 印刷領域サイズ (プリンタードット)
+    page_w = dc.GetDeviceCaps(win32con.HORZRES)
+    page_h = dc.GetDeviceCaps(win32con.VERTRES)
+
+    # StretchDIBits で画像をページ全体にフィット
+    gdi32 = ctypes.windll.gdi32
+    gdi32.StretchDIBits(
+        hdc,
+        0, 0, page_w, page_h,     # 出力先: ページ全体
+        0, 0, w, h,                # ソース: 画像全体
+        bits,                      # ピクセルデータ
+        bih,                       # BITMAPINFOHEADER
+        0,                         # DIB_RGB_COLORS
+        0x00CC0020,                # SRCCOPY
+    )
+
+
 # ── 印刷ジョブ ───────────────────────────────────────────────────────────────
 
 
@@ -87,11 +196,10 @@ class PrintJob:
     """GDI 印刷ジョブ。
 
     使用方法:
-        job = PrintJob('Microsoft Print to PDF')
-        job.start('名簿印刷')
-        for lay in filled_layouts:
-            job.print_page(lay)
-        job.end()
+        with PrintJob('Microsoft Print to PDF') as job:
+            job.start('名簿印刷')
+            for lay in filled_layouts:
+                job.print_page(lay)
     """
 
     def __init__(self, printer_name: str) -> None:
@@ -100,28 +208,30 @@ class PrintJob:
             raise RuntimeError(msg)
         self._printer_name = printer_name
         self._dc = None
+        self._hdc = None  # win32gui 生ハンドル (DevMode 適用用)
         self._dpi_x = 300
         self._dpi_y = 300
         self._started = False
 
     def start(self, doc_name: str = '名簿印刷') -> None:
-        """印刷ジョブを開始する。"""
-        hprinter = win32print.OpenPrinter(self._printer_name)
-        try:
-            devmode = win32print.GetPrinter(hprinter, 2)['pDevMode']
-        finally:
-            win32print.ClosePrinter(hprinter)
+        """印刷ジョブを開始する。
 
-        # A4 用紙設定
-        if devmode:
-            devmode.PaperSize = win32con.DMPAPER_A4
-            devmode.Orientation = win32con.DMORIENT_PORTRAIT
+        DocumentProperties で正しい DevMode を構築し、
+        win32gui.CreateDC で DevMode 付き DC を作成する。
+        """
+        devmode = _create_devmode(self._printer_name)
 
-        self._dc = win32ui.CreateDC()
-        self._dc.CreatePrinterDC(self._printer_name)
-
-        if devmode:
-            self._dc.ResetDC(devmode)
+        if devmode is not None:
+            # DevMode 付きで DC を作成（用紙サイズ・方向が確実に反映される）
+            self._hdc = win32gui.CreateDC(
+                'WINSPOOL', self._printer_name, devmode,
+            )
+            self._dc = win32ui.CreateDCFromHandle(self._hdc)
+        else:
+            # DevMode 取得失敗時のフォールバック
+            self._dc = win32ui.CreateDC()
+            self._dc.CreatePrinterDC(self._printer_name)
+            self._hdc = None
 
         self._dpi_x = self._dc.GetDeviceCaps(win32con.LOGPIXELSX)
         self._dpi_y = self._dc.GetDeviceCaps(win32con.LOGPIXELSY)
@@ -130,20 +240,23 @@ class PrintJob:
         self._started = True
 
     def print_page(self, lay: LayFile) -> None:
-        """1 ページ分のレイアウトを印刷する。"""
+        """1 ページ分のレイアウトを印刷する。
+
+        PILBackend で高解像度画像を生成し、StretchDIBits で DC に転送する。
+        プレビューと同一の描画コードパスを使用するため、表示と印刷が一致する。
+        """
         if not self._started or self._dc is None:
             msg = 'start() を先に呼び出してください。'
             raise RuntimeError(msg)
 
         self._dc.StartPage()
 
-        # LABEL / FIELD を先に描画、LINE は最前面
-        for obj in lay.objects:
-            if obj.obj_type != ObjectType.LINE:
-                self._render_object(obj)
-        for obj in lay.objects:
-            if obj.obj_type == ObjectType.LINE:
-                self._render_object(obj)
+        # プリンター解像度で PIL 画像を生成（ページ外枠はスキップ）
+        dpi = min(self._dpi_x, self._dpi_y)
+        img = render_layout_to_image(lay, dpi=dpi, for_print=True)
+
+        # PIL Image → GDI DC に転送
+        _blit_pil_image(self._dc, img, self._dpi_x, self._dpi_y)
 
         self._dc.EndPage()
 
@@ -155,6 +268,11 @@ class PrintJob:
                     self._dc.EndDoc()
             with contextlib.suppress(Exception):
                 self._dc.DeleteDC()
+            # CreateDCFromHandle の場合、生ハンドルも明示的に解放
+            if self._hdc is not None:
+                with contextlib.suppress(Exception):
+                    win32gui.DeleteDC(self._hdc)
+                self._hdc = None
             self._dc = None
         self._started = False
 
@@ -163,276 +281,3 @@ class PrintJob:
 
     def __exit__(self, *_args: object) -> None:
         self.end()
-
-    # ── 内部描画 ─────────────────────────────────────────────────────────
-
-    def _model_x(self, x: int) -> int:
-        """モデル X 座標 → プリンタドット。"""
-        return model_to_printer(x, self._dpi_x)
-
-    def _model_y(self, y: int) -> int:
-        """モデル Y 座標 → プリンタドット。"""
-        return model_to_printer(y, self._dpi_y)
-
-    def _render_object(self, obj: LayoutObject) -> None:
-        """1 オブジェクトを GDI で描画する。"""
-        if obj.obj_type == ObjectType.LABEL:
-            self._render_label(obj)
-        elif obj.obj_type == ObjectType.FIELD:
-            self._render_field(obj)
-        elif obj.obj_type == ObjectType.LINE:
-            self._render_line(obj)
-
-    def _create_font(
-        self, name: str, size_pt: float,
-        bold: bool = False, italic: bool = False,
-    ) -> object:
-        """GDI フォントを作成する。"""
-        # ポイント → デバイスピクセル
-        height = -round(size_pt * self._dpi_y / 72)
-        font = win32ui.CreateFont({
-            'name': name or 'IPAmj明朝',
-            'height': height,
-            'weight': 700 if bold else 400,
-            'italic': 1 if italic else 0,
-            'charset': 128,  # SHIFTJIS_CHARSET
-        })
-        return font
-
-    @staticmethod
-    def _is_vertical_text(obj: LayoutObject, text: str) -> bool:
-        """縦書きテキストかどうかを判定する。"""
-        if obj.rect is None:
-            return False
-        w = obj.rect.width
-        h = obj.rect.height
-        has_newline = '\r' in text or '\n' in text
-        return (
-            not has_newline
-            and len(text) > 1
-            and w < h * 0.5
-            and w < 120
-        )
-
-    @staticmethod
-    def _is_multiline_text(text: str) -> bool:
-        """複数行テキストかどうかを判定する。"""
-        return '\r' in text or '\n' in text
-
-    def _render_label(self, obj: LayoutObject) -> None:
-        """LABEL を GDI で描画する。"""
-        if obj.rect is None:
-            return
-
-        text = obj.prefix + obj.text + obj.suffix
-        if not text:
-            return
-
-        r = obj.rect
-        left = self._model_x(r.left)
-        top = self._model_y(r.top)
-        right = self._model_x(r.right)
-        bottom = self._model_y(r.bottom)
-
-        if self._is_vertical_text(obj, text):
-            self._render_vertical_text(
-                text, left, top, right, bottom,
-                obj.font.name, obj.font.size_pt,
-                obj.font.bold, obj.font.italic,
-                obj.h_align, obj.v_align,
-            )
-            return
-
-        if self._is_multiline_text(text):
-            self._render_multiline_text(
-                text, left, top, right, bottom,
-                obj.font.name, obj.font.size_pt,
-                obj.font.bold, obj.font.italic,
-                obj.h_align, obj.v_align,
-            )
-            return
-
-        # ── 単一行テキスト: 自動文字サイズ調整 ──
-        size_pt = obj.font.size_pt
-        box_w = right - left
-        font = self._create_font(
-            obj.font.name, size_pt, obj.font.bold, obj.font.italic,
-        )
-        old_font = self._dc.SelectObject(font)
-
-        calc_flags = (
-            _H_ALIGN_FLAGS.get(obj.h_align, 0)
-            | win32con.DT_SINGLELINE | win32con.DT_NOPREFIX | win32con.DT_CALCRECT
-        )
-        _h, _w, calc_rect = self._dc.DrawText(
-            text, (left, top, left + 10000, bottom), calc_flags,
-        )
-        text_w = calc_rect[2] - calc_rect[0]
-        while text_w > box_w and size_pt > 3:
-            self._dc.SelectObject(old_font)
-            font.DeleteObject()
-            size_pt -= 0.5
-            font = self._create_font(
-                obj.font.name, size_pt, obj.font.bold, obj.font.italic,
-            )
-            old_font = self._dc.SelectObject(font)
-            _h, _w, calc_rect = self._dc.DrawText(
-                text, (left, top, left + 10000, bottom), calc_flags,
-            )
-            text_w = calc_rect[2] - calc_rect[0]
-
-        flags = _H_ALIGN_FLAGS.get(obj.h_align, 0)
-        flags |= win32con.DT_SINGLELINE | win32con.DT_NOPREFIX
-
-        rect = (left, top, right, bottom)
-        if obj.v_align in (_V_ALIGN_CENTER, _V_ALIGN_BOTTOM):
-            calc_flags = flags | win32con.DT_CALCRECT
-            _h, _w, calc_rect = self._dc.DrawText(text, rect, calc_flags)
-            text_h = calc_rect[3] - calc_rect[1]
-            box_h = bottom - top
-            if obj.v_align == _V_ALIGN_CENTER:
-                top += (box_h - text_h) // 2
-            else:
-                top += box_h - text_h
-            rect = (left, top, right, bottom)
-
-        self._dc.DrawText(text, rect, flags)
-        self._dc.SelectObject(old_font)
-        font.DeleteObject()
-
-    def _render_vertical_text(
-        self, text: str,
-        left: int, top: int, right: int, bottom: int,
-        font_name: str, size_pt: float,
-        bold: bool, italic: bool,
-        h_align: int, v_align: int,
-    ) -> None:
-        """縦書きテキスト: 各文字を縦に1文字ずつ描画する。"""
-        chars = list(text)
-        n = len(chars)
-        if n == 0:
-            return
-
-        box_h = bottom - top
-
-        # 各文字の高さを計算し、収まるまでサイズ縮小
-        font = self._create_font(font_name, size_pt, bold, italic)
-        old_font = self._dc.SelectObject(font)
-
-        calc_flags = (
-            win32con.DT_SINGLELINE | win32con.DT_NOPREFIX | win32con.DT_CALCRECT
-        )
-        _h, _w, cr = self._dc.DrawText('国', (0, 0, 10000, 10000), calc_flags)
-        char_h = cr[3] - cr[1]
-
-        total_h = char_h * n
-        while total_h > box_h and size_pt > 3:
-            self._dc.SelectObject(old_font)
-            font.DeleteObject()
-            size_pt -= 0.5
-            font = self._create_font(font_name, size_pt, bold, italic)
-            old_font = self._dc.SelectObject(font)
-            _h, _w, cr = self._dc.DrawText(
-                '国', (0, 0, 10000, 10000), calc_flags,
-            )
-            char_h = cr[3] - cr[1]
-            total_h = char_h * n
-
-        # 開始Y位置
-        if v_align == _V_ALIGN_CENTER:
-            start_y = top + (box_h - total_h) // 2
-        elif v_align == _V_ALIGN_BOTTOM:
-            start_y = bottom - total_h
-        else:
-            start_y = top
-
-        # 各文字を描画（水平中央揃え）
-        flags = win32con.DT_CENTER | win32con.DT_SINGLELINE | win32con.DT_NOPREFIX
-        for i, ch in enumerate(chars):
-            cy = start_y + char_h * i
-            self._dc.DrawText(ch, (left, cy, right, cy + char_h), flags)
-
-        self._dc.SelectObject(old_font)
-        font.DeleteObject()
-
-    def _render_multiline_text(
-        self, text: str,
-        left: int, top: int, right: int, bottom: int,
-        font_name: str, size_pt: float,
-        bold: bool, italic: bool,
-        h_align: int, v_align: int,
-    ) -> None:
-        """複数行テキスト: \\r\\n を改行として描画する。"""
-        # \r\n → \n に正規化
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
-
-        font = self._create_font(font_name, size_pt, bold, italic)
-        old_font = self._dc.SelectObject(font)
-
-        # DT_WORDBREAK で複数行描画（DT_SINGLELINE なし）
-        flags = _H_ALIGN_FLAGS.get(h_align, 0)
-        flags |= win32con.DT_NOPREFIX | win32con.DT_WORDBREAK
-
-        rect = (left, top, right, bottom)
-        if v_align in (_V_ALIGN_CENTER, _V_ALIGN_BOTTOM):
-            calc_flags = flags | win32con.DT_CALCRECT
-            _h, _w, calc_rect = self._dc.DrawText(text, rect, calc_flags)
-            text_h = calc_rect[3] - calc_rect[1]
-            box_h = bottom - top
-            if v_align == _V_ALIGN_CENTER:
-                top += (box_h - text_h) // 2
-            else:
-                top += box_h - text_h
-            rect = (left, top, right, bottom)
-
-        self._dc.DrawText(text, rect, flags)
-        self._dc.SelectObject(old_font)
-        font.DeleteObject()
-
-    def _render_field(self, obj: LayoutObject) -> None:
-        """FIELD を GDI で描画する（通常は fill_layout 後なので呼ばれない）。"""
-        if obj.rect is None:
-            return
-
-        r = obj.rect
-        name = resolve_field_name(obj.field_id)
-        text = f'{obj.prefix}{{{{{name}}}}}{obj.suffix}'
-
-        left = self._model_x(r.left)
-        top = self._model_y(r.top)
-        right = self._model_x(r.right)
-        bottom = self._model_y(r.bottom)
-
-        font = self._create_font(
-            obj.font.name, obj.font.size_pt, obj.font.bold, obj.font.italic,
-        )
-        old_font = self._dc.SelectObject(font)
-
-        flags = _H_ALIGN_FLAGS.get(obj.h_align, 0)
-        flags |= win32con.DT_SINGLELINE | win32con.DT_NOPREFIX
-
-        self._dc.DrawText(text, (left, top, right, bottom), flags)
-        self._dc.SelectObject(old_font)
-        font.DeleteObject()
-
-    def _render_line(self, obj: LayoutObject) -> None:
-        """LINE を GDI で描画する。"""
-        if obj.line_start is None or obj.line_end is None:
-            return
-
-        x1 = self._model_x(obj.line_start.x)
-        y1 = self._model_y(obj.line_start.y)
-        x2 = self._model_x(obj.line_end.x)
-        y2 = self._model_y(obj.line_end.y)
-
-        # 1pt 幅の黒ペン
-        pen = win32ui.CreatePen(
-            win32con.PS_SOLID, max(1, self._dpi_x // 72), 0x000000,
-        )
-        old_pen = self._dc.SelectObject(pen)
-
-        self._dc.MoveTo((x1, y1))
-        self._dc.LineTo((x2, y2))
-
-        self._dc.SelectObject(old_pen)
-        pen.DeleteObject()

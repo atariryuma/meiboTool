@@ -181,7 +181,9 @@ class App(ctk.CTk):
         tab_print.grid_rowconfigure(0, weight=1)
 
         from gui.frames.roster_print_panel import RosterPrintPanel
-        self._roster_print = RosterPrintPanel(tab_print, self.config)
+        self._roster_print = RosterPrintPanel(
+            tab_print, self.config, on_import=self._on_import,
+        )
         self._roster_print.grid(row=0, column=0, sticky='nsew')
 
     # ────────────────────────────────────────────────────────────────────────
@@ -270,6 +272,9 @@ class App(ctk.CTk):
 
         # プレビュー更新
         self._right.show_data(df_mapped)
+
+        # 名簿印刷タブにもデータを共有
+        self._roster_print.set_data(df_mapped)
 
     def _on_class_select(self, filter_dict: dict) -> None:
         """クラス/学年選択時に呼ばれる。"""
@@ -525,9 +530,12 @@ class App(ctk.CTk):
             EditorWindow(self)
 
     def _on_tab_change(self) -> None:
-        """タブ切り替え時にレイアウト一覧を更新する。"""
+        """タブ切り替え時にデータとレイアウト一覧を同期する。"""
         if self._main_tabview.get() == '名簿印刷':
             self._roster_print.refresh_layouts()
+            # 帳票生成タブで読み込み済みのデータを共有
+            if self.df_mapped is not None:
+                self._roster_print.set_data(self.df_mapped)
 
     def _open_settings(self) -> None:
         """設定ダイアログを開く。"""

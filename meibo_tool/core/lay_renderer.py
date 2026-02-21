@@ -17,6 +17,7 @@ import tkinter as tk
 from abc import ABC, abstractmethod
 
 from core.lay_parser import (
+    FontInfo,
     LayFile,
     LayoutObject,
     ObjectType,
@@ -51,8 +52,20 @@ _SELECT_OUTLINE = '#1A73E8'
 _HANDLE_COLOR = '#1A73E8'
 _HANDLE_SIZE = 5
 
-# Windows フォントパス候補
-_FONT_PATHS = [
+# Windows フォント名 → パスマッピング（.lay で使われるフォント名に対応）
+_FONT_NAME_MAP: dict[str, str] = {
+    'ＭＳ 明朝': 'C:/Windows/Fonts/msmincho.ttc',
+    'ＭＳ ゴシック': 'C:/Windows/Fonts/msgothic.ttc',
+    'ＭＳ Ｐ明朝': 'C:/Windows/Fonts/msmincho.ttc',
+    'ＭＳ Ｐゴシック': 'C:/Windows/Fonts/msgothic.ttc',
+    'IPAmj明朝': 'C:/Windows/Fonts/ipamjm.ttf',
+    'メイリオ': 'C:/Windows/Fonts/meiryo.ttc',
+    'Yu Gothic': 'C:/Windows/Fonts/YuGothR.ttc',
+    '游ゴシック': 'C:/Windows/Fonts/YuGothR.ttc',
+}
+
+# フォールバック候補（指定フォントが見つからない場合）
+_FALLBACK_FONT_PATHS = [
     'C:/Windows/Fonts/ipamjm.ttf',
     'C:/Windows/Fonts/meiryo.ttc',
     'C:/Windows/Fonts/YuGothR.ttc',
@@ -412,16 +425,33 @@ class PILBackend(RenderBackend):
         has_newline = '\n' in text
 
         if is_vertical:
-            self._draw_vertical(x, y, w, h, text, font_size, h_align, v_align, color)
+            self._draw_vertical(x, y, w, h, text, font_size, h_align, v_align, color, font_name)
         elif has_newline:
-            self._draw_multiline(x, y, w, h, text, font_size, h_align, v_align, color)
+            self._draw_multiline(x, y, w, h, text, font_size, h_align, v_align, color, font_name)
         else:
-            self._draw_single_line(x, y, w, h, text, font_size, h_align, v_align, color)
+            self._draw_single_line(x, y, w, h, text, font_size, h_align, v_align, color, font_name)
 
-    def _load_font(self, size_pt: float) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-        """PIL フォントをロードする。"""
+    def _load_font(
+        self, size_pt: float, font_name: str = '',
+    ) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+        """PIL フォントをロードする。
+
+        font_name が指定されていれば、対応するフォントファイルを優先的に使用する。
+        見つからない場合はフォールバックリストから順に試す。
+        """
         size_px = max(8, int(size_pt * self._dpi / 72))
-        for path in _FONT_PATHS:
+
+        # 指定フォント名でマッチするパスを優先
+        if font_name:
+            path = _FONT_NAME_MAP.get(font_name)
+            if path and os.path.exists(path):
+                try:
+                    return ImageFont.truetype(path, size=size_px)
+                except (OSError, IndexError):
+                    pass
+
+        # フォールバック
+        for path in _FALLBACK_FONT_PATHS:
             if os.path.exists(path):
                 try:
                     return ImageFont.truetype(path, size=size_px)
@@ -433,8 +463,9 @@ class PILBackend(RenderBackend):
         self, x: float, y: float, w: float, h: float,
         text: str, font_size: float,
         h_align: int, v_align: int, color: str,
+        font_name: str = '',
     ) -> None:
-        font = self._load_font(font_size)
+        font = self._load_font(font_size, font_name)
 
         # 自動フォント縮小
         bbox = self._draw.textbbox((0, 0), text, font=font)
@@ -442,7 +473,7 @@ class PILBackend(RenderBackend):
         current_size = font_size
         while tw > w * 1.05 and current_size > 4:
             current_size *= 0.9
-            font = self._load_font(current_size)
+            font = self._load_font(current_size, font_name)
             bbox = self._draw.textbbox((0, 0), text, font=font)
             tw = bbox[2] - bbox[0]
 
@@ -472,11 +503,12 @@ class PILBackend(RenderBackend):
         self, x: float, y: float, w: float, h: float,
         text: str, font_size: float,
         h_align: int, v_align: int, color: str,
+        font_name: str = '',
     ) -> None:
         n = len(text)
         char_h = h / n if n > 0 else h
         char_size = min(font_size, char_h * 72 / self._dpi * 0.9)
-        font = self._load_font(char_size)
+        font = self._load_font(char_size, font_name)
 
         for i, ch in enumerate(text):
             bbox = self._draw.textbbox((0, 0), ch, font=font)
@@ -490,9 +522,10 @@ class PILBackend(RenderBackend):
         self, x: float, y: float, w: float, h: float,
         text: str, font_size: float,
         h_align: int, v_align: int, color: str,
+        font_name: str = '',
     ) -> None:
         lines = text.split('\n')
-        font = self._load_font(font_size)
+        font = self._load_font(font_size, font_name)
 
         # 行高さ計算
         line_h = h / len(lines) if lines else h
@@ -526,12 +559,16 @@ class LayRenderer:
         self._lay = lay
         self._b = backend
 
-    def render_all(self) -> None:
+    def render_all(self, *, skip_page_outline: bool = False) -> None:
         """ページ外枠 + 全オブジェクトを描画する。
 
         罫線（LINE）は最前面に描画する。
+
+        Args:
+            skip_page_outline: True の場合、ページ背景・外枠を描画しない（印刷用）。
         """
-        self._render_page_outline()
+        if not skip_page_outline:
+            self._render_page_outline()
         # LABEL / FIELD を先に描画
         for i, obj in enumerate(self._lay.objects):
             if obj.obj_type != ObjectType.LINE:
@@ -633,12 +670,15 @@ class LayRenderer:
 # ── PIL レンダリング ──────────────────────────────────────────────────────────
 
 
-def render_layout_to_image(lay: LayFile, dpi: int = 150) -> Image.Image:
+def render_layout_to_image(
+    lay: LayFile, dpi: int = 150, *, for_print: bool = False,
+) -> Image.Image:
     """LayFile を PIL 画像にレンダリングする。
 
     Args:
         lay: レンダリング対象のレイアウト
         dpi: 画像解像度 (default 150)
+        for_print: True の場合、ページ外枠を描画しない（印刷用）。
 
     Returns:
         PIL.Image.Image (RGB)
@@ -649,7 +689,7 @@ def render_layout_to_image(lay: LayFile, dpi: int = 150) -> Image.Image:
     img = Image.new('RGB', (w, h), (255, 255, 255))
     backend = PILBackend(img, dpi)
     renderer = LayRenderer(lay, backend)
-    renderer.render_all()
+    renderer.render_all(skip_page_outline=for_print)
     return img
 
 
@@ -718,8 +758,10 @@ def calculate_page_arrangement(
     lay: LayFile,
     paper_width: int = A4_WIDTH,
     paper_height: int = A4_HEIGHT,
-) -> tuple[int, int, int]:
+) -> tuple[int, int, int, float]:
     """レイアウトサイズから1ページあたりの配置数を計算する。
+
+    レイアウトが用紙より大きい場合は、縮小して複数枚配置を試みる。
 
     Args:
         lay: レイアウト
@@ -727,11 +769,34 @@ def calculate_page_arrangement(
         paper_height: 用紙高さ（0.25mm 単位）
 
     Returns:
-        (cols, rows, per_page) タプル
+        (cols, rows, per_page, scale) タプル。
+        scale は 1.0（等倍）または縮小率。
     """
-    cols = max(1, paper_width // max(1, lay.page_width))
-    rows = max(1, paper_height // max(1, lay.page_height))
-    return cols, rows, cols * rows
+    card_w = max(1, lay.page_width)
+    card_h = max(1, lay.page_height)
+
+    # 等倍で複数枚入るか試す
+    cols = max(1, paper_width // card_w)
+    rows = max(1, paper_height // card_h)
+    if cols * rows > 1:
+        return cols, rows, cols * rows, 1.0
+
+    # カードが用紙に収まるなら等倍 1 枚
+    if card_w <= paper_width and card_h <= paper_height:
+        return 1, 1, 1, 1.0
+
+    # カードが用紙より大きい — 縮小して複数枚配置を試みる
+    # 候補配置を試し、縮小率 >= 25% の最良を採用
+    _MIN_SCALE = 0.25
+    candidates = [(2, 1), (1, 2), (2, 2), (3, 1), (1, 3), (3, 2), (2, 3)]
+    for c, r in candidates:
+        s = min(paper_width / (c * card_w), paper_height / (r * card_h))
+        if s >= _MIN_SCALE:
+            return c, r, c * r, s
+
+    # どの配置も縮小率が足りない — 用紙に合わせて 1 枚
+    scale = min(paper_width / card_w, paper_height / card_h)
+    return 1, 1, 1, scale
 
 
 def tile_layouts(
@@ -740,11 +805,12 @@ def tile_layouts(
     rows: int,
     paper_width: int = A4_WIDTH,
     paper_height: int = A4_HEIGHT,
+    scale: float = 1.0,
 ) -> list[LayFile]:
     """複数のレイアウトを1ページにタイル配置した LayFile のリストを返す。
 
     各レイアウトを用紙上のグリッドに配置し、中央揃えする。
-    既に per_page == 1 の場合は元のリストをそのまま返す。
+    既に per_page == 1 かつ scale == 1.0 の場合は元のリストをそのまま返す。
 
     Args:
         layouts: 差込済みの個別レイアウト
@@ -752,20 +818,30 @@ def tile_layouts(
         rows: 行数
         paper_width: 用紙幅（0.25mm 単位）
         paper_height: 用紙高さ（0.25mm 単位）
+        scale: 縮小率（1.0 = 等倍）
 
     Returns:
         タイル配置された page LayFile のリスト
     """
     per_page = cols * rows
-    if per_page <= 1 or not layouts:
+    if (per_page <= 1 and scale >= 1.0) or not layouts:
         return layouts
 
-    cell_w = layouts[0].page_width
-    cell_h = layouts[0].page_height
+    cell_w = int(layouts[0].page_width * scale)
+    cell_h = int(layouts[0].page_height * scale)
 
-    # 中央揃えマージン
-    margin_x = (paper_width - cols * cell_w) // 2
-    margin_y = (paper_height - rows * cell_h) // 2
+    # カード間ガター (0.25mm 単位, 上限 20 = 5mm)
+    _MAX_GUTTER = 20
+    spare_x = paper_width - cols * cell_w
+    spare_y = paper_height - rows * cell_h
+    gutter_x = min(_MAX_GUTTER, spare_x // cols) if cols > 1 and spare_x > 0 else 0
+    gutter_y = min(_MAX_GUTTER, spare_y // rows) if rows > 1 and spare_y > 0 else 0
+
+    # 中央揃えマージン（ガター分を含む）
+    total_w = cols * cell_w + (cols - 1) * gutter_x
+    total_h = rows * cell_h + (rows - 1) * gutter_y
+    margin_x = (paper_width - total_w) // 2
+    margin_y = (paper_height - total_h) // 2
 
     pages: list[LayFile] = []
     for page_start in range(0, len(layouts), per_page):
@@ -781,16 +857,66 @@ def tile_layouts(
         for i, lay in enumerate(page_items):
             col = i % cols
             row = i // cols
-            ox = margin_x + col * cell_w
-            oy = margin_y + row * cell_h
+            ox = margin_x + col * (cell_w + gutter_x)
+            oy = margin_y + row * (cell_h + gutter_y)
 
             for obj in lay.objects:
-                new_obj = _offset_object(obj, ox, oy)
+                new_obj = _scale_and_offset_object(obj, scale, ox, oy)
                 page.objects.append(new_obj)
 
         pages.append(page)
 
     return pages
+
+
+def _scale_and_offset_object(
+    obj: LayoutObject, scale: float, dx: int, dy: int,
+) -> LayoutObject:
+    """オブジェクトを縮小してからオフセットしたコピーを返す。"""
+    if scale >= 1.0:
+        return _offset_object(obj, dx, dy)
+
+    s = scale
+    new_rect = None
+    if obj.rect is not None:
+        new_rect = Rect(
+            int(obj.rect.left * s) + dx,
+            int(obj.rect.top * s) + dy,
+            int(obj.rect.right * s) + dx,
+            int(obj.rect.bottom * s) + dy,
+        )
+
+    new_start = None
+    if obj.line_start is not None:
+        new_start = Point(int(obj.line_start.x * s) + dx,
+                          int(obj.line_start.y * s) + dy)
+
+    new_end = None
+    if obj.line_end is not None:
+        new_end = Point(int(obj.line_end.x * s) + dx,
+                        int(obj.line_end.y * s) + dy)
+
+    # フォントサイズも縮小
+    new_font = FontInfo(
+        name=obj.font.name,
+        size_pt=obj.font.size_pt * s,
+        bold=obj.font.bold,
+        italic=obj.font.italic,
+    )
+
+    return LayoutObject(
+        obj_type=obj.obj_type,
+        rect=new_rect,
+        line_start=new_start,
+        line_end=new_end,
+        text=obj.text,
+        field_id=obj.field_id,
+        font=new_font,
+        h_align=obj.h_align,
+        v_align=obj.v_align,
+        prefix=obj.prefix,
+        suffix=obj.suffix,
+    )
 
 
 def _offset_object(obj: LayoutObject, dx: int, dy: int) -> LayoutObject:
@@ -899,11 +1025,19 @@ def fill_layout(
             logical_name = resolve_field_name(obj.field_id)
             value = _resolve(logical_name)
             text = obj.prefix + value + obj.suffix
+            # データフィールドは IPAmj明朝 に上書き（IVS 異体字対応）
+            # 静的テキスト（LABEL）は .lay のフォントをそのまま使う
+            filled_font = FontInfo(
+                name='IPAmj明朝',
+                size_pt=obj.font.size_pt,
+                bold=obj.font.bold,
+                italic=obj.font.italic,
+            )
             filled_obj = LayoutObject(
                 obj_type=ObjectType.LABEL,
                 rect=obj.rect,
                 text=text,
-                font=obj.font,
+                font=filled_font,
                 h_align=obj.h_align,
                 v_align=obj.v_align,
             )

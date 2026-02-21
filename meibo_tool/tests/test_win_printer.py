@@ -1,6 +1,6 @@
 """win_printer テスト
 
-GDI 印刷エンジンのロジックをモックでテストする。
+PIL 画像ベース印刷エンジンのロジックをモックでテストする。
 実際のプリンター出力はテストしない。
 """
 
@@ -83,37 +83,56 @@ class TestPrintJobMock:
         """win32 モジュールをモックする。"""
         mock_dc = MagicMock()
         mock_dc.GetDeviceCaps.return_value = 300  # 300 DPI
-        mock_dc.DrawText.return_value = (100, 50, (0, 0, 100, 50))
+        mock_dc.GetSafeHdc.return_value = 99999
 
         mock_win32ui = MagicMock()
         mock_win32ui.CreateDC.return_value = mock_dc
-        mock_win32ui.CreateFont.return_value = MagicMock()
-        mock_win32ui.CreatePen.return_value = MagicMock()
+        mock_win32ui.CreateDCFromHandle.return_value = mock_dc
 
         mock_win32print = MagicMock()
-        mock_win32print.OpenPrinter.return_value = MagicMock()
-        mock_win32print.GetPrinter.return_value = {'pDevMode': MagicMock()}
+
+        mock_win32gui = MagicMock()
+        mock_win32gui.CreateDC.return_value = 12345
+
+        mock_win32con = MagicMock()
+        mock_win32con.HORZRES = 8
+        mock_win32con.VERTRES = 10
+        mock_win32con.LOGPIXELSX = 88
+        mock_win32con.LOGPIXELSY = 90
 
         return {
             'dc': mock_dc,
             'win32ui': mock_win32ui,
             'win32print': mock_win32print,
+            'win32gui': mock_win32gui,
+            'win32con': mock_win32con,
         }
 
-    def test_print_label(self, mock_win32: dict) -> None:
-        """LABEL オブジェクトが DrawText で描画される。"""
+    def test_print_page_calls_render_and_blit(self, mock_win32: dict) -> None:
+        """print_page が render_layout_to_image → _blit_pil_image を呼ぶ。"""
         lay = _make_layout(new_label(10, 20, 200, 50, text='テスト'))
 
-        with patch.dict('core.win_printer.__dict__', {
-            'win32ui': mock_win32['win32ui'],
-            'win32print': mock_win32['win32print'],
-            'win32con': MagicMock(),
-            'HAS_WIN32': True,
-        }):
+        mock_img = MagicMock()
+        mock_img.convert.return_value = mock_img
+        mock_img.size = (2480, 3508)
+        mock_img.tobytes.return_value = b'\x00' * (2480 * 3508 * 3)
+
+        with (
+            patch.dict('core.win_printer.__dict__', {
+                'win32ui': mock_win32['win32ui'],
+                'win32print': mock_win32['win32print'],
+                'win32gui': mock_win32['win32gui'],
+                'win32con': mock_win32['win32con'],
+                'HAS_WIN32': True,
+            }),
+            patch('core.win_printer.render_layout_to_image', return_value=mock_img) as mock_render,
+            patch('core.win_printer._blit_pil_image') as mock_blit,
+        ):
             from core.win_printer import PrintJob
             job = PrintJob.__new__(PrintJob)
             job._printer_name = 'TestPrinter'
             job._dc = mock_win32['dc']
+            job._hdc = None
             job._dpi_x = 300
             job._dpi_y = 300
             job._started = True
@@ -122,45 +141,32 @@ class TestPrintJobMock:
 
             mock_win32['dc'].StartPage.assert_called_once()
             mock_win32['dc'].EndPage.assert_called_once()
-            mock_win32['dc'].DrawText.assert_called()
-
-    def test_print_line(self, mock_win32: dict) -> None:
-        """LINE オブジェクトが MoveTo/LineTo で描画される。"""
-        lay = _make_layout(new_line(0, 0, 100, 100))
-
-        with patch.dict('core.win_printer.__dict__', {
-            'win32ui': mock_win32['win32ui'],
-            'win32print': mock_win32['win32print'],
-            'win32con': MagicMock(),
-            'HAS_WIN32': True,
-        }):
-            from core.win_printer import PrintJob
-            job = PrintJob.__new__(PrintJob)
-            job._printer_name = 'TestPrinter'
-            job._dc = mock_win32['dc']
-            job._dpi_x = 300
-            job._dpi_y = 300
-            job._started = True
-
-            job.print_page(lay)
-
-            mock_win32['dc'].MoveTo.assert_called()
-            mock_win32['dc'].LineTo.assert_called()
+            mock_render.assert_called_once_with(lay, dpi=300, for_print=True)
+            mock_blit.assert_called_once_with(
+                mock_win32['dc'], mock_img, 300, 300,
+            )
 
     def test_print_empty_layout(self, mock_win32: dict) -> None:
         """空レイアウトでもエラーにならない。"""
         lay = _make_layout()
+        mock_img = MagicMock()
 
-        with patch.dict('core.win_printer.__dict__', {
-            'win32ui': mock_win32['win32ui'],
-            'win32print': mock_win32['win32print'],
-            'win32con': MagicMock(),
-            'HAS_WIN32': True,
-        }):
+        with (
+            patch.dict('core.win_printer.__dict__', {
+                'win32ui': mock_win32['win32ui'],
+                'win32print': mock_win32['win32print'],
+                'win32gui': mock_win32['win32gui'],
+                'win32con': mock_win32['win32con'],
+                'HAS_WIN32': True,
+            }),
+            patch('core.win_printer.render_layout_to_image', return_value=mock_img),
+            patch('core.win_printer._blit_pil_image'),
+        ):
             from core.win_printer import PrintJob
             job = PrintJob.__new__(PrintJob)
             job._printer_name = 'TestPrinter'
             job._dc = mock_win32['dc']
+            job._hdc = None
             job._dpi_x = 300
             job._dpi_y = 300
             job._started = True
@@ -179,6 +185,7 @@ class TestPrintJobMock:
         job = PrintJob.__new__(PrintJob)
         job._started = False
         job._dc = None
+        job._hdc = None
 
         with pytest.raises(RuntimeError, match='start'):
             job.print_page(_make_layout())
@@ -188,13 +195,15 @@ class TestPrintJobMock:
         with patch.dict('core.win_printer.__dict__', {
             'win32ui': mock_win32['win32ui'],
             'win32print': mock_win32['win32print'],
-            'win32con': MagicMock(),
+            'win32gui': mock_win32['win32gui'],
+            'win32con': mock_win32['win32con'],
             'HAS_WIN32': True,
         }):
             from core.win_printer import PrintJob
             job = PrintJob.__new__(PrintJob)
             job._printer_name = 'TestPrinter'
             job._dc = mock_win32['dc']
+            job._hdc = None
             job._started = True
 
             with job:
@@ -205,6 +214,98 @@ class TestPrintJobMock:
             mock_win32['dc'].DeleteDC.assert_called()
             assert job._dc is None
             assert job._started is False
+
+    def test_context_manager_with_hdc(self, mock_win32: dict) -> None:
+        """hdc がある場合、win32gui.DeleteDC も呼ばれる。"""
+        with patch.dict('core.win_printer.__dict__', {
+            'win32ui': mock_win32['win32ui'],
+            'win32print': mock_win32['win32print'],
+            'win32gui': mock_win32['win32gui'],
+            'win32con': mock_win32['win32con'],
+            'HAS_WIN32': True,
+        }):
+            from core.win_printer import PrintJob
+            job = PrintJob.__new__(PrintJob)
+            job._printer_name = 'TestPrinter'
+            job._dc = mock_win32['dc']
+            job._hdc = 12345
+            job._started = True
+
+            with job:
+                pass
+
+            mock_win32['dc'].DeleteDC.assert_called()
+            mock_win32['win32gui'].DeleteDC.assert_called_once_with(12345)
+            assert job._hdc is None
+
+
+# ── _blit_pil_image テスト ──────────────────────────────────────────────────
+
+
+class TestBlitPilImage:
+    """_blit_pil_image のテスト。"""
+
+    def test_calls_stretch_dib_bits(self) -> None:
+        """StretchDIBits が正しく呼ばれる。"""
+        from core.win_printer import HAS_WIN32
+        if not HAS_WIN32:
+            pytest.skip('pywin32 未インストール')
+
+        from PIL import Image
+
+        from core.win_printer import _blit_pil_image
+
+        # 10x10 白画像
+        img = Image.new('RGB', (10, 10), (255, 255, 255))
+
+        mock_dc = MagicMock()
+        mock_dc.GetSafeHdc.return_value = 99999
+        mock_dc.GetDeviceCaps.return_value = 2480
+
+        with patch('core.win_printer.ctypes') as mock_ctypes:
+            mock_gdi32 = MagicMock()
+            mock_ctypes.windll.gdi32 = mock_gdi32
+
+            _blit_pil_image(mock_dc, img, 300, 300)
+
+            mock_gdi32.StretchDIBits.assert_called_once()
+            args = mock_gdi32.StretchDIBits.call_args[0]
+            assert args[0] == 99999  # hdc
+            assert args[1] == 0      # xDest
+            assert args[2] == 0      # yDest
+            assert args[5] == 0      # xSrc
+            assert args[6] == 0      # ySrc
+            assert args[7] == 10     # wSrc
+            assert args[8] == 10     # hSrc
+
+    def test_stride_padding(self) -> None:
+        """幅が 4 バイト境界でない場合パディングされる。"""
+        from core.win_printer import HAS_WIN32
+        if not HAS_WIN32:
+            pytest.skip('pywin32 未インストール')
+
+        from PIL import Image
+
+        from core.win_printer import _blit_pil_image
+
+        # 幅 5px → stride = (5*3+3)&~3 = 16 (padding=1)
+        img = Image.new('RGB', (5, 2), (255, 0, 0))
+
+        mock_dc = MagicMock()
+        mock_dc.GetSafeHdc.return_value = 99999
+        mock_dc.GetDeviceCaps.return_value = 100
+
+        with patch('core.win_printer.ctypes') as mock_ctypes:
+            mock_gdi32 = MagicMock()
+            mock_ctypes.windll.gdi32 = mock_gdi32
+
+            _blit_pil_image(mock_dc, img, 300, 300)
+
+            mock_gdi32.StretchDIBits.assert_called_once()
+            args = mock_gdi32.StretchDIBits.call_args[0]
+            bits = args[9]
+            # stride=16, 2行 → 32バイト
+            assert len(bits) == 32
 
 
 # ── fill + print 統合テスト ──────────────────────────────────────────────────

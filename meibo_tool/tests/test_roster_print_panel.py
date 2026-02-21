@@ -184,35 +184,39 @@ class TestCalculatePageArrangement:
     """calculate_page_arrangement のテスト。"""
 
     def test_a4_layout_is_1x1(self) -> None:
-        """A4 サイズレイアウト → 1×1 = 1名/ページ。"""
+        """A4 サイズレイアウト → 1×1 = 1名/ページ（等倍）。"""
         lay = _make_lay()  # 840×1188 = A4
-        cols, rows, per_page = calculate_page_arrangement(lay)
+        cols, rows, per_page, scale = calculate_page_arrangement(lay)
         assert (cols, rows, per_page) == (1, 1, 1)
+        assert scale == 1.0
 
     def test_half_a4_is_1x2(self) -> None:
-        """A4 半分 → 1×2 = 2名/ページ。"""
+        """A4 半分 → 1×2 = 2名/ページ（等倍）。"""
         lay = _make_small_lay(840, 594)  # 210mm × 148.5mm
-        cols, rows, per_page = calculate_page_arrangement(lay)
+        cols, rows, per_page, scale = calculate_page_arrangement(lay)
         assert (cols, rows, per_page) == (1, 2, 2)
+        assert scale == 1.0
 
     def test_quarter_a4_is_2x2(self) -> None:
-        """A4 四分割 → 2×2 = 4名/ページ。"""
+        """A4 四分割 → 2×2 = 4名/ページ（等倍）。"""
         lay = _make_small_lay(420, 594)  # 105mm × 148.5mm
-        cols, rows, per_page = calculate_page_arrangement(lay)
+        cols, rows, per_page, scale = calculate_page_arrangement(lay)
         assert (cols, rows, per_page) == (2, 2, 4)
+        assert scale == 1.0
 
     def test_small_label(self) -> None:
-        """小ラベル 70×25mm → 3×11 = 33名/ページ。"""
+        """小ラベル 70×25mm → 3×11 = 33名/ページ（等倍）。"""
         lay = _make_small_lay(280, 100)  # 70mm × 25mm
-        cols, rows, per_page = calculate_page_arrangement(lay)
+        cols, rows, per_page, scale = calculate_page_arrangement(lay)
         assert cols == 3
         assert rows == 11
         assert per_page == 33
+        assert scale == 1.0
 
     def test_custom_paper_size(self) -> None:
         """カスタム用紙サイズ対応。"""
         lay = _make_small_lay(420, 594)
-        cols, rows, per_page = calculate_page_arrangement(
+        cols, rows, per_page, _scale = calculate_page_arrangement(
             lay, paper_width=1188, paper_height=840,  # A4 横
         )
         assert cols == 2
@@ -220,10 +224,24 @@ class TestCalculatePageArrangement:
         assert per_page == 2
 
     def test_larger_than_paper(self) -> None:
-        """レイアウトが用紙より大きい → 1×1。"""
+        """レイアウトが用紙より大きい → 縮小して複数配置。"""
         lay = _make_small_lay(1200, 1600)
-        cols, rows, per_page = calculate_page_arrangement(lay)
-        assert (cols, rows, per_page) == (1, 1, 1)
+        cols, rows, per_page, scale = calculate_page_arrangement(lay)
+        # 1200×1600 → 2列: scale=min(840/2400, 1188/1600)=min(0.35, 0.7425)=0.35
+        assert per_page == 2
+        assert cols == 2
+        assert rows == 1
+        assert 0.25 <= scale < 1.0
+
+    def test_oversized_card_210x680mm(self) -> None:
+        """210mm×680mm の個票 → 縮小して 2 枚横並び。"""
+        lay = _make_small_lay(840, 2720)  # 210mm × 680mm
+        cols, rows, per_page, scale = calculate_page_arrangement(lay)
+        assert cols == 2
+        assert rows == 1
+        assert per_page == 2
+        # scale = min(840/(2*840), 1188/2720) = min(0.5, 0.4368) ≈ 0.437
+        assert 0.43 <= scale <= 0.44
 
 
 class TestTileLayouts:
@@ -284,15 +302,18 @@ class TestTileLayouts:
         assert result == []
 
     def test_centered_on_page(self) -> None:
-        """タイルが用紙の中央に配置される。"""
+        """タイルが用紙の中央に配置される（ガター含む）。"""
         # 280×100 のラベル → 3×11 配置
         small = _make_small_lay(280, 100)
         layouts = [small]
         result = tile_layouts(layouts, cols=3, rows=11)
 
-        # マージン計算: (840 - 3*280) / 2 = 0, (1188 - 11*100) / 2 = 44
-        expected_margin_y = (A4_HEIGHT - 11 * 100) // 2
-        assert expected_margin_y == 44
+        # ガター計算: spare_y = 1188 - 11*100 = 88, gutter_y = min(20, 88//11) = 8
+        # total_h = 11*100 + 10*8 = 1180, margin_y = (1188-1180)//2 = 4
+        gutter_y = min(20, (A4_HEIGHT - 11 * 100) // 11)
+        total_h = 11 * 100 + 10 * gutter_y
+        expected_margin_y = (A4_HEIGHT - total_h) // 2
+        assert expected_margin_y == 4
 
         page = result[0]
         assert page.objects[0].rect is not None

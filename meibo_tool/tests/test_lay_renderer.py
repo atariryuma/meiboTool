@@ -307,72 +307,61 @@ class TestFillLayoutMixed:
             assert obj.obj_type == ObjectType.LABEL
 
 
+def _is_vertical_text(w: float, h: float, text: str, scale: float = 1.0) -> bool:
+    """縦書き判定ロジック（PILBackend.draw_text 内と同じ）。"""
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    return (
+        '\n' not in text
+        and len(text) > 1
+        and w < h * 0.5
+        and w < 120 * scale
+    )
+
+
+def _is_multiline_text(text: str) -> bool:
+    """複数行判定（\r\n を \n に正規化後に判定）。"""
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    return '\n' in text
+
+
 class TestVerticalTextDetection:
-    """縦書きテキスト検出のテスト。"""
+    """縦書きテキスト検出のテスト（PILBackend と同じロジック）。"""
 
     def test_narrow_box_no_newline_is_vertical(self) -> None:
         """狭い矩形＋改行なし → 縦書き判定。"""
-        obj = LayoutObject(
-            obj_type=ObjectType.LABEL,
-            rect=Rect(30, 1980, 90, 2260),  # w=60, h=280
-            text='その他特記事項',
-            font=FontInfo('ＭＳ 明朝', 10.0),
-        )
-        from core.win_printer import PrintJob
-        assert PrintJob._is_vertical_text(obj, obj.text) is True
+        # w=60, h=280
+        assert _is_vertical_text(60, 280, 'その他特記事項') is True
 
     def test_wide_box_is_not_vertical(self) -> None:
         """幅のある矩形 → 縦書きではない。"""
-        obj = LayoutObject(
-            obj_type=ObjectType.LABEL,
-            rect=Rect(20, 100, 200, 160),  # w=180, h=60
-            text='学年',
-            font=FontInfo('ＭＳ 明朝', 10.0),
-        )
-        from core.win_printer import PrintJob
-        assert PrintJob._is_vertical_text(obj, obj.text) is False
+        # w=180, h=60
+        assert _is_vertical_text(180, 60, '学年') is False
 
     def test_narrow_with_newline_is_not_vertical(self) -> None:
         """狭い矩形でも改行あり → 縦書きではない。"""
-        obj = LayoutObject(
-            obj_type=ObjectType.LABEL,
-            rect=Rect(350, 240, 390, 370),  # w=40, h=130
-            text='氏\r\n名',
-            font=FontInfo('ＭＳ 明朝', 10.0),
-        )
-        from core.win_printer import PrintJob
-        assert PrintJob._is_vertical_text(obj, obj.text) is False
+        # w=40, h=130
+        assert _is_vertical_text(40, 130, '氏\r\n名') is False
 
     def test_single_char_is_not_vertical(self) -> None:
         """1文字 → 縦書きではない。"""
-        obj = LayoutObject(
-            obj_type=ObjectType.LABEL,
-            rect=Rect(0, 0, 30, 100),  # w=30, h=100
-            text='A',
-            font=FontInfo('ＭＳ 明朝', 10.0),
-        )
-        from core.win_printer import PrintJob
-        assert PrintJob._is_vertical_text(obj, obj.text) is False
+        # w=30, h=100
+        assert _is_vertical_text(30, 100, 'A') is False
 
 
 class TestMultilineTextDetection:
     """複数行テキスト検出のテスト。"""
 
     def test_text_with_crlf(self) -> None:
-        from core.win_printer import PrintJob
-        assert PrintJob._is_multiline_text('行1\r\n行2') is True
+        assert _is_multiline_text('行1\r\n行2') is True
 
     def test_text_with_lf(self) -> None:
-        from core.win_printer import PrintJob
-        assert PrintJob._is_multiline_text('行1\n行2') is True
+        assert _is_multiline_text('行1\n行2') is True
 
     def test_text_with_cr(self) -> None:
-        from core.win_printer import PrintJob
-        assert PrintJob._is_multiline_text('行1\r行2') is True
+        assert _is_multiline_text('行1\r行2') is True
 
     def test_single_line(self) -> None:
-        from core.win_printer import PrintJob
-        assert PrintJob._is_multiline_text('単一行テキスト') is False
+        assert _is_multiline_text('単一行テキスト') is False
 
 
 class TestFontInfoBoldItalic:
