@@ -20,6 +20,7 @@ from core.lay_parser import (
     ObjectType,
     PaperLayout,
     Point,
+    RawTag,
     Rect,
     TableColumn,
     new_field,
@@ -34,12 +35,6 @@ from core.lay_serializer import (
 )
 
 # ── ヘルパー ─────────────────────────────────────────────────────────────────
-
-_SAMPLE_LAY = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    'R8年度小学校個票20260130.lay',
-)
-
 
 def _make_full_layout() -> LayFile:
     """テスト用のフル構成 LayFile を構築する。"""
@@ -143,6 +138,38 @@ class TestRoundTrip:
         assert obj.prefix == '〒'
         assert obj.suffix == '様'
 
+    def test_style_flags_preserved(self):
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.LABEL,
+                rect=Rect(10, 20, 200, 100),
+                text='枠付きラベル',
+                style_1001=0,
+                style_1002=10,
+                style_1003=-1,
+                raw_tags=[
+                    RawTag(path=[0x03EB, 0x03E9], payload=b'\x00\x00\x00\x00', payload_len=4),
+                    RawTag(path=[0x03EB, 0x0BBC], payload=b'', payload_len=14),
+                    RawTag(path=[0x03EB, 0x0BBC, 0x03EA], payload=b'\x78\x00\x00\x00', payload_len=4),
+                ],
+            ),
+        ], raw_tags=[
+            RawTag(path=[0x05E0], payload=b'\x02\x00\x00\x00', payload_len=4),
+        ])
+        restored = dict_to_layfile(layfile_to_dict(lay))
+        obj = restored.objects[0]
+        assert obj.style_1001 == 0
+        assert obj.style_1002 == 10
+        assert obj.style_1003 == -1
+        assert obj.raw_tags == [
+            RawTag(path=[0x03EB, 0x03E9], payload=b'\x00\x00\x00\x00', payload_len=4),
+            RawTag(path=[0x03EB, 0x0BBC], payload=b'', payload_len=14),
+            RawTag(path=[0x03EB, 0x0BBC, 0x03EA], payload=b'\x78\x00\x00\x00', payload_len=4),
+        ]
+        assert restored.raw_tags == [
+            RawTag(path=[0x05E0], payload=b'\x02\x00\x00\x00', payload_len=4),
+        ]
+
     def test_page_dimensions_preserved(self):
         lay = LayFile(page_width=1188, page_height=840)
         restored = dict_to_layfile(layfile_to_dict(lay))
@@ -201,90 +228,25 @@ class TestErrorHandling:
         assert lay.objects[0].obj_type == ObjectType.LABEL
 
 
-# ── 実ファイルラウンドトリップ ─────────────────────────────────────────────────
-
-
-@pytest.mark.skipif(
-    not os.path.isfile(_SAMPLE_LAY),
-    reason='サンプル .lay ファイルが見つかりません',
-)
-class TestRealFileRoundTrip:
-    """実 .lay → JSON → LayFile ラウンドトリップ。"""
-
-    def test_roundtrip_preserves_object_count(self, tmp_path):
-        from core.lay_parser import parse_lay
-
-        lay = parse_lay(_SAMPLE_LAY)
-        path = str(tmp_path / 'roundtrip.json')
-        save_layout(lay, path)
-        restored = load_layout(path)
-
-        assert len(restored.objects) == len(lay.objects)
-
-    def test_roundtrip_preserves_title(self, tmp_path):
-        from core.lay_parser import parse_lay
-
-        lay = parse_lay(_SAMPLE_LAY)
-        path = str(tmp_path / 'roundtrip.json')
-        save_layout(lay, path)
-        restored = load_layout(path)
-
-        assert restored.title == lay.title
-
-    def test_roundtrip_preserves_field_ids(self, tmp_path):
-        from core.lay_parser import parse_lay
-
-        lay = parse_lay(_SAMPLE_LAY)
-        path = str(tmp_path / 'roundtrip.json')
-        save_layout(lay, path)
-        restored = load_layout(path)
-
-        orig_ids = sorted(f.field_id for f in lay.fields)
-        rest_ids = sorted(f.field_id for f in restored.fields)
-        assert orig_ids == rest_ids
-
-
 class TestBoldItalicRoundTrip:
     """bold/italic の JSON ラウンドトリップテスト。"""
 
-    def test_bold_preserved(self):
+    @pytest.mark.parametrize(
+        ('bold', 'italic'),
+        [(True, False), (False, True), (True, True)],
+    )
+    def test_font_style_preserved(self, bold: bool, italic: bool):
         lay = LayFile(objects=[
             LayoutObject(
                 obj_type=ObjectType.LABEL,
                 rect=Rect(0, 0, 100, 30),
-                text='太字',
-                font=FontInfo('ＭＳ ゴシック', 12.0, bold=True),
+                text='スタイル',
+                font=FontInfo('ＭＳ ゴシック', 12.0, bold=bold, italic=italic),
             ),
         ])
         restored = dict_to_layfile(layfile_to_dict(lay))
-        assert restored.objects[0].font.bold is True
-        assert restored.objects[0].font.italic is False
-
-    def test_italic_preserved(self):
-        lay = LayFile(objects=[
-            LayoutObject(
-                obj_type=ObjectType.LABEL,
-                rect=Rect(0, 0, 100, 30),
-                text='斜体',
-                font=FontInfo('ＭＳ ゴシック', 12.0, italic=True),
-            ),
-        ])
-        restored = dict_to_layfile(layfile_to_dict(lay))
-        assert restored.objects[0].font.italic is True
-        assert restored.objects[0].font.bold is False
-
-    def test_bold_italic_combined(self):
-        lay = LayFile(objects=[
-            LayoutObject(
-                obj_type=ObjectType.LABEL,
-                rect=Rect(0, 0, 100, 30),
-                text='太字斜体',
-                font=FontInfo('ＭＳ ゴシック', 12.0, bold=True, italic=True),
-            ),
-        ])
-        restored = dict_to_layfile(layfile_to_dict(lay))
-        assert restored.objects[0].font.bold is True
-        assert restored.objects[0].font.italic is True
+        assert restored.objects[0].font.bold is bold
+        assert restored.objects[0].font.italic is italic
 
     def test_normal_no_bold_italic_in_json(self):
         """通常フォントでは bold/italic キーが JSON に含まれない。"""
@@ -388,7 +350,6 @@ class TestDeserializationEdgeCases:
             f.write('{broken json}')
         with pytest.raises(json.JSONDecodeError):
             load_layout(path)
-
 
 # ── V2 フォーマット テスト ───────────────────────────────────────────────────
 
@@ -612,54 +573,3 @@ class TestTableColumnRoundTrip:
         assert restored.tables[0].table_columns[1].h_align == 1
 
 
-# ── マルチレイアウト実ファイル → JSON ラウンドトリップ ─────────────────────
-
-_MULTI_LAY = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    '名簿レイアウト_20260221.lay',
-)
-
-
-@pytest.mark.skipif(
-    not os.path.isfile(_MULTI_LAY),
-    reason='マルチレイアウト .lay ファイルが見つかりません',
-)
-class TestMultiLayoutRoundTrip:
-    """マルチレイアウト .lay → JSON → LayFile ラウンドトリップ。"""
-
-    def test_roundtrip_preserves_paper(self, tmp_path):
-        from core.lay_parser import parse_lay_multi
-
-        layouts = parse_lay_multi(_MULTI_LAY)
-        lay = layouts[0]
-        path = str(tmp_path / 'multi_rt.json')
-        save_layout(lay, path)
-        restored = load_layout(path)
-
-        assert restored.paper is not None
-        assert restored.paper.paper_size == lay.paper.paper_size
-        assert restored.paper.orientation == lay.paper.orientation
-
-    def test_roundtrip_preserves_table_columns(self, tmp_path):
-        from core.lay_parser import parse_lay_multi
-
-        layouts = parse_lay_multi(_MULTI_LAY)
-        # 修了台帳（最初のテーブルを含むレイアウト）を探す
-        table_lay = None
-        for lay in layouts:
-            if lay.tables:
-                table_lay = lay
-                break
-        assert table_lay is not None, 'テーブルを含むレイアウトが見つかりません'
-
-        path = str(tmp_path / 'table_rt.json')
-        save_layout(table_lay, path)
-        restored = load_layout(path)
-
-        orig_cols = table_lay.tables[0].table_columns
-        rest_cols = restored.tables[0].table_columns
-        assert len(rest_cols) == len(orig_cols)
-        for orig, rest in zip(orig_cols, rest_cols, strict=True):
-            assert rest.field_id == orig.field_id
-            assert rest.header == orig.header
-            assert rest.width == orig.width

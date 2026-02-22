@@ -14,12 +14,148 @@
         140
       ],
       "field_id": 109,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "ＤＦ特太ゴシック体",
         "size_pt": 48.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "AAAAAAAAAADWBgAAjAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "bQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 71
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 18,
+          "payload": "JP8m/3lyKlm0MLcwwzCvMFNP"
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "4AEAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -30,61 +166,193 @@
         550
       ],
       "field_id": 108,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "ＤＦ特太ゴシック体",
         "size_pt": 110.0
       },
-      "h_align": 1,
-      "v_align": 1
-    },
-    {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        0,
-        0
-      ],
-      "line_end": [
-        1750,
-        0
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "AAAAAIwAAADWBgAAJgIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "bAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 71
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 18,
+          "payload": "JP8m/3lyKlm0MLcwwzCvMFNP"
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "TAQAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
       ]
     },
     {
-      "type": "LINE",
-      "line_start": [
+      "type": "GROUP",
+      "rect": [
         0,
-        550
-      ],
-      "line_end": [
+        0,
         1750,
         550
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        0,
-        0
       ],
-      "line_end": [
-        0,
-        550
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        1750,
-        0
-      ],
-      "line_end": [
-        1750,
-        550
+      "style_1001": 0,
+      "style_1002": 8,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "CAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "AAAAAAAAAADWBgAAJgIAAA=="
+        }
       ]
     }
   ],
@@ -101,5 +369,128 @@
     "spacing_v_mm": 0.0,
     "paper_size": "A3",
     "orientation": "landscape"
-  }
+  },
+  "raw_tags": [
+    {
+      "path": [
+        1500
+      ],
+      "payload_len": 26,
+      "payload": "EDApWUVOD1wRMDpnKHUPbA1U6TDZMOswMgA="
+    },
+    {
+      "path": [
+        1503
+      ],
+      "payload_len": 4,
+      "payload": "AQAAAA=="
+    },
+    {
+      "path": [
+        1504
+      ],
+      "payload_len": 4,
+      "payload": "AgAAAA=="
+    },
+    {
+      "path": [
+        1506
+      ],
+      "payload_len": 4,
+      "payload": "kgQAAA=="
+    },
+    {
+      "path": [
+        1505
+      ],
+      "payload_len": 522
+    },
+    {
+      "path": [
+        1505,
+        1000
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        1001
+      ],
+      "payload_len": 1,
+      "payload": "AQ=="
+    },
+    {
+      "path": [
+        1505,
+        1003
+      ],
+      "payload_len": 1,
+      "payload": "Aw=="
+    },
+    {
+      "path": [
+        1505,
+        1004
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1006
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1002
+      ],
+      "payload_len": 412
+    },
+    {
+      "path": [
+        1505,
+        2000
+      ],
+      "payload_len": 1,
+      "payload": "AQ=="
+    },
+    {
+      "path": [
+        1505,
+        2001
+      ],
+      "payload_len": 8,
+      "payload": "1gYAACYCAAA="
+    },
+    {
+      "path": [
+        1505,
+        2002
+      ],
+      "payload_len": 8,
+      "payload": "AgAAAAUAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2003
+      ],
+      "payload_len": 8,
+      "payload": "AAAAAAAAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2004
+      ],
+      "payload_len": 8,
+      "payload": "XgEAAG4AAAA="
+    }
+  ]
 }

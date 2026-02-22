@@ -25,6 +25,7 @@ from core.lay_parser import (
     ObjectType,
     PaperLayout,
     Point,
+    RawTag,
     Rect,
     TableColumn,
 )
@@ -67,6 +68,13 @@ def _table_column_to_dict(col: TableColumn) -> dict:
     return d
 
 
+def _raw_tag_to_dict(tag: RawTag) -> dict:
+    d: dict = {'path': tag.path, 'payload_len': tag.payload_len}
+    if tag.payload:
+        d['payload'] = base64.b64encode(tag.payload).decode('ascii')
+    return d
+
+
 def _object_to_dict(obj: LayoutObject) -> dict:
     """LayoutObject を JSON 互換の dict に変換する。"""
     d: dict = {'type': obj.obj_type.name}
@@ -77,24 +85,18 @@ def _object_to_dict(obj: LayoutObject) -> dict:
         d['line_start'] = _point_to_list(obj.line_start)
     if obj.line_end is not None:
         d['line_end'] = _point_to_list(obj.line_end)
-    if obj.text:
-        d['text'] = obj.text
-    if obj.field_id:
-        d['field_id'] = obj.field_id
+    for k in ('text', 'prefix', 'suffix'):
+        v = getattr(obj, k)
+        if v:
+            d[k] = v
+    for k in ('field_id', 'h_align', 'v_align', 'table_row_count'):
+        v = getattr(obj, k)
+        if v:
+            d[k] = v
     if obj.font.name or obj.font.size_pt != 10.0:
         d['font'] = _font_to_dict(obj.font)
-    if obj.h_align:
-        d['h_align'] = obj.h_align
-    if obj.v_align:
-        d['v_align'] = obj.v_align
-    if obj.prefix:
-        d['prefix'] = obj.prefix
-    if obj.suffix:
-        d['suffix'] = obj.suffix
     if obj.table_columns:
         d['table_columns'] = [_table_column_to_dict(c) for c in obj.table_columns]
-    if obj.table_row_count:
-        d['table_row_count'] = obj.table_row_count
     if obj.meibo is not None:
         m = obj.meibo
         d['meibo'] = {
@@ -114,6 +116,12 @@ def _object_to_dict(obj: LayoutObject) -> dict:
             'image_data': base64.b64encode(img.image_data).decode('ascii'),
             'original_path': img.original_path,
         }
+    for k in ('style_1001', 'style_1002', 'style_1003'):
+        v = getattr(obj, k)
+        if v is not None:
+            d[k] = v
+    if obj.raw_tags:
+        d['raw_tags'] = [_raw_tag_to_dict(t) for t in obj.raw_tags]
 
     return d
 
@@ -158,6 +166,8 @@ def layfile_to_dict(lay: LayFile) -> dict:
 
     if lay.paper is not None:
         d['paper'] = _paper_to_dict(lay.paper)
+    if lay.raw_tags:
+        d['raw_tags'] = [_raw_tag_to_dict(t) for t in lay.raw_tags]
 
     return d
 
@@ -209,6 +219,15 @@ def _dict_to_paper(d: dict) -> PaperLayout:
     )
 
 
+def _dict_to_raw_tag(d: dict) -> RawTag:
+    payload = base64.b64decode(d.get('payload', '')) if d.get('payload') else b''
+    return RawTag(
+        path=list(d.get('path', [])),
+        payload=payload,
+        payload_len=d.get('payload_len', len(payload)),
+    )
+
+
 _TYPE_MAP = {t.name: t for t in ObjectType}
 
 
@@ -225,26 +244,15 @@ def _dict_to_object(d: dict) -> LayoutObject:
         obj.line_start = _list_to_point(d['line_start'])
     if 'line_end' in d:
         obj.line_end = _list_to_point(d['line_end'])
-    if 'text' in d:
-        obj.text = d['text']
-    if 'field_id' in d:
-        obj.field_id = d['field_id']
+    for k in ('text', 'field_id', 'h_align', 'v_align', 'prefix', 'suffix', 'table_row_count'):
+        if k in d:
+            setattr(obj, k, d[k])
     if 'font' in d:
         obj.font = _dict_to_font(d['font'])
-    if 'h_align' in d:
-        obj.h_align = d['h_align']
-    if 'v_align' in d:
-        obj.v_align = d['v_align']
-    if 'prefix' in d:
-        obj.prefix = d['prefix']
-    if 'suffix' in d:
-        obj.suffix = d['suffix']
     if 'table_columns' in d:
         obj.table_columns = [
             _dict_to_table_column(c) for c in d['table_columns']
         ]
-    if 'table_row_count' in d:
-        obj.table_row_count = d['table_row_count']
     if 'meibo' in d:
         m = d['meibo']
         obj.meibo = MeiboArea(
@@ -264,6 +272,11 @@ def _dict_to_object(d: dict) -> LayoutObject:
             image_data=base64.b64decode(img.get('image_data', '')),
             original_path=img.get('original_path', ''),
         )
+    for k in ('style_1001', 'style_1002', 'style_1003'):
+        if k in d:
+            setattr(obj, k, d[k])
+    if 'raw_tags' in d:
+        obj.raw_tags = [_dict_to_raw_tag(t) for t in d['raw_tags']]
 
     return obj
 
@@ -287,6 +300,7 @@ def dict_to_layfile(data: dict) -> LayFile:
         page_height=data.get('page_height', 1188),
         objects=[_dict_to_object(o) for o in data.get('objects', [])],
         paper=paper,
+        raw_tags=[_dict_to_raw_tag(t) for t in data.get('raw_tags', [])],
     )
 
 

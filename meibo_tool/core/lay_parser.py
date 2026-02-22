@@ -262,6 +262,14 @@ class FontInfo:
 
 
 @dataclass
+class RawTag:
+    """TLV のタグ経路と生ペイロードを保持する。"""
+    path: list[int] = field(default_factory=list)
+    payload: bytes = b''
+    payload_len: int = 0
+
+
+@dataclass
 class TableColumn:
     """テーブルオブジェクトのカラム定義。"""
     field_id: int = 0
@@ -280,7 +288,7 @@ class MeiboArea:
     row_count: int = 0
     data_start_index: int = 0
     ref_name: str = ''
-    direction: int = 0      # 0=横並び, 1=縦並び
+    direction: int = 0      # 0=縦並び, 1=横並び
 
 
 @dataclass
@@ -404,6 +412,13 @@ class LayoutObject:
     table_row_count: int = 0
     meibo: MeiboArea | None = None
     image: EmbeddedImage | None = None
+    # オブジェクト内の style 系タグ (0x03E9/0x03EA/0x03EB) を保持する。
+    # 意味は文脈依存のため、生値として保存する。
+    style_1001: int | None = None
+    style_1002: int | None = None
+    style_1003: int | None = None
+    # タグ/サブタグを落とさないための生 TLV 保持領域
+    raw_tags: list[RawTag] = field(default_factory=list)
 
 
 @dataclass
@@ -415,6 +430,8 @@ class LayFile:
     page_height: int = 1188
     objects: list[LayoutObject] = field(default_factory=list)
     paper: PaperLayout | None = None
+    # レイアウトレベル（document/content）の生 TLV
+    raw_tags: list[RawTag] = field(default_factory=list)
 
     @property
     def labels(self) -> list[LayoutObject]:
@@ -532,16 +549,85 @@ def _iter_tlv(data: bytes, start: int = 0,
     return entries
 
 
+def _append_raw_tag(
+    out: list[RawTag] | None,
+    parent_path: tuple[int, ...],
+    tag: int,
+    data: bytes,
+    *,
+    keep_payload: bool | None = None,
+) -> None:
+    """生 TLV を out に追加する。"""
+    if out is None:
+        return
+    if keep_payload is None:
+        keep_payload = _should_keep_raw_payload(parent_path, tag)
+    out.append(
+        RawTag(
+            path=[*parent_path, tag],
+            payload=bytes(data) if keep_payload else b'',
+            payload_len=len(data),
+        ),
+    )
+
+
+def _should_keep_raw_payload(parent_path: tuple[int, ...], tag: int) -> bool:
+    """raw_tags に payload を保持するかを一元判定する。"""
+    if not parent_path and tag == _TAG_DOC_CONTENT:
+        return False
+    if parent_path and parent_path[0] == _TAG_DOC_CONTENT and tag == _TAG_OBJ_CONTAINER:
+        return False
+    if parent_path and parent_path[0] in (
+        _TAG_OBJ_LINE,
+        _TAG_OBJ_CONTAINER,
+        _TAG_OBJ_LABEL,
+        _TAG_OBJ_FIELD,
+    ) and tag == _TAG_FONT:
+        return False
+    if parent_path and parent_path[0] == _TAG_OBJ_TABLE and tag in (_TAG_FONT, _TAG_TEXT):
+        return False
+    return True
+
+
+def _decode_style_tag(tag: int, data: bytes) -> tuple[str, int] | None:
+    """style タグを (属性名, 値) へ変換する。"""
+    if len(data) != 4:
+        return None
+    if tag == _TAG_OBJ_LINE:
+        return 'style_1001', struct.unpack_from('<i', data)[0]
+    if tag == _TAG_OBJ_CONTAINER:
+        return 'style_1002', struct.unpack_from('<i', data)[0]
+    if tag == _TAG_OBJ_LABEL:
+        return 'style_1003', struct.unpack_from('<i', data)[0]
+    return None
+
+
+def _looks_like_tlv_block(data: bytes) -> bool:
+    """ペイロードが TLV ブロックとして解釈可能かを返す。"""
+    if len(data) < 6:
+        return False
+    try:
+        _, _, _, next_pos = _read_tlv(data, 0)
+    except ValueError:
+        return False
+    return 6 <= next_pos <= len(data)
+
+
 # ── フォントパース ───────────────────────────────────────────────────────────
 
 
 _TAG_FONT_VERTICAL = 0x03EB  # 1003 (フォントブロック内: 縦書きフラグ)
 
 
-def _parse_font(payload: bytes) -> FontInfo:
+def _parse_font(
+    payload: bytes,
+    raw_tags: list[RawTag] | None = None,
+    parent_path: tuple[int, ...] = (),
+) -> FontInfo:
     """タグ 0x0BBC (3004) のフォントブロックをパースする。"""
     info = FontInfo()
     for tag, data in _iter_tlv(payload):
+        _append_raw_tag(raw_tags, parent_path, tag, data)
         if tag == _TAG_FONT_NAME and len(data) >= 2:
             info.name = data.decode('utf-16-le', errors='replace')
         elif tag == _TAG_FONT_STYLE and len(data) == 4:
@@ -578,6 +664,16 @@ def _parse_object_block(outer_tag: int, payload: bytes) -> LayoutObject:
     obj = LayoutObject(obj_type=type_map.get(outer_tag, ObjectType.LABEL))
 
     for tag, data in _iter_tlv(payload):
+        _append_raw_tag(
+            obj.raw_tags,
+            (outer_tag,),
+            tag,
+            data,
+        )
+        style = _decode_style_tag(tag, data)
+        if style is not None:
+            setattr(obj, style[0], style[1])
+            continue
         if tag == _TAG_GEO_RECT:
             if len(data) == 16:
                 left, top, right, bottom = struct.unpack_from('<IIII', data)
@@ -602,12 +698,20 @@ def _parse_object_block(outer_tag: int, payload: bytes) -> LayoutObject:
         elif tag == _TAG_SUFFIX and len(data) >= 2:
             obj.suffix = data.decode('utf-16-le', errors='replace')
         elif tag == _TAG_FONT:
-            obj.font = _parse_font(data)
+            obj.font = _parse_font(
+                data,
+                obj.raw_tags,
+                (outer_tag, _TAG_FONT),
+            )
 
     return obj
 
 
-def _parse_table_columns(payload: bytes) -> list[TableColumn]:
+def _parse_table_columns(
+    payload: bytes,
+    raw_tags: list[RawTag] | None = None,
+    parent_path: tuple[int, ...] = (),
+) -> list[TableColumn]:
     """TABLE オブジェクト内のカラム定義をパースする。
 
     TABLE (0x03EF) 内の 0x0BBC タグがカラム定義を含む。
@@ -622,6 +726,7 @@ def _parse_table_columns(payload: bytes) -> list[TableColumn]:
         if tag == _TAG_FONT:  # 0x0BBC = カラム定義（TABLE コンテキスト）
             col = TableColumn()
             for ct, cp in _iter_tlv(data):
+                _append_raw_tag(raw_tags, parent_path, ct, cp)
                 if ct == _TAG_FONT_NAME and len(cp) >= 4:
                     # TABLE 内では 0x03E8 = field_id
                     col.field_id = struct.unpack_from('<I', cp)[0]
@@ -638,7 +743,11 @@ def _parse_table_columns(payload: bytes) -> list[TableColumn]:
     return columns
 
 
-def _parse_table_body_font(payload: bytes) -> FontInfo:
+def _parse_table_body_font(
+    payload: bytes,
+    raw_tags: list[RawTag] | None = None,
+    parent_path: tuple[int, ...] = (),
+) -> FontInfo:
     """TABLE の 0x0BB9 (TEXT) タグからテーブル本文フォントを解析する。
 
     TABLE コンテキストでは 0x0BB9 はテキストではなく、
@@ -646,6 +755,7 @@ def _parse_table_body_font(payload: bytes) -> FontInfo:
     """
     info = FontInfo()
     for tag, data in _iter_tlv(payload):
+        _append_raw_tag(raw_tags, parent_path, tag, data)
         if tag == _TAG_FONT_NAME and len(data) >= 2:
             info.name = data.decode('utf-16-le', errors='replace').rstrip('\x00')
         elif tag == _TAG_FONT_STYLE and len(data) >= 4:
@@ -665,6 +775,16 @@ def _parse_table_object(payload: bytes) -> LayoutObject:
     obj = LayoutObject(obj_type=ObjectType.TABLE)
 
     for tag, data in _iter_tlv(payload):
+        _append_raw_tag(
+            obj.raw_tags,
+            (_TAG_OBJ_TABLE,),
+            tag,
+            data,
+        )
+        style = _decode_style_tag(tag, data)
+        if style is not None:
+            setattr(obj, style[0], style[1])
+            continue
         if tag == _TAG_GEO_RECT:
             if len(data) == 16:
                 left, top, right, bottom = struct.unpack_from('<IIII', data)
@@ -674,12 +794,20 @@ def _parse_table_object(payload: bytes) -> LayoutObject:
             pass  # _parse_table_columns で一括処理
         elif tag == _TAG_TEXT and len(data) >= 6:
             # TABLE コンテキスト: 0x0BB9 はネスト TLV のフォント定義
-            obj.font = _parse_table_body_font(data)
+            obj.font = _parse_table_body_font(
+                data,
+                obj.raw_tags,
+                (_TAG_OBJ_TABLE, _TAG_TEXT),
+            )
         elif tag == _TAG_VALIGN and len(data) >= 4:
             # TABLE コンテキスト: 0x0BBB = 行数
             obj.table_row_count = struct.unpack_from('<I', data)[0]
 
-    obj.table_columns = _parse_table_columns(payload)
+    obj.table_columns = _parse_table_columns(
+        payload,
+        obj.raw_tags,
+        (_TAG_OBJ_TABLE, _TAG_FONT),
+    )
 
     return obj
 
@@ -687,7 +815,18 @@ def _parse_table_object(payload: bytes) -> LayoutObject:
 def _parse_meibo_object(payload: bytes) -> LayoutObject:
     """MEIBO オブジェクト (0x03F0) をパースする。"""
     meibo = MeiboArea()
+    styles: dict[str, int | None] = {
+        'style_1001': None,
+        'style_1002': None,
+        'style_1003': None,
+    }
+    raw_tags: list[RawTag] = []
     for tag, data in _iter_tlv(payload):
+        _append_raw_tag(raw_tags, (_TAG_OBJ_MEIBO,), tag, data)
+        style = _decode_style_tag(tag, data)
+        if style is not None:
+            styles[style[0]] = style[1]
+            continue
         if tag == _TAG_GEO_RECT and len(data) >= 8:
             meibo.origin_x, meibo.origin_y = struct.unpack_from('<II', data)
         elif tag == _TAG_GEO_POINT2 and len(data) >= 8:
@@ -700,13 +839,31 @@ def _parse_meibo_object(payload: bytes) -> LayoutObject:
             meibo.data_start_index = struct.unpack_from('<I', data)[0]
         elif tag == 0x07DB and len(data) >= 2:
             meibo.ref_name = data.decode('utf-16-le', errors='replace').rstrip('\x00')
-    return LayoutObject(obj_type=ObjectType.MEIBO, meibo=meibo)
+    return LayoutObject(
+        obj_type=ObjectType.MEIBO,
+        meibo=meibo,
+        style_1001=styles['style_1001'],
+        style_1002=styles['style_1002'],
+        style_1003=styles['style_1003'],
+        raw_tags=raw_tags,
+    )
 
 
 def _parse_image_object(payload: bytes) -> LayoutObject:
     """埋め込み画像オブジェクト (0x03ED 大ブロブ) をパースする。"""
     img = EmbeddedImage()
+    styles: dict[str, int | None] = {
+        'style_1001': None,
+        'style_1002': None,
+        'style_1003': None,
+    }
+    raw_tags: list[RawTag] = []
     for tag, data in _iter_tlv(payload):
+        _append_raw_tag(raw_tags, (_TAG_OBJ_PROP5,), tag, data)
+        style = _decode_style_tag(tag, data)
+        if style is not None:
+            styles[style[0]] = style[1]
+            continue
         if tag == _TAG_GEO_RECT and len(data) >= 16:
             x1, y1, x2, y2 = struct.unpack_from('<IIII', data)
             img.rect = (x1, y1, x2, y2)
@@ -720,6 +877,10 @@ def _parse_image_object(payload: bytes) -> LayoutObject:
         obj_type=ObjectType.IMAGE,
         rect=Rect(img.rect[0], img.rect[1], img.rect[2], img.rect[3]),
         image=img,
+        style_1001=styles['style_1001'],
+        style_1002=styles['style_1002'],
+        style_1003=styles['style_1003'],
+        raw_tags=raw_tags,
     )
 
 
@@ -727,7 +888,7 @@ def _parse_object_list(payload: bytes) -> list[LayoutObject]:
     """タグ 1002 のオブジェクトリストをパースする。
 
     GROUP (CONTAINER) オブジェクトは再帰的に子要素を展開し、
-    GROUP 自身の rect は外枠として 4 本の LINE に変換する。
+    GROUP 自身も保持する。
     TABLE オブジェクトはカラム定義を含むテーブルとしてパースする。
     MEIBO オブジェクトは繰り返しエリアとしてパースする。
     IMAGE オブジェクト (0x03ED 大ブロブ) は埋め込み画像としてパースする。
@@ -735,28 +896,21 @@ def _parse_object_list(payload: bytes) -> list[LayoutObject]:
     objects: list[LayoutObject] = []
     for tag, data in _iter_tlv(payload):
         if tag == _TAG_OBJ_CONTAINER:
-            # GROUP: 子オブジェクトを再帰的に展開
+            if not _looks_like_tlv_block(data):
+                continue
+            # GROUP: 自身を保持しつつ、子オブジェクトを再帰展開
+            obj = _parse_object_block(tag, data)
+            objects.append(obj)
             children = _parse_object_list(data)
             objects.extend(children)
-            # GROUP 自身の rect を外枠 LINE に変換
-            obj = _parse_object_block(tag, data)
-            if obj.rect is not None:
-                r = obj.rect
-                for x1, y1, x2, y2 in [
-                    (r.left, r.top, r.right, r.top),       # 上辺
-                    (r.left, r.bottom, r.right, r.bottom),  # 下辺
-                    (r.left, r.top, r.left, r.bottom),      # 左辺
-                    (r.right, r.top, r.right, r.bottom),    # 右辺
-                ]:
-                    objects.append(LayoutObject(
-                        obj_type=ObjectType.LINE,
-                        line_start=Point(x1, y1),
-                        line_end=Point(x2, y2),
-                    ))
         elif tag == _TAG_OBJ_TABLE:
+            if not _looks_like_tlv_block(data):
+                continue
             obj = _parse_table_object(data)
             objects.append(obj)
         elif tag == _TAG_OBJ_MEIBO:
+            if not _looks_like_tlv_block(data):
+                continue
             obj = _parse_meibo_object(data)
             objects.append(obj)
         elif tag == _TAG_OBJ_PROP5 and len(data) > 100:
@@ -764,6 +918,8 @@ def _parse_object_list(payload: bytes) -> list[LayoutObject]:
             obj = _parse_image_object(data)
             objects.append(obj)
         elif tag in (_TAG_OBJ_LINE, _TAG_OBJ_LABEL, _TAG_OBJ_FIELD):
+            if not _looks_like_tlv_block(data):
+                continue
             obj = _parse_object_block(tag, data)
             objects.append(obj)
     return objects
@@ -774,17 +930,21 @@ def _parse_object_list(payload: bytes) -> list[LayoutObject]:
 
 def _parse_content_block(
     payload: bytes,
-) -> tuple[list[LayoutObject], int, int, PaperLayout | None, int | None]:
+) -> tuple[
+    list[LayoutObject], int, int, PaperLayout | None, int | None,
+    list[RawTag],
+]:
     """タグ 1505 のメインコンテンツブロックをパースする。
 
     Returns:
-        (objects, page_width, page_height, paper_layout, paper_size_flag)
+        (objects, page_width, page_height, paper_layout, paper_size_flag, raw_tags)
         paper_size_flag: コンテンツレベル 0x03E8 (0=A3, 2=A4, 4=はがき, None=不明)
     """
     objects: list[LayoutObject] = []
     page_w, page_h = 840, 1188
     found_object_list = False
     paper_size_flag: int | None = None
+    raw_tags: list[RawTag] = []
 
     # ジオメトリタグ値 (生値)
     geo_mode: int | None = None
@@ -794,6 +954,12 @@ def _parse_content_block(
     geo_margin: tuple[int, int] | None = None  # (left, top)
 
     for tag, data in _iter_tlv(payload):
+        _append_raw_tag(
+            raw_tags,
+            (_TAG_DOC_CONTENT,),
+            tag,
+            data,
+        )
         if tag == _TAG_OBJ_STYLE and len(data) >= 1 and paper_size_flag is None:
             # 0x03E8: コンテンツレベル用紙サイズ (0=A3, 2=A4, 4=はがき)
             paper_size_flag = data[0]
@@ -854,7 +1020,7 @@ def _parse_content_block(
             if paper_h_units > page_h:
                 page_h = paper_h_units
 
-    return objects, page_w, page_h, paper, paper_size_flag
+    return objects, page_w, page_h, paper, paper_size_flag, raw_tags
 
 
 # ── トップレベルパース ───────────────────────────────────────────────────────
@@ -874,17 +1040,24 @@ def _parse_layout_from_tlv(
     paper_size_flag: int | None = None  # 0=A3, 2=A4, 4=はがき
 
     for tag, payload in entries:
+        _append_raw_tag(
+            lay.raw_tags,
+            tuple(),
+            tag,
+            payload,
+        )
         if tag == _TAG_DOC_TITLE and len(payload) >= 2:
             lay.title = payload.decode('utf-16-le', errors='replace')
         elif tag == _TAG_DOC_FLAG2 and len(payload) >= 4:
             doc_flag2 = struct.unpack_from('<I', payload)[0]
         elif tag == _TAG_DOC_CONTENT:
-            objs, pw, ph, paper, psf = _parse_content_block(payload)
+            objs, pw, ph, paper, psf, raws = _parse_content_block(payload)
             lay.objects = objs
             lay.page_width = pw
             lay.page_height = ph
             lay.paper = paper
             paper_size_flag = psf
+            lay.raw_tags.extend(raws)
 
     # mode=0 レイアウトの用紙サイズ・向きを DOC_FLAG2 + paper_size_flag から決定
     # paper_size_flag: 0=A3, 1=B4, 2=A4(デフォルト), 3=B5, 4=はがき

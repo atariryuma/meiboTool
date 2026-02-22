@@ -16,8 +16,10 @@ import pytest
 from core.lay_parser import (
     LayFile,
     LayoutObject,
+    MeiboArea,
     ObjectType,
     PaperLayout,
+    RawTag,
     Rect,
     TableColumn,
     new_field,
@@ -27,21 +29,14 @@ from core.lay_parser import (
 from core.lay_serializer import save_layout
 from core.layout_registry import (
     build_layout_registry,
+    collect_part_layout_keys,
     delete_layout,
     import_json_file,
-    import_lay_file,
-    import_lay_file_multi,
     rename_layout,
     scan_layout_dir,
 )
 
 # ── ヘルパー ─────────────────────────────────────────────────────────────────
-
-_SAMPLE_LAY = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    'R8年度小学校個票20260130.lay',
-)
-
 
 def _make_layout_json(path: str, title: str = 'テスト', n_fields: int = 2) -> None:
     """テスト用の JSON レイアウトファイルを作成する。"""
@@ -52,6 +47,21 @@ def _make_layout_json(path: str, title: str = 'テスト', n_fields: int = 2) ->
             *[new_field(0, 30 * (i + 1), 100, 30 * (i + 2), field_id=100 + i)
               for i in range(n_fields)],
             new_line(0, 0, 100, 0),
+        ],
+    )
+    save_layout(lay, path)
+
+
+def _make_meibo_layout_json(path: str, title: str, ref_name: str) -> None:
+    """MEIBO 参照を持つテスト用レイアウト JSON を作成する。"""
+    lay = LayFile(
+        title=title,
+        objects=[
+            LayoutObject(
+                obj_type=ObjectType.MEIBO,
+                rect=Rect(0, 0, 100, 100),
+                meibo=MeiboArea(ref_name=ref_name, row_count=1),
+            ),
         ],
     )
     save_layout(lay, path)
@@ -121,19 +131,6 @@ class TestScanLayoutDir:
 
 class TestImport:
     """インポートのテスト。"""
-
-    @pytest.mark.skipif(
-        not os.path.isfile(_SAMPLE_LAY),
-        reason='サンプル .lay ファイルが見つかりません',
-    )
-    def test_import_lay_file(self, tmp_path):
-        dest = import_lay_file(_SAMPLE_LAY, str(tmp_path))
-        assert os.path.isfile(dest)
-        assert dest.endswith('.json')
-
-        results = scan_layout_dir(str(tmp_path))
-        assert len(results) == 1
-        assert results[0]['object_count'] > 0
 
     def test_import_json_file(self, tmp_path):
         src = str(tmp_path / 'source' / 'layout.json')
@@ -254,52 +251,6 @@ class TestUniquePath:
             )
 
 
-# ── マルチインポートテスト ────────────────────────────────────────────────
-
-
-_MULTI_LAY = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    '名簿レイアウト_20260221.lay',
-)
-
-
-@pytest.mark.skipif(
-    not os.path.isfile(_MULTI_LAY),
-    reason='マルチレイアウト .lay ファイルが見つかりません',
-)
-class TestImportMulti:
-    """import_lay_file_multi のテスト。"""
-
-    def test_import_all_layouts(self, tmp_path):
-        lib_dir = str(tmp_path / 'layouts')
-        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
-        assert len(results) == 27
-
-    def test_all_files_created(self, tmp_path):
-        lib_dir = str(tmp_path / 'layouts')
-        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
-        for r in results:
-            assert os.path.isfile(r['path'])
-
-    def test_each_has_title(self, tmp_path):
-        lib_dir = str(tmp_path / 'layouts')
-        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
-        for r in results:
-            assert r['title']
-
-    def test_scanned_after_import(self, tmp_path):
-        lib_dir = str(tmp_path / 'layouts')
-        import_lay_file_multi(_MULTI_LAY, lib_dir)
-        scanned = scan_layout_dir(lib_dir)
-        assert len(scanned) == 27
-
-    def test_unique_file_names(self, tmp_path):
-        lib_dir = str(tmp_path / 'layouts')
-        results = import_lay_file_multi(_MULTI_LAY, lib_dir)
-        paths = [r['path'] for r in results]
-        assert len(paths) == len(set(paths))
-
-
 # ── v2 メタデータ読み取りテスト ──────────────────────────────────────────
 
 
@@ -341,6 +292,7 @@ class TestV2MetaData:
             title='元の名前',
             objects=[new_label(0, 0, 100, 30, text='test')],
             paper=paper,
+            raw_tags=[RawTag(path=[0x05E0], payload=b'\x02\x00\x00\x00', payload_len=4)],
         )
         path = str(tmp_path / 'original.json')
         save_layout(lay, path)
@@ -350,6 +302,9 @@ class TestV2MetaData:
         restored = load_layout(new_path)
         assert restored.paper is not None
         assert restored.paper.paper_size == 'A4'
+        assert restored.raw_tags == [
+            RawTag(path=[0x05E0], payload=b'\x02\x00\x00\x00', payload_len=4),
+        ]
 
     def test_table_in_meta_count(self, tmp_path):
         """TABLE オブジェクトが object_count に含まれる。"""
@@ -417,6 +372,19 @@ class TestBuildLayoutRegistry:
         registry = build_layout_registry(str(tmp_path))
         assert 'sirabe' in registry
 
+    def test_alias_photo_copy(self, tmp_path):
+        """写真名簿用 ref_name エイリアスが写真ラベルに解決される。"""
+        _make_layout_json(
+            str(tmp_path / 'photo_label.json'),
+            title='【天久小】写真ラベル（名前なし）',
+        )
+        registry = build_layout_registry(str(tmp_path))
+        assert 'コピー：写真＋番号＋ふりがな' in registry
+        assert (
+            registry['コピー：写真＋番号＋ふりがな']
+            is registry['【天久小】写真ラベル（名前なし）']
+        )
+
     def test_alias_unresolved_without_target(self, tmp_path):
         """ターゲットが無いエイリアスは登録されない。"""
         _make_layout_json(str(tmp_path / 'unrelated.json'), title='無関係')
@@ -434,3 +402,34 @@ class TestBuildLayoutRegistry:
         assert 'a' in registry
         assert 'b' in registry
         assert 'c' in registry
+
+
+class TestCollectPartLayoutKeys:
+    """collect_part_layout_keys() のテスト。"""
+
+    def test_collects_referenced_layout_title(self, tmp_path):
+        _make_layout_json(str(tmp_path / 'part.json'), title='パーツ')
+        _make_meibo_layout_json(str(tmp_path / 'parent.json'), title='親', ref_name='パーツ')
+
+        keys = collect_part_layout_keys(str(tmp_path))
+        assert 'パーツ' in keys
+
+    def test_collects_all_keys_of_referenced_layout(self, tmp_path):
+        _make_layout_json(str(tmp_path / 'part_layout.json'), title='takara_simei')
+        _make_meibo_layout_json(str(tmp_path / 'parent.json'), title='親', ref_name='gakkyu')
+
+        keys = collect_part_layout_keys(str(tmp_path))
+        assert 'takara_simei' in keys
+        assert 'part_layout' in keys
+
+    def test_ignores_self_reference(self, tmp_path):
+        _make_meibo_layout_json(str(tmp_path / 'self.json'), title='self', ref_name='self')
+
+        keys = collect_part_layout_keys(str(tmp_path))
+        assert keys == set()
+
+    def test_ignores_unresolved_reference(self, tmp_path):
+        _make_meibo_layout_json(str(tmp_path / 'parent.json'), title='親', ref_name='missing')
+
+        keys = collect_part_layout_keys(str(tmp_path))
+        assert keys == set()

@@ -33,7 +33,11 @@ from core.lay_renderer import (
     tile_layouts,
 )
 from core.lay_serializer import load_layout
-from core.layout_registry import build_layout_registry, scan_layout_dir
+from core.layout_registry import (
+    build_layout_registry,
+    collect_part_layout_keys,
+    scan_layout_dir,
+)
 from core.special_needs import (
     detect_regular_students,
     detect_special_needs_students,
@@ -299,6 +303,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
     def refresh_layouts(self) -> None:
         """レイアウト一覧を再読み込みする（外部から呼び出し可能）。"""
+        self._registry = build_layout_registry(self._layout_dir)
         self._refresh_layouts()
 
     def set_data(self, df: pd.DataFrame) -> None:
@@ -323,9 +328,11 @@ class RosterPrintPanel(ctk.CTkFrame):
             self._tree.delete(item)
 
         all_layouts = scan_layout_dir(self._layout_dir)
-        # パーツレイアウト（MEIBO 参照用）は除外し、印刷用レイアウトのみ表示
+        part_keys = collect_part_layout_keys(self._layout_dir)
         self._layouts = [
-            m for m in all_layouts if '【' in (m.get('title') or '')
+            m for m in all_layouts
+            if (m.get('title') or '').strip() not in part_keys
+            and (m.get('name') or '').strip() not in part_keys
         ]
         for i, meta in enumerate(self._layouts):
             self._tree.insert(
@@ -377,25 +384,27 @@ class RosterPrintPanel(ctk.CTkFrame):
             self._arrangement_label.configure(text='')
             return
 
-        cols, rows, per_page, scale = get_page_arrangement(
-            self._selected_lay,
-        )
         p = self._selected_lay.paper
         unit_mm = p.unit_mm if p else 0.25
         w_mm = self._selected_lay.page_width * unit_mm
         h_mm = self._selected_lay.page_height * unit_mm
         paper_name = p.paper_size if p and p.paper_size else 'A4'
-
-        if per_page == 1:
-            text = f'{w_mm:.0f}×{h_mm:.0f}mm → {paper_name}に1名/ページ'
-        else:
-            text = (
-                f'{w_mm:.0f}×{h_mm:.0f}mm'
-                f' → {paper_name}に{cols}×{rows}={per_page}名/ページ'
+        text = f'用紙: {paper_name} / レイアウト: {w_mm:.0f}×{h_mm:.0f}mm'
+        if (
+            p is not None
+            and p.mode == 1
+            and p.cols > 0
+            and p.rows > 0
+            and p.item_width_mm > 0
+            and p.item_height_mm > 0
+        ):
+            text += (
+                f' / ラベル: {p.cols}×{p.rows}'
+                f' / {p.item_width_mm:.0f}×{p.item_height_mm:.0f}mm'
             )
-            if scale < 1.0:
-                text += f'（{scale:.0%}縮小）'
-        self._arrangement_label.configure(text=text)
+        self._arrangement_label.configure(
+            text=text,
+        )
 
     # ── プレビュー ─────────────────────────────────────────────────────
 

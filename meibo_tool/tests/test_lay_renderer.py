@@ -24,8 +24,10 @@ from core.lay_parser import (
     resolve_field_display,
 )
 from core.lay_renderer import (
+    _normalize_text,
     _contains_gaiji,
     _meibo_page_capacity,
+    _should_render_vertical_text,
     canvas_to_model,
     fill_layout,
     fill_meibo_layout,
@@ -319,19 +321,15 @@ class TestFillLayoutMixed:
 
 def _is_vertical_text(w: float, h: float, text: str, scale: float = 1.0) -> bool:
     """縦書き判定ロジック（PILBackend.draw_text 内と同じ）。"""
-    text = text.replace('\r\n', '\n').replace('\r', '\n')
-    return (
-        '\n' not in text
-        and len(text) > 1
-        and w < h * 0.5
-        and w < 120 * scale
+    normalized = _normalize_text(text)
+    return _should_render_vertical_text(
+        normalized, w, h, scale, vertical=False,
     )
 
 
 def _is_multiline_text(text: str) -> bool:
     """複数行判定（\r\n を \n に正規化後に判定）。"""
-    text = text.replace('\r\n', '\n').replace('\r', '\n')
-    return '\n' in text
+    return '\n' in _normalize_text(text)
 
 
 class TestVerticalTextDetection:
@@ -481,6 +479,19 @@ class TestFillLayoutFontSelection:
         assert result.objects[0].font.name == 'IPAmj明朝'
         assert result.objects[0].font.bold is True
         assert result.objects[0].font.italic is True
+
+    def test_gaiji_preserves_vertical(self) -> None:
+        """外字でフォント置換されても縦書きフラグは保持される。"""
+        obj = LayoutObject(
+            obj_type=ObjectType.FIELD,
+            rect=Rect(10, 20, 200, 50),
+            field_id=108,
+            font=FontInfo('ＭＳ ゴシック', 12.0, vertical=True),
+        )
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {'氏名': '葛\U000E0100城太郎'})
+        assert result.objects[0].font.name == 'IPAmj明朝'
+        assert result.objects[0].font.vertical is True
 
     def test_label_always_keeps_original_font(self) -> None:
         """LABEL（静的テキスト）は外字有無にかかわらず元フォントのまま。"""

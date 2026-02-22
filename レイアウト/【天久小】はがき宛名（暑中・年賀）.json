@@ -14,11 +14,147 @@
         490
       ],
       "field_id": 603,
+      "v_align": 1,
       "font": {
         "name": "ＭＳ ゴシック",
         "size_pt": 16.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "IgEAAKQBAAAmAgAA6gEAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "WwIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 67
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 14,
+          "payload": "Lf8z/yAAtDC3MMMwrzA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "oAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -32,7 +168,143 @@
       "font": {
         "name": "ＭＳ 明朝",
         "size_pt": 16.0
-      }
+      },
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "IgEAAPQBAACEAwAAigIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "XAIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 63
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 10,
+          "payload": "Lf8z/yAADmYdZw=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "oAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -43,12 +315,148 @@
         750
       ],
       "field_id": 108,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "ＭＳ 明朝",
         "size_pt": 18.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "IgEAAJ4CAABmAwAA7gIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "bAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 63
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 10,
+          "payload": "Lf8z/yAADmYdZw=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "tAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -59,11 +467,147 @@
         1120
       ],
       "field_id": 111,
+      "v_align": 1,
       "font": {
         "name": "ＭＳ 明朝",
         "size_pt": 12.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "VAEAAC4EAAD4AgAAYAQAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "bwAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 63
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 10,
+          "payload": "Lf8z/yAADmYdZw=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "eAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -74,11 +618,147 @@
         1180
       ],
       "field_id": 113,
+      "v_align": 1,
       "font": {
         "name": "ＭＳ 明朝",
         "size_pt": 12.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "TgIAAGoEAACOAwAAnAQAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "cQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 63
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 10,
+          "payload": "Lf8z/yAADmYdZw=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "eAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "LABEL",
@@ -89,12 +769,134 @@
         750
       ],
       "text": "様",
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "ＭＳ 明朝",
         "size_pt": 18.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1003,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1003,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1003,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "ZgMAAJ4CAAC2AwAA7gIAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3001
+          ],
+          "payload_len": 2,
+          "payload": "2Gk="
+        },
+        {
+          "path": [
+            1003,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004
+          ],
+          "payload_len": 63
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1000
+          ],
+          "payload_len": 10,
+          "payload": "Lf8z/yAADmYdZw=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "tAAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "LABEL",
@@ -105,11 +907,133 @@
         1060
       ],
       "text": "900-0005\r\n沖縄県那覇市天久１丁目４番１号",
+      "v_align": 1,
       "font": {
         "name": "ＭＳ 明朝",
         "size_pt": 10.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1003,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1003,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1003,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "VAEAALYDAACEAwAAJAQAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3001
+          ],
+          "payload_len": 50,
+          "payload": "OQAwADAALQAwADAAMAA1AA0ACgCWbAR+DHejkIeJAl4pWUVOEf8BTu52FP9qdRH/91M="
+        },
+        {
+          "path": [
+            1003,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004
+          ],
+          "payload_len": 63
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1000
+          ],
+          "payload_len": 10,
+          "payload": "Lf8z/yAADmYdZw=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "ZAAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1003,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -119,13 +1043,150 @@
         580,
         1180
       ],
+      "suffix": "担任",
       "field_id": 102,
+      "v_align": 1,
       "font": {
         "name": "ＭＳ 明朝",
         "size_pt": 12.0
       },
-      "v_align": 1,
-      "suffix": "担任"
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "VAEAAGoEAABEAgAAnAQAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "ZgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 4,
+          "payload": "xWL7Tg=="
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 63
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 10,
+          "payload": "Lf8z/yAADmYdZw=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "eAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     }
   ],
   "paper": {
@@ -141,5 +1202,128 @@
     "spacing_v_mm": 0.0,
     "paper_size": "A4",
     "orientation": "portrait"
-  }
+  },
+  "raw_tags": [
+    {
+      "path": [
+        1500
+      ],
+      "payload_len": 34,
+      "payload": "EDApWUVOD1wRMG8wTDBNMJtbDVQI/5FmLU77MHRewIwJ/w=="
+    },
+    {
+      "path": [
+        1503
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1504
+      ],
+      "payload_len": 4,
+      "payload": "AQAAAA=="
+    },
+    {
+      "path": [
+        1506
+      ],
+      "payload_len": 4,
+      "payload": "gAQAAA=="
+    },
+    {
+      "path": [
+        1505
+      ],
+      "payload_len": 1490
+    },
+    {
+      "path": [
+        1505,
+        1000
+      ],
+      "payload_len": 1,
+      "payload": "BA=="
+    },
+    {
+      "path": [
+        1505,
+        1001
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        1003
+      ],
+      "payload_len": 1,
+      "payload": "Aw=="
+    },
+    {
+      "path": [
+        1505,
+        1004
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1006
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1002
+      ],
+      "payload_len": 1380
+    },
+    {
+      "path": [
+        1505,
+        2000
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        2001
+      ],
+      "payload_len": 8,
+      "payload": "jgMAACYCAAA="
+    },
+    {
+      "path": [
+        1505,
+        2002
+      ],
+      "payload_len": 8,
+      "payload": "AgAAAAUAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2003
+      ],
+      "payload_len": 8,
+      "payload": "AAAAAAAAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2004
+      ],
+      "payload_len": 8,
+      "payload": "jAAAAG4AAAA="
+    }
+  ]
 }

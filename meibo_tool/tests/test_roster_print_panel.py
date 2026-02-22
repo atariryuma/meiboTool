@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from core.lay_parser import LayFile, new_field, new_label
+from core.lay_parser import FontInfo, LayFile, new_field, new_label
 from core.lay_renderer import (
     A4_HEIGHT,
     A4_WIDTH,
@@ -300,6 +300,16 @@ class TestTileLayouts:
         """空リスト → 空リスト。"""
         result = tile_layouts([], cols=2, rows=2)
         assert result == []
+
+    def test_scaled_tiling_preserves_vertical_flag(self) -> None:
+        """縮小タイル時もフォントの縦書きフラグを保持する。"""
+        lay = _make_small_lay(420, 594)
+        lay.objects[0].font = FontInfo('ＭＳ 明朝', 10.0, vertical=True)
+        result = tile_layouts([lay, lay], cols=2, rows=1, scale=0.5)
+        assert len(result) == 1
+        assert len(result[0].objects) == 2
+        assert all(obj.font.vertical for obj in result[0].objects)
+        assert all(abs(obj.font.size_pt - 5.0) < 1e-6 for obj in result[0].objects)
 
     def test_centered_on_page(self) -> None:
         """タイルが用紙の中央に配置される（ガター含む）。"""

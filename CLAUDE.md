@@ -69,14 +69,15 @@ C4th Excel
 
 ```text
 App (CTk) — 2カラムレイアウト
-├── ヘッダーバー（設定ボタン）
+├── ヘッダーバー（設定ボタン・レイアウトエディターボタン）
 ├── 左パネル（CTkScrollableFrame）
 │   ├── ImportFrame      — ファイル選択・読込件数・同期ステータス
-│   ├── ClassSelectPanel — 学年・組の選択
+│   ├── ClassSelectPanel — 学年・組の選択（特別支援学級対応）
 │   ├── SelectFrame      — テンプレート選択・担任名・学校名（on_template_change コールバック）
-│   └── OutputFrame      — 生成ボタン・進捗バー
+│   ├── OutputFrame      — 生成ボタン・進捗バー
+│   └── RosterPrintPanel — レイアウト印刷パネル
 └── 右パネル（_PreviewPanel — CTkTabview）
-    ├── 「データ」タブ   — Treeview でデータ一覧表示
+    ├── 「データ」タブ   — Treeview でデータ一覧表示（セル編集可能）
     └── 「プレビュー」タブ — PIL レンダリング画像で帳票プレビュー表示
 ```
 
@@ -154,53 +155,79 @@ App (CTk) — 2カラムレイアウト
 
 > 詳細なフェーズ計画は `docs/ROADMAP.md` を参照。
 
-### 実装済み ✅
+### モジュール一覧
+
+#### core/ — コアロジック（16 ファイル）
 
 | ファイル | 内容 | テスト |
 | -------- | ---- | ------ |
-| `utils/wareki.py` | 西暦→和暦変換 | ✅ 10 |
-| `utils/address.py` | 住所4フィールド結合 | ✅ 5 |
-| `utils/date_fmt.py` | 日付フォーマット（YY/MM/DD・Excelシリアル値対応） | ✅ 19 |
-| `utils/font_helper.py` | IPAmj明朝フォント適用 | ✅ 11 |
-| `core/config.py` | config.json 読み書き・deep_merge・パス解決 | ✅ 13 |
-| `core/mapper.py` | C4th カラム名マッピング + resolve_name_fields | ✅ 12 |
-| `core/importer.py` | ヘッダー自動検出付き Excel 読込 | ✅ 11 |
-| `core/generator.py` | Grid/List/Individual ジェネレーター + 性別ソート + 画像警告抑制 | ✅ 52 |
-| `core/crypto.py` | AES-256-GCM 暗号化/復号 + DPAPI パスワード保護 | ✅ 17 |
-| `core/data_sync.py` | 名簿データ自動同期（LAN/GDrive/手動） | ✅ 15 |
-| `core/updater.py` | GitHub Releases ベースのアプリ更新 | ✅ 20 |
-| `templates/template_registry.py` | テンプレート 9 種メタデータ + カテゴリ別表示 | ✅ 30 |
-| `templates/template_scanner.py` | テンプレート自動検出（.xlsx スキャン → メタデータ推定） | ✅ 13 |
-| `templates/generators/gen_nafuda.py` | 名札テンプレート生成 | ✅ 16 |
-| `templates/generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
-| `templates/generators/generate_all.py` | 全テンプレート一括生成 | — |
-| `core/special_needs.py` | 特別支援学級判定・検出・統合・交流学級割り当てロジック | ✅ 36 |
-| `gui/app.py` | メインウィンドウ（2カラム + CTkTabview プレビュー + 特支自動統合） | ✅ 35 |
-| `gui/preview_renderer.py` | openpyxl Worksheet → PIL Image レンダラー（IPAmj明朝・画像・垂直揃え対応） | ✅ 22 |
-| `gui/frames/import_frame.py` | ファイル選択・同期ステータス表示 | — |
-| `gui/frames/class_select_panel.py` | 学年・組選択 + 特別支援学級表示 | — |
-| `gui/frames/select_frame.py` | テンプレート選択（カテゴリ別）・担任名・学校名・特支配置設定 | — |
-| `gui/frames/output_frame.py` | 生成ボタン・進捗バー | — |
-| `gui/dialogs/mapping_dialog.py` | カラムマッピング手動調整ダイアログ | ✅ 13 |
-| `gui/dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
-| `gui/dialogs/exchange_class_dialog.py` | 交流学級割り当てダイアログ | — |
-| `gui/dialogs/update_dialog.py` | 更新確認ダイアログ | — |
-| `core/lay_parser.py` | .lay バイナリパーサー + FontInfo bold/italic + `new_label/new_field/new_line` | ✅ 29 |
-| `core/lay_serializer.py` | LayFile ↔ JSON 保存/読込（bold/italic ラウンドトリップ） | ✅ 22 |
-| `core/lay_renderer.py` | Canvas/PILBackend 描画 + 縦書き/複数行 + `fill_layout()` + `render_layout_to_image()` | ✅ 50 |
-| `core/win_printer.py` | Windows GDI 直接印刷（縦書き・複数行・bold/italic 対応） | ✅ 13 |
-| `core/layout_registry.py` | レイアウトライブラリ管理（scan/import/delete/rename） | ✅ 15 |
-| `gui/editor/editor_window.py` | レイアウトエディター メインウィンドウ（Canvas + プロパティ + Undo/Redo） | — |
-| `gui/editor/layout_canvas.py` | インタラクティブ Canvas（選択・移動・リサイズ） | — |
-| `gui/editor/properties_panel.py` | オブジェクトプロパティ編集パネル（bold/italic 保持） | — |
-| `gui/editor/toolbar.py` | ツールバー（ファイル操作・ズーム・オブジェクト追加/削除） | — |
-| `gui/editor/print_dialog.py` | プリンター選択・印刷実行ダイアログ | — |
-| `gui/editor/print_preview_dialog.py` | 印刷プレビュー（PILBackend レンダリング + ページ送り） | — |
-| `gui/editor/layout_manager_dialog.py` | レイアウトライブラリ管理ダイアログ（Treeview 一覧） | — |
-| `gui/editor/object_list.py` | オブジェクト一覧パネル（TreeView + Canvas 連動） | — |
-| `templates/generators/gen_from_lay.py` | .lay → Excel テンプレート変換 | ✅ 27 |
-| `.github/workflows/build-release.yml` | CI/CD（テスト→ビルド→Release） | — |
-| `tests/conftest.py` | 共通フィクスチャ | — |
+| `config.py` | config.json 読み書き・deep_merge・パス解決 | ✅ 13 |
+| `crypto.py` | AES-256-GCM 暗号化/復号 + DPAPI パスワード保護 | ✅ 17 |
+| `data_model.py` | EditableDataModel（GUI 上でデータ編集 + Undo/Redo） | ✅ 23 |
+| `data_sync.py` | 名簿データ自動同期（LAN/GDrive/手動） | ✅ 15 |
+| `exporter.py` | Excel エクスポート | ✅ 6 |
+| `generator.py` | Grid/List/Individual ジェネレーター + 性別ソート | ✅ 29 |
+| `importer.py` | ヘッダー自動検出付き Excel/CSV 読込 | ✅ 26 |
+| `lay_parser.py` | .lay バイナリパーサー（TLV 再帰 + FontInfo + raw_tags） | ✅ 74 |
+| `lay_renderer.py` | Canvas/PILBackend 描画 + fill_layout + MEIBO 展開 | ✅ 101 |
+| `lay_serializer.py` | LayFile ↔ JSON 保存/読込（ラウンドトリップ保証） | ✅ 44 |
+| `layout_registry.py` | レイアウトライブラリ管理（scan/import/delete/rename） | ✅ 43 |
+| `mapper.py` | C4th カラム名マッピング + resolve_name_fields | ✅ 12 |
+| `photo_manager.py` | 児童写真管理 | ✅ 46 |
+| `special_needs.py` | 特別支援学級判定・検出・統合・交流学級割り当て | ✅ 36 |
+| `updater.py` | GitHub Releases ベースのアプリ更新 | ✅ 33 |
+| `win_printer.py` | Windows GDI 直接印刷（縦書き・bold/italic 対応） | ✅ 15 |
+
+#### gui/ — ユーザーインターフェース（21 ファイル）
+
+| ファイル | 内容 | テスト |
+| -------- | ---- | ------ |
+| `app.py` | メインウィンドウ（2カラム + CTkTabview + 特支自動統合） | ✅ 35 |
+| `preview_renderer.py` | openpyxl Worksheet → PIL Image レンダラー | ✅ 20 |
+| `frames/import_frame.py` | ファイル選択・同期ステータス表示 | — |
+| `frames/class_select_panel.py` | 学年・組選択 + 特別支援学級 | — |
+| `frames/select_frame.py` | テンプレート選択・担任名・学校名・特支配置 | — |
+| `frames/output_frame.py` | 生成ボタン・進捗バー | — |
+| `frames/roster_print_panel.py` | レイアウト印刷パネル | ✅ 22 |
+| `dialogs/mapping_dialog.py` | カラムマッピング手動調整 | ✅ 13 |
+| `dialogs/settings_dialog.py` | 管理者設定（同期モード設定） | — |
+| `dialogs/exchange_class_dialog.py` | 交流学級割り当てダイアログ | — |
+| `dialogs/update_dialog.py` | 更新確認ダイアログ | — |
+| `editor/editor_window.py` | レイアウトエディター メインウィンドウ | — |
+| `editor/layout_canvas.py` | インタラクティブ Canvas（選択・移動・リサイズ） | — |
+| `editor/properties_panel.py` | オブジェクトプロパティ編集 | — |
+| `editor/toolbar.py` | ファイル操作・ズーム・オブジェクト追加/削除 | — |
+| `editor/print_dialog.py` | プリンター選択・印刷実行 | — |
+| `editor/print_preview_dialog.py` | 印刷プレビュー（PILBackend + ページ送り） | — |
+| `editor/layout_manager_dialog.py` | レイアウトライブラリ管理（Treeview 一覧） | — |
+| `editor/object_list.py` | オブジェクト一覧（TreeView + Canvas 連動） | — |
+
+#### utils/ — ユーティリティ（4 ファイル）
+
+| ファイル | 内容 | テスト |
+| -------- | ---- | ------ |
+| `wareki.py` | 西暦→和暦変換 | ✅ 10 |
+| `address.py` | 住所4フィールド結合 | ✅ 12 |
+| `date_fmt.py` | 日付フォーマット（YY/MM/DD・Excel シリアル値対応） | ✅ 22 |
+| `font_helper.py` | IPAmj明朝フォント適用 | ✅ 11 |
+
+#### templates/ — テンプレート管理（7 ファイル）
+
+| ファイル | 内容 | テスト |
+| -------- | ---- | ------ |
+| `template_registry.py` | テンプレート 9 種メタデータ + カテゴリ別表示 | ✅ 28 |
+| `template_scanner.py` | テンプレート自動検出（.xlsx スキャン → メタデータ推定） | ✅ 29 |
+| `generators/gen_nafuda.py` | 名札テンプレート生成 | ✅ 16 |
+| `generators/gen_from_lay.py` | .lay → Excel テンプレート変換 | ✅ 27 |
+| `generators/gen_from_legacy.py` | レガシーテンプレート変換 | — |
+| `generators/generate_all.py` | 全テンプレート一括生成 | — |
+
+#### その他
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `.github/workflows/build-release.yml` | CI/CD（テスト→ビルド→Release） |
+| `tests/conftest.py` | 共通フィクスチャ（dummy_df・default_options・default_config） |
 
 ### 未実装 ❌
 
@@ -208,17 +235,22 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **615 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **773 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テストファイル: 32 ファイル
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ
 
-## 詳細仕様の参照先（docs/SPEC.md）
+## 詳細仕様の参照先
 
-| 内容 | 章 |
-| ---- | -- |
-| C4th 全 50 カラム定義・EXACT_MAP | 第2章 |
-| GUI 各パネルの詳細仕様・実装コード | 第3章 |
-| テンプレート 15 種の列幅・行高・差込フィールド | 第4章 |
-| generator.py・fill_placeholders・印刷設定 | 第5章 |
-| 自動更新（GitHub Releases + 名簿データ同期） | 第6章 |
-| build.spec・テストケース一覧・ダミーデータ生成 | 第7章 |
+| 内容 | 参照先 |
+| ---- | ------ |
+| C4th 全 50 カラム定義・EXACT_MAP | SPEC.md 第2章 |
+| GUI 各パネルの詳細仕様 | SPEC.md 第3章 |
+| Excel テンプレート 9 種・ジェネレーター | SPEC.md 第4章 |
+| 特別支援学級 | SPEC.md 第5章 |
+| 自動更新（GitHub Releases + 名簿データ同期） | SPEC.md 第6章 |
+| ビルド・テスト構成 | SPEC.md 第7章 |
+| .lay レイアウトシステム（パーサー・レンダラー・エディター） | SPEC.md 第8章 |
+| レイアウト帳票のフィールド ID 一覧 | core/lay_parser.py `FIELD_ID_MAP` |
+| テンプレート作成ガイド（Excel） | docs/TEMPLATE_GUIDE.md |
+| 開発ロードマップ（フェーズ別進捗） | docs/ROADMAP.md |

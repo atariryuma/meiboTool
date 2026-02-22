@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import tkinter as tk
 from abc import ABC, abstractmethod
+from dataclasses import replace
 from io import BytesIO
 
 from core.lay_parser import (
@@ -109,6 +110,30 @@ def model_to_printer(x: int, dpi: int, unit_mm: float = 0.25) -> int:
     return round(x * unit_mm * dpi / 25.4)
 
 
+def _normalize_text(text: str) -> str:
+    """描画前の改行コードを統一する。"""
+    return text.replace('\r\n', '\n').replace('\r', '\n')
+
+
+def _should_render_vertical_text(
+    text: str,
+    w: float,
+    h: float,
+    scale: float,
+    *,
+    vertical: bool = False,
+) -> bool:
+    """縦書き描画にするかを判定する。"""
+    if vertical:
+        return True
+    return (
+        '\n' not in text
+        and len(text) > 1
+        and w < h * 0.5
+        and w < 120 * scale
+    )
+
+
 # ── 抽象バックエンド ─────────────────────────────────────────────────────────
 
 
@@ -137,6 +162,7 @@ class RenderBackend(ABC):
         color: str = '#000000',
         bold: bool = False, italic: bool = False,
         vertical: bool = False,
+        auto_wrap: bool = False,
     ) -> None:
         """テキストを描画する。"""
 
@@ -205,14 +231,14 @@ class CanvasBackend(RenderBackend):
         color: str = '#000000', tags: tuple[str, ...] = (),
         bold: bool = False, italic: bool = False,
         vertical: bool = False,
+        auto_wrap: bool = False,
     ) -> int | None:
         import tkinter.font as tkfont
 
         if not text:
             return None
 
-        # \r\n → \n に正規化
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        text = _normalize_text(text)
 
         # Canvas フォントサイズ（ポイント → Canvas 用スケール）
         fname = font_name or 'IPAmj明朝'
@@ -225,11 +251,8 @@ class CanvasBackend(RenderBackend):
         # ── 縦書き判定 ──
         # font.vertical フラグが明示されていればそれを使う
         # フォールバック: 幅が狭くて高さがある矩形 + 改行なしテキスト
-        is_vertical = vertical or (
-            '\n' not in text
-            and len(text) > 1
-            and w < h * 0.5
-            and w < 120 * self._scale
+        is_vertical = _should_render_vertical_text(
+            text, w, h, self._scale, vertical=vertical,
         )
         has_newline = '\n' in text
 
@@ -256,6 +279,12 @@ class CanvasBackend(RenderBackend):
                     weight=weight, slant=slant,
                 )
                 text_w = font_obj.measure(text)
+                # LABEL 長文は縮小より先に自動折り返し（高さに余裕がある場合）。
+                if auto_wrap and text_w > box_w and h >= scaled_size * 1.8:
+                    return self._draw_multiline_text(
+                        x, y, w, h, text, fname, scaled_size,
+                        weight, slant, h_align, v_align, color, tags,
+                    )
                 while text_w > box_w and scaled_size > 5:
                     scaled_size -= 1
                     font_obj.configure(size=scaled_size)
@@ -378,10 +407,11 @@ class CanvasBackend(RenderBackend):
             x, y, w, h, h_align, v_align,
         )
 
-        # tkinter create_text は \n を尊重する（width=0 でも改行される）
+        # 明示改行に加えて、長い1行をボックス幅で自動折り返しさせる。
+        wrap_w = max(w - 4, 1)
         return self._canvas.create_text(
             tx, ty, text=text, font=font_spec, fill=color,
-            anchor=anchor, width=0, tags=tags,
+            anchor=anchor, width=wrap_w, tags=tags,
         )
 
     def draw_image(
@@ -462,19 +492,17 @@ class PILBackend(RenderBackend):
         color: str = '#000000',
         bold: bool = False, italic: bool = False,
         vertical: bool = False,
+        auto_wrap: bool = False,
         **kwargs: object,
     ) -> None:
         if not text:
             return
 
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        text = _normalize_text(text)
 
         # 縦書き判定: font.vertical フラグ優先、フォールバックはヒューリスティック
-        is_vertical = vertical or (
-            '\n' not in text
-            and len(text) > 1
-            and w < h * 0.5
-            and w < 120 * self._scale
+        is_vertical = _should_render_vertical_text(
+            text, w, h, self._scale, vertical=vertical,
         )
         has_newline = '\n' in text
 
@@ -483,7 +511,10 @@ class PILBackend(RenderBackend):
         elif has_newline:
             self._draw_multiline(x, y, w, h, text, font_size, h_align, v_align, color, font_name)
         else:
-            self._draw_single_line(x, y, w, h, text, font_size, h_align, v_align, color, font_name)
+            self._draw_single_line(
+                x, y, w, h, text, font_size, h_align, v_align, color, font_name,
+                auto_wrap=auto_wrap,
+            )
 
     def _load_font(
         self, size_pt: float, font_name: str = '',
@@ -513,19 +544,48 @@ class PILBackend(RenderBackend):
                     continue
         return ImageFont.load_default()
 
+    @staticmethod
+    def _align_x(
+        x: float, w: float, content_w: float, h_align: int, pad: float = 2.0,
+    ) -> float:
+        """横方向の揃え位置を返す。"""
+        if h_align == 1:
+            return x + (w - content_w) / 2
+        if h_align == 2:
+            return x + w - content_w - pad
+        return x + pad
+
+    @staticmethod
+    def _align_y(
+        y: float, h: float, content_h: float, v_align: int, pad: float = 2.0,
+    ) -> float:
+        """縦方向の揃え位置を返す。"""
+        if v_align == 1:
+            return y + (h - content_h) / 2
+        if v_align == 2:
+            return y + h - content_h - pad
+        return y + pad
+
     def _draw_single_line(
         self, x: float, y: float, w: float, h: float,
         text: str, font_size: float,
         h_align: int, v_align: int, color: str,
         font_name: str = '',
+        auto_wrap: bool = False,
     ) -> None:
         font = self._load_font(font_size, font_name)
+        avail_w = max(1.0, w - 4.0)
 
         # 自動フォント縮小
         bbox = self._draw.textbbox((0, 0), text, font=font)
         tw = bbox[2] - bbox[0]
+        if auto_wrap and tw > avail_w * 1.05 and h >= (bbox[3] - bbox[1]) * 1.8:
+            self._draw_multiline(
+                x, y, w, h, text, font_size, h_align, v_align, color, font_name,
+            )
+            return
         current_size = font_size
-        while tw > w * 1.05 and current_size > 4:
+        while tw > avail_w * 1.05 and current_size > 4:
             current_size *= 0.9
             font = self._load_font(current_size, font_name)
             bbox = self._draw.textbbox((0, 0), text, font=font)
@@ -535,21 +595,8 @@ class PILBackend(RenderBackend):
         tw = bbox[2] - bbox[0]
         th = bbox[3] - bbox[1]
 
-        # 水平アライメント
-        if h_align == 1:     # 中央
-            tx = x + (w - tw) / 2
-        elif h_align == 2:   # 右揃え
-            tx = x + w - tw
-        else:                # 左揃え
-            tx = x
-
-        # 垂直アライメント
-        if v_align == 1:     # 中央
-            ty = y + (h - th) / 2
-        elif v_align == 2:   # 下揃え
-            ty = y + h - th
-        else:                # 上揃え
-            ty = y
+        tx = self._align_x(x, w, tw, h_align)
+        ty = self._align_y(y, h, th, v_align)
 
         self._draw.text((tx, ty), text, fill=color, font=font)
 
@@ -559,18 +606,25 @@ class PILBackend(RenderBackend):
         h_align: int, v_align: int, color: str,
         font_name: str = '',
     ) -> None:
-        n = len(text)
-        char_h = h / n if n > 0 else h
+        chars = list(text)
+        n = len(chars)
+        if n == 0:
+            return
+
+        box_h = max(h - 4.0, 1.0)
+        char_h = box_h / n
         char_size = min(font_size, char_h * 72 / self._dpi * 0.9)
         font = self._load_font(char_size, font_name)
+        total_h = char_h * n
+        start_y = self._align_y(y, h, total_h, v_align)
 
-        for i, ch in enumerate(text):
+        for i, ch in enumerate(chars):
             bbox = self._draw.textbbox((0, 0), ch, font=font)
             cw = bbox[2] - bbox[0]
             ch_h = bbox[3] - bbox[1]
-            cx = x + (w - cw) / 2
-            cy = y + i * char_h + (char_h - ch_h) / 2
-            self._draw.text((cx, cy), ch, fill=color, font=font)
+            tx = self._align_x(x, w, cw, h_align)
+            ty = start_y + i * char_h + (char_h - ch_h) / 2
+            self._draw.text((tx, ty), ch, fill=color, font=font)
 
     def _draw_multiline(
         self, x: float, y: float, w: float, h: float,
@@ -580,9 +634,23 @@ class PILBackend(RenderBackend):
     ) -> None:
         lines = text.split('\n')
         font = self._load_font(font_size, font_name)
+        max_w = max(1.0, w - 4.0)
 
-        # 行高さ計算
-        line_h = h / len(lines) if lines else h
+        wrapped_lines: list[str] = []
+        for line in lines:
+            wrapped_lines.extend(self._wrap_line(line, font, max_w))
+        lines = wrapped_lines or ['']
+
+        if not lines:
+            return
+        line_bbox = self._draw.textbbox((0, 0), 'Ag', font=font)
+        natural_line_h = max(1.0, float(line_bbox[3] - line_bbox[1]))
+        line_h = natural_line_h
+        box_h = max(h - 4.0, 1.0)
+        if line_h * len(lines) > box_h:
+            line_h = box_h / len(lines)
+        total_h = line_h * len(lines)
+        start_y = self._align_y(y, h, total_h, v_align)
 
         for i, line in enumerate(lines):
             if not line:
@@ -591,16 +659,34 @@ class PILBackend(RenderBackend):
             tw = bbox[2] - bbox[0]
             th = bbox[3] - bbox[1]
 
-            # 水平アライメント
-            if h_align == 1:
-                tx = x + (w - tw) / 2
-            elif h_align == 2:
-                tx = x + w - tw
-            else:
-                tx = x
-
-            ty = y + i * line_h + (line_h - th) / 2
+            tx = self._align_x(x, w, tw, h_align)
+            ty = start_y + i * line_h + (line_h - th) / 2
             self._draw.text((tx, ty), line, fill=color, font=font)
+
+    def _wrap_line(
+        self,
+        line: str,
+        font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        max_w: float,
+    ) -> list[str]:
+        """1行テキストを描画幅で折り返す（空白の有無に依存しない）。"""
+        if not line:
+            return ['']
+
+        wrapped: list[str] = []
+        current = ''
+        for ch in line:
+            candidate = current + ch
+            bbox = self._draw.textbbox((0, 0), candidate, font=font)
+            cand_w = bbox[2] - bbox[0]
+            if current and cand_w > max_w:
+                wrapped.append(current)
+                current = ch
+            else:
+                current = candidate
+        if current:
+            wrapped.append(current)
+        return wrapped or ['']
 
     def draw_image(
         self, left: float, top: float, right: float, bottom: float,
@@ -686,6 +772,8 @@ class LayRenderer:
             self._render_label(obj, tag)
         elif obj.obj_type == ObjectType.FIELD:
             self._render_field(obj, tag)
+        elif obj.obj_type == ObjectType.GROUP:
+            self._render_group(obj, tag)
         elif obj.obj_type == ObjectType.LINE:
             self._render_line(obj, tag)
         elif obj.obj_type == ObjectType.TABLE:
@@ -695,6 +783,19 @@ class LayRenderer:
         elif obj.obj_type == ObjectType.IMAGE:
             self._render_image(obj, tag)
 
+    def _render_group(self, obj: LayoutObject, tag: str) -> None:
+        """GROUP オブジェクトを外枠として描画する。"""
+        if obj.rect is None:
+            return
+        r = obj.rect
+        px1, py1 = self._b._to_px(r.left, r.top)
+        px2, py2 = self._b._to_px(r.right, r.bottom)
+        self._b.draw_rect(
+            px1, py1, px2, py2,
+            fill='', outline=_LINE_COLOR, width=1,
+            tags=(tag, 'group'),
+        )
+
     def _render_label(self, obj: LayoutObject, tag: str) -> None:
         """LABEL オブジェクトを描画する（透明背景）。"""
         if obj.rect is None:
@@ -703,10 +804,14 @@ class LayRenderer:
         px1, py1 = self._b._to_px(r.left, r.top)
         px2, py2 = self._b._to_px(r.right, r.bottom)
 
-        # 透明なヒットエリア（選択用の不可視矩形）
+        # 一部レイアウトでは LABEL の style_1002=10 が枠付きテキストボックスを表す。
+        label_outline = _LINE_COLOR if obj.style_1002 == 10 else ''
+        label_width = 1 if obj.style_1002 == 10 else 0
+
+        # ヒットエリア（必要なら枠線も描画）
         self._b.draw_rect(
             px1, py1, px2, py2,
-            fill='', outline='', width=0,
+            fill='', outline=label_outline, width=label_width,
             tags=(tag, 'label'),
         )
 
@@ -719,6 +824,7 @@ class LayRenderer:
                 tags=(tag, 'label_text'),
                 bold=obj.font.bold, italic=obj.font.italic,
                 vertical=obj.font.vertical,
+                auto_wrap=True,
             )
 
     def _render_field(self, obj: LayoutObject, tag: str) -> None:
@@ -908,6 +1014,8 @@ class LayRenderer:
                     self._render_label(offset_obj, tag)
                 elif offset_obj.obj_type == ObjectType.FIELD:
                     self._render_field(offset_obj, tag)
+                elif offset_obj.obj_type == ObjectType.GROUP:
+                    self._render_group(offset_obj, tag)
                 elif offset_obj.obj_type == ObjectType.LINE:
                     self._render_line(offset_obj, tag)
                 elif offset_obj.obj_type == ObjectType.TABLE:
@@ -1212,6 +1320,30 @@ def tile_layouts(
     return pages
 
 
+def _clone_layout_object(obj: LayoutObject, **changes) -> LayoutObject:
+    """LayoutObject のコピーを作り、必要な項目だけ差し替える。"""
+    base = replace(
+        obj,
+        table_columns=list(obj.table_columns),
+        raw_tags=list(obj.raw_tags),
+    )
+    for key, val in changes.items():
+        setattr(base, key, val)
+    return base
+
+
+def _clone_layfile(lay: LayFile, **changes) -> LayFile:
+    """LayFile のコピーを作り、必要な項目だけ差し替える。"""
+    base = replace(
+        lay,
+        objects=list(lay.objects),
+        raw_tags=list(lay.raw_tags),
+    )
+    for key, val in changes.items():
+        setattr(base, key, val)
+    return base
+
+
 def _scale_and_offset_object(
     obj: LayoutObject, scale: float, dx: int, dy: int,
 ) -> LayoutObject:
@@ -1245,23 +1377,15 @@ def _scale_and_offset_object(
         size_pt=obj.font.size_pt * s,
         bold=obj.font.bold,
         italic=obj.font.italic,
+        vertical=obj.font.vertical,
     )
 
-    return LayoutObject(
-        obj_type=obj.obj_type,
+    return _clone_layout_object(
+        obj,
         rect=new_rect,
         line_start=new_start,
         line_end=new_end,
-        text=obj.text,
-        field_id=obj.field_id,
         font=new_font,
-        h_align=obj.h_align,
-        v_align=obj.v_align,
-        prefix=obj.prefix,
-        suffix=obj.suffix,
-        table_columns=obj.table_columns,
-        meibo=obj.meibo,
-        image=obj.image,
     )
 
 
@@ -1284,21 +1408,11 @@ def _offset_object(obj: LayoutObject, dx: int, dy: int) -> LayoutObject:
     if obj.line_end is not None:
         new_end = Point(obj.line_end.x + dx, obj.line_end.y + dy)
 
-    return LayoutObject(
-        obj_type=obj.obj_type,
+    return _clone_layout_object(
+        obj,
         rect=new_rect,
         line_start=new_start,
         line_end=new_end,
-        text=obj.text,
-        field_id=obj.field_id,
-        font=obj.font,
-        h_align=obj.h_align,
-        v_align=obj.v_align,
-        prefix=obj.prefix,
-        suffix=obj.suffix,
-        table_columns=obj.table_columns,
-        meibo=obj.meibo,
-        image=obj.image,
     )
 
 
@@ -1389,21 +1503,22 @@ def _fill_photo_field(
     obj: LayoutObject, data_row: dict, options: dict,
 ) -> LayoutObject:
     """写真フィールドを IMAGE オブジェクトに変換する。"""
+    empty_label = _clone_layout_object(
+        obj,
+        obj_type=ObjectType.LABEL,
+        text='',
+        field_id=0,
+        image=None,
+    )
     photo_map = options.get('_photo_map')
     if not photo_map:
-        return LayoutObject(
-            obj_type=ObjectType.LABEL, rect=obj.rect,
-            text='', font=obj.font,
-        )
+        return empty_label
 
     from core.photo_manager import load_photo_bytes, match_photo_to_student
 
     photo_path = match_photo_to_student(data_row, photo_map)
     if photo_path is None:
-        return LayoutObject(
-            obj_type=ObjectType.LABEL, rect=obj.rect,
-            text='', font=obj.font,
-        )
+        return empty_label
 
     # フィールドの rect からアスペクト比を計算
     target_rect = None
@@ -1415,18 +1530,15 @@ def _fill_photo_field(
 
     image_data = load_photo_bytes(photo_path, target_rect=target_rect)
     if image_data is None:
-        return LayoutObject(
-            obj_type=ObjectType.LABEL, rect=obj.rect,
-            text='', font=obj.font,
-        )
+        return empty_label
 
-    return LayoutObject(
+    return _clone_layout_object(
+        obj,
         obj_type=ObjectType.IMAGE,
-        rect=obj.rect,
+        field_id=0,
         image=EmbeddedImage(
             rect=(
-                obj.rect.left, obj.rect.top,
-                obj.rect.right, obj.rect.bottom,
+                obj.rect.left, obj.rect.top, obj.rect.right, obj.rect.bottom,
             ) if obj.rect else (0, 0, 0, 0),
             image_data=image_data,
             original_path=photo_path,
@@ -1451,16 +1563,17 @@ def _fill_field_object(
             size_pt=obj.font.size_pt,
             bold=obj.font.bold,
             italic=obj.font.italic,
+            vertical=obj.font.vertical,
         )
     else:
         filled_font = obj.font
-    return LayoutObject(
+    return _clone_layout_object(
+        obj,
         obj_type=ObjectType.LABEL,
-        rect=obj.rect,
         text=text,
         font=filled_font,
-        h_align=obj.h_align,
-        v_align=obj.v_align,
+        field_id=0,
+        image=None,
     )
 
 
@@ -1478,13 +1591,7 @@ def _fill_table_object(
             h_align=col.h_align,
             header=value if value else col.header,
         ))
-    return LayoutObject(
-        obj_type=ObjectType.TABLE,
-        rect=obj.rect,
-        font=obj.font,
-        table_columns=filled_cols,
-        table_row_count=obj.table_row_count,
-    )
+    return _clone_layout_object(obj, table_columns=filled_cols)
 
 
 def fill_layout(
@@ -1512,14 +1619,7 @@ def fill_layout(
         else:
             filled_objects.append(obj)
 
-    return LayFile(
-        title=lay.title,
-        version=lay.version,
-        page_width=lay.page_width,
-        page_height=lay.page_height,
-        objects=filled_objects,
-        paper=lay.paper,
-    )
+    return _clone_layfile(lay, objects=filled_objects)
 
 
 def _meibo_page_capacity(lay: LayFile) -> int:
@@ -1635,7 +1735,7 @@ def fill_meibo_layout(
                         # 生徒データなし — 罫線やラベル（枠線）のみ配置
                         for ref_obj in ref_lay.objects:
                             if ref_obj.obj_type in (
-                                ObjectType.LINE, ObjectType.LABEL,
+                                ObjectType.LINE, ObjectType.LABEL, ObjectType.GROUP,
                             ):
                                 filled_objects.append(
                                     _offset_object(ref_obj, dx, dy),
@@ -1643,13 +1743,6 @@ def fill_meibo_layout(
             else:
                 filled_objects.append(obj)
 
-        pages.append(LayFile(
-            title=lay.title,
-            version=lay.version,
-            page_width=lay.page_width,
-            page_height=lay.page_height,
-            objects=filled_objects,
-            paper=lay.paper,
-        ))
+        pages.append(_clone_layfile(lay, objects=filled_objects))
 
     return pages

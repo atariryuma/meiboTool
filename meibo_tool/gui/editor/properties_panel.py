@@ -342,6 +342,7 @@ class PropertiesPanel(ctk.CTkFrame):
         obj.font = FontInfo(
             font_name, font_size,
             bold=obj.font.bold, italic=obj.font.italic,
+            vertical=obj.font.vertical,
         )
 
         # 揃え

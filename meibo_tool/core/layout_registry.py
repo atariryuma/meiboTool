@@ -27,6 +27,7 @@ _SUZUKI_REF_ALIASES: dict[str, str] = {
     '氏名（ふりがな）': 'takara_simei_furi',
     '氏名（ひらがな）': 'takara_simei_hira',
     '卒業台帳ラベル（長嶺）': '【天久小】卒業台帳ラベル（※削除しない※）',
+    'コピー：写真＋番号＋ふりがな': '【天久小】写真ラベル（名前なし）',
 }
 
 
@@ -61,6 +62,36 @@ def build_layout_registry(layout_dir: str) -> dict[str, LayFile]:
         elif alias not in registry:
             logger.debug('ref_name エイリアス未解決: %s → %s', alias, target)
     return registry
+
+
+def collect_part_layout_keys(layout_dir: str) -> set[str]:
+    """他レイアウトから MEIBO 参照されるパーツレイアウトの識別キーを返す。"""
+    registry = build_layout_registry(layout_dir)
+    if not registry:
+        return set()
+
+    keys_by_layout_id: dict[int, set[str]] = {}
+    unique_layouts: dict[int, LayFile] = {}
+    for key, lay in registry.items():
+        layout_id = id(lay)
+        unique_layouts[layout_id] = lay
+        keys_by_layout_id.setdefault(layout_id, set()).add(key)
+
+    part_keys: set[str] = set()
+    for source_lay in unique_layouts.values():
+        for obj in source_lay.objects:
+            meibo = obj.meibo
+            if meibo is None:
+                continue
+            ref_name = meibo.ref_name.strip()
+            if not ref_name:
+                continue
+            target_lay = registry.get(ref_name)
+            if target_lay is None or target_lay is source_lay:
+                continue
+            part_keys.update(keys_by_layout_id.get(id(target_lay), set()))
+
+    return part_keys
 
 
 def scan_layout_dir(layout_dir: str) -> list[dict[str, Any]]:
@@ -199,6 +230,7 @@ def rename_layout(path: str, new_name: str) -> str:
         page_height=lay.page_height,
         objects=lay.objects,
         paper=lay.paper,
+        raw_tags=lay.raw_tags,
     )
     save_layout(updated, new_path)
     if os.path.abspath(new_path) != os.path.abspath(path):

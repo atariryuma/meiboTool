@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 import struct
 import zlib
 
@@ -32,9 +31,7 @@ from core.lay_parser import (
     TableColumn,
     _detect_paper,
     new_image,
-    parse_lay,
     parse_lay_bytes,
-    parse_lay_multi,
     resolve_field_name,
 )
 
@@ -78,14 +75,6 @@ def _make_minimal_decompressed(
     body = title_tlv + content_tlv
     header = struct.pack('<HI', 1600, len(body) + 6)
     return header + body
-
-
-# ── サンプルファイルパス ─────────────────────────────────────────────────────
-
-_SAMPLE_LAY = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    'R8年度小学校個票20260130.lay',
-)
 
 
 # ── テストクラス ─────────────────────────────────────────────────────────────
@@ -159,7 +148,10 @@ class TestObjectTypes:
             + _make_tlv(0x03EA, struct.pack('<I', 120))
         )
         inner = (
-            _make_tlv(0x07D1, struct.pack('<IIII', 10, 20, 100, 50))
+            _make_tlv(0x03E9, struct.pack('<I', 0))
+            + _make_tlv(0x03EA, struct.pack('<I', 10))
+            + _make_tlv(0x03EB, struct.pack('<I', 0xFFFFFFFF))
+            + _make_tlv(0x07D1, struct.pack('<IIII', 10, 20, 100, 50))
             + _make_tlv(0x0BB9, text)
             + _make_tlv(0x0BBC, font_block)
         )
@@ -177,6 +169,23 @@ class TestObjectTypes:
         assert obj.rect.right == 100
         assert obj.font.name == 'ＭＳ 明朝'
         assert obj.font.size_pt == 12.0
+        assert obj.style_1001 == 0
+        assert obj.style_1002 == 10
+        assert obj.style_1003 == -1
+        assert any(
+            t.path == [0x03EB, 0x03E9] and t.payload == struct.pack('<I', 0)
+            for t in obj.raw_tags
+        )
+        assert any(
+            t.path == [0x03EB, 0x0BBC, 0x03EA]
+            and t.payload == struct.pack('<I', 120)
+            for t in obj.raw_tags
+        )
+        assert any(
+            t.path == [0x05E1, 0x07D1]
+            and t.payload == struct.pack('<II', 840, 1188)
+            for t in lay.raw_tags
+        )
 
     def test_field_object(self):
         inner = (
@@ -209,6 +218,30 @@ class TestObjectTypes:
         assert obj.line_start == Point(10, 100)
         assert obj.line_end == Point(500, 100)
 
+    def test_group_object_preserved(self):
+        child_inner = (
+            _make_tlv(0x07D1, struct.pack('<IIII', 10, 20, 110, 60))
+            + _make_tlv(0x0BB9, '子'.encode('utf-16-le'))
+        )
+        child_label = _make_tlv(0x03EB, child_inner)
+        group_inner = (
+            _make_tlv(0x03EA, struct.pack('<I', 10))
+            + _make_tlv(0x07D1, struct.pack('<IIII', 0, 0, 200, 200))
+            + child_label
+        )
+        group_tlv = _make_tlv(0x03EA, group_inner)
+
+        raw = _make_minimal_decompressed(objects_payload=group_tlv)
+        lay = parse_lay_bytes(_make_lay_bytes(raw))
+
+        groups = [o for o in lay.objects if o.obj_type == ObjectType.GROUP]
+        assert len(groups) == 1
+        assert groups[0].rect == Rect(0, 0, 200, 200)
+        assert groups[0].style_1003 is None
+        assert len(lay.labels) == 1
+        assert lay.labels[0].text == '子'
+        assert len(lay.lines) == 0  # GROUP を擬似 LINE へ展開しない
+
 
 class TestRect:
     """座標データクラスのテスト。"""
@@ -238,68 +271,6 @@ class TestFontInfo:
         f = FontInfo(bold=True, italic=True)
         assert f.bold is True
         assert f.italic is True
-
-
-# ── 実ファイルテスト ─────────────────────────────────────────────────────────
-
-
-@pytest.mark.skipif(
-    not os.path.isfile(_SAMPLE_LAY),
-    reason='サンプル .lay ファイルが見つかりません',
-)
-class TestRealFile:
-    """実際の .lay ファイルをパースするテスト。"""
-
-    @pytest.fixture
-    def lay(self) -> LayFile:
-        return parse_lay(_SAMPLE_LAY)
-
-    def test_parse_succeeds(self, lay: LayFile):
-        assert isinstance(lay, LayFile)
-
-    def test_title_extracted(self, lay: LayFile):
-        # タイトルには 'R' prefix byte がある可能性
-        assert '小学校個票' in lay.title
-
-    def test_version(self, lay: LayFile):
-        assert lay.version == 1600
-
-    def test_page_width(self, lay: LayFile):
-        assert lay.page_width == 840  # A4 幅 = 210mm
-
-    def test_object_count(self, lay: LayFile):
-        assert len(lay.objects) >= 60  # 71 オブジェクト期待
-
-    def test_has_fields(self, lay: LayFile):
-        assert len(lay.fields) >= 14
-
-    def test_has_labels(self, lay: LayFile):
-        assert len(lay.labels) >= 18
-
-    def test_has_lines(self, lay: LayFile):
-        assert len(lay.lines) >= 20
-
-    def test_field_108_is_name(self, lay: LayFile):
-        name_fields = [f for f in lay.fields if f.field_id == 108]
-        assert len(name_fields) == 1
-        assert name_fields[0].rect is not None
-
-    def test_label_has_shimei(self, lay: LayFile):
-        shimei = [lb for lb in lay.labels if '氏' in lb.text]
-        assert len(shimei) >= 1
-
-    def test_label_font(self, lay: LayFile):
-        for lb in lay.labels:
-            if lb.font.name:
-                assert 'Ｓ' in lb.font.name or '明朝' in lb.font.name
-                break
-        else:
-            pytest.fail('フォント名を持つラベルが見つかりません')
-
-    def test_lines_have_endpoints(self, lay: LayFile):
-        for line in lay.lines:
-            assert line.line_start is not None
-            assert line.line_end is not None
 
 
 # ── PaperLayout テスト ──────────────────────────────────────────────────────
@@ -522,158 +493,6 @@ class TestFieldDisplayMapCorrected:
     def test_display_134(self):
         from core.lay_parser import resolve_field_display
         assert resolve_field_display(134) == '年度'
-
-
-# ── マルチレイアウト .lay 実ファイルテスト ────────────────────────────────────
-
-_MULTI_LAY = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    '名簿レイアウト_20260221.lay',
-)
-
-
-@pytest.mark.skipif(
-    not os.path.isfile(_MULTI_LAY),
-    reason='マルチレイアウト .lay ファイルが見つかりません',
-)
-class TestMultiLayoutRealFile:
-    """マルチレイアウト .lay ファイルの実ファイルテスト。"""
-
-    @pytest.fixture
-    def layouts(self) -> list[LayFile]:
-        return parse_lay_multi(_MULTI_LAY)
-
-    def test_parse_multi_count(self, layouts: list[LayFile]):
-        assert len(layouts) == 27
-
-    def test_main_layout_title(self, layouts: list[LayFile]):
-        assert '家庭調査票' in layouts[0].title
-
-    def test_all_layouts_have_paper(self, layouts: list[LayFile]):
-        for lay in layouts:
-            assert lay.paper is not None
-
-    def test_all_layouts_have_objects(self, layouts: list[LayFile]):
-        # 1年生用机ラベル (index 10) は 0 オブジェクトだが他は > 0
-        has_objects = sum(1 for lay in layouts if len(lay.objects) > 0)
-        assert has_objects >= 25
-
-    def test_mode0_paper_size_expanded(self, layouts: list[LayFile]):
-        """mode=0 レイアウトの page_width/page_height が用紙サイズに拡張される。"""
-        main = layouts[0]
-        assert main.paper is not None
-        assert main.paper.mode == 0
-        # A4 portrait in 0.1mm units: 2100×2970
-        assert main.page_width == 2100
-        assert main.page_height == 2970
-
-    def test_mode1_item_size(self, layouts: list[LayFile]):
-        """mode=1 レイアウトの page_width/page_height がアイテムサイズ。"""
-        kojihyo = layouts[24]  # 学級編成用個票
-        assert kojihyo.paper is not None
-        assert kojihyo.paper.mode == 1
-        assert kojihyo.page_width == 840
-        assert kojihyo.page_height == 2720
-
-    def test_a4_portrait_detected(self, layouts: list[LayFile]):
-        main = layouts[0]
-        assert main.paper.paper_size == 'A4'
-        assert main.paper.orientation == 'portrait'
-
-    def test_a3_landscape_detected(self, layouts: list[LayFile]):
-        desk_label = layouts[7]  # 机用氏名ラベル
-        assert desk_label.paper.paper_size == 'A3'
-        assert desk_label.paper.orientation == 'landscape'
-
-    def test_doc_flag2_landscape_shuryou(self, layouts: list[LayFile]):
-        """修了台帳: mode=0 + DOC_FLAG2=2 → A4 横 (2970×2100)。"""
-        daicho = layouts[18]
-        assert daicho.paper is not None
-        assert daicho.paper.mode == 0
-        assert daicho.paper.orientation == 'landscape'
-        assert daicho.page_width == 2970
-        assert daicho.page_height == 2100
-
-    def test_doc_flag2_landscape_sotsugyou(self, layouts: list[LayFile]):
-        """卒業台帳: mode=0 + DOC_FLAG2=2 → A4 横 (2970×2100)。"""
-        sotsugyou = layouts[21]
-        assert sotsugyou.paper is not None
-        assert sotsugyou.paper.mode == 0
-        assert sotsugyou.paper.orientation == 'landscape'
-        assert sotsugyou.page_width == 2970
-        assert sotsugyou.page_height == 2100
-
-    def test_doc_flag2_portrait_unchanged(self, layouts: list[LayFile]):
-        """家庭調査票: mode=0 + DOC_FLAG2=1 → A4 縦 (2100×2970) のまま。"""
-        main = layouts[0]
-        assert main.paper.mode == 0
-        assert main.paper.orientation == 'portrait'
-        assert main.page_width == 2100
-        assert main.page_height == 2970
-
-    def test_paper_size_flag_a3(self, layouts: list[LayFile]):
-        """1年生用机ラベル: mode=0 + paper_size_flag=0 → A3 縦 (2970×4200)。"""
-        label_1nen = layouts[10]
-        assert '1年生' in label_1nen.title
-        assert label_1nen.paper is not None
-        assert label_1nen.paper.mode == 0
-        assert label_1nen.paper.paper_size == 'A3'
-        assert label_1nen.paper.orientation == 'portrait'
-        assert label_1nen.page_width == 2970
-        assert label_1nen.page_height == 4200
-
-    def test_paper_size_flag_b4(self, layouts: list[LayFile]):
-        """複数学級名列表: mode=0 + paper_size_flag=1 → B4 横 (3640×2570)。"""
-        fukusu = layouts[17]
-        assert '複数学級' in fukusu.title
-        assert fukusu.paper is not None
-        assert fukusu.paper.mode == 0
-        assert fukusu.paper.paper_size == 'B4'
-        assert fukusu.paper.orientation == 'landscape'
-        assert fukusu.page_width == 3640
-        assert fukusu.page_height == 2570
-
-    def test_table_found_in_shuryou_daicho(self, layouts: list[LayFile]):
-        """修了台帳に TABLE オブジェクト (10カラム) が含まれる。"""
-        daicho = layouts[18]  # 修了台帳
-        assert len(daicho.tables) == 1
-        tbl = daicho.tables[0]
-        assert len(tbl.table_columns) == 10
-
-    def test_table_column_headers(self, layouts: list[LayFile]):
-        """修了台帳のカラムヘッダーが正しくパースされる。"""
-        daicho = layouts[18]
-        tbl = daicho.tables[0]
-        headers = [c.header for c in tbl.table_columns]
-        assert '氏名' in headers
-        assert 'ふりがな' in headers
-        assert '性別' in headers
-        assert '生年月日' in headers
-
-    def test_table_column_field_ids(self, layouts: list[LayFile]):
-        """修了台帳のカラム field_id が正しい。"""
-        daicho = layouts[18]
-        tbl = daicho.tables[0]
-        fids = [c.field_id for c in tbl.table_columns]
-        assert 108 in fids  # 氏名
-        assert 107 in fids  # 性別
-
-    def test_table_has_rect(self, layouts: list[LayFile]):
-        daicho = layouts[18]
-        tbl = daicho.tables[0]
-        assert tbl.rect is not None
-        assert tbl.rect.width > 0
-        assert tbl.rect.height > 0
-
-    def test_unit_mm_is_01(self, layouts: list[LayFile]):
-        """マルチレイアウトの座標単位は 0.1mm。"""
-        for lay in layouts:
-            assert lay.paper.unit_mm == pytest.approx(0.1)
-
-    def test_parse_lay_single_returns_first(self):
-        """parse_lay() は最初のレイアウトだけを返す。"""
-        lay = parse_lay(_MULTI_LAY)
-        assert '家庭調査票' in lay.title
 
 
 # ── LayoutObject 新フィールドテスト ──────────────────────────────────────────

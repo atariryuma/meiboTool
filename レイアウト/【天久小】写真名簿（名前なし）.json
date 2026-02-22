@@ -16,7 +16,122 @@
         "data_start_index": 0,
         "ref_name": "コピー：写真＋番号＋ふりがな",
         "direction": 1
-      }
+      },
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1008,
+            2001
+          ],
+          "payload_len": 8,
+          "payload": "HgAAAHgAAAA="
+        },
+        {
+          "path": [
+            1008,
+            2002
+          ],
+          "payload_len": 8,
+          "payload": "VAEAANYBAAA="
+        },
+        {
+          "path": [
+            1008,
+            2003
+          ],
+          "payload_len": 4,
+          "payload": "BgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2004
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2005
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2006
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2007
+          ],
+          "payload_len": 4,
+          "payload": "iwQAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2011
+          ],
+          "payload_len": 28,
+          "payload": "szDUMPwwGv+ZUR93C/9qdfdTC/91MIowTDBqMA=="
+        },
+        {
+          "path": [
+            1008,
+            2008
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2009
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2010
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1008,
+            2012
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2013
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "MEIBO",
@@ -29,7 +144,122 @@
         "data_start_index": 6,
         "ref_name": "コピー：写真＋番号＋ふりがな",
         "direction": 1
-      }
+      },
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1008,
+            2001
+          ],
+          "payload_len": 8,
+          "payload": "HgAAAE4CAAA="
+        },
+        {
+          "path": [
+            1008,
+            2002
+          ],
+          "payload_len": 8,
+          "payload": "VAEAANYBAAA="
+        },
+        {
+          "path": [
+            1008,
+            2003
+          ],
+          "payload_len": 4,
+          "payload": "BgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2004
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2005
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2006
+          ],
+          "payload_len": 4,
+          "payload": "BgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2007
+          ],
+          "payload_len": 4,
+          "payload": "iwQAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2011
+          ],
+          "payload_len": 28,
+          "payload": "szDUMPwwGv+ZUR93C/9qdfdTC/91MIowTDBqMA=="
+        },
+        {
+          "path": [
+            1008,
+            2008
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2009
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2010
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1008,
+            2012
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2013
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "MEIBO",
@@ -42,7 +272,122 @@
         "data_start_index": 12,
         "ref_name": "コピー：写真＋番号＋ふりがな",
         "direction": 1
-      }
+      },
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1008,
+            2001
+          ],
+          "payload_len": 8,
+          "payload": "HgAAACQEAAA="
+        },
+        {
+          "path": [
+            1008,
+            2002
+          ],
+          "payload_len": 8,
+          "payload": "VAEAANYBAAA="
+        },
+        {
+          "path": [
+            1008,
+            2003
+          ],
+          "payload_len": 4,
+          "payload": "BgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2004
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2005
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2006
+          ],
+          "payload_len": 4,
+          "payload": "DAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2007
+          ],
+          "payload_len": 4,
+          "payload": "iwQAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2011
+          ],
+          "payload_len": 28,
+          "payload": "szDUMPwwGv+ZUR93C/9qdfdTC/91MIowTDBqMA=="
+        },
+        {
+          "path": [
+            1008,
+            2008
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2009
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2010
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1008,
+            2012
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2013
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "MEIBO",
@@ -55,7 +400,122 @@
         "data_start_index": 18,
         "ref_name": "コピー：写真＋番号＋ふりがな",
         "direction": 1
-      }
+      },
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1008,
+            2001
+          ],
+          "payload_len": 8,
+          "payload": "HgAAAPoFAAA="
+        },
+        {
+          "path": [
+            1008,
+            2002
+          ],
+          "payload_len": 8,
+          "payload": "VAEAANYBAAA="
+        },
+        {
+          "path": [
+            1008,
+            2003
+          ],
+          "payload_len": 4,
+          "payload": "BgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2004
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2005
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2006
+          ],
+          "payload_len": 4,
+          "payload": "EgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2007
+          ],
+          "payload_len": 4,
+          "payload": "iwQAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2011
+          ],
+          "payload_len": 28,
+          "payload": "szDUMPwwGv+ZUR93C/9qdfdTC/91MIowTDBqMA=="
+        },
+        {
+          "path": [
+            1008,
+            2008
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2009
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2010
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1008,
+            2012
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2013
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "MEIBO",
@@ -68,7 +528,122 @@
         "data_start_index": 24,
         "ref_name": "コピー：写真＋番号＋ふりがな",
         "direction": 1
-      }
+      },
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1008,
+            2001
+          ],
+          "payload_len": 8,
+          "payload": "HgAAANAHAAA="
+        },
+        {
+          "path": [
+            1008,
+            2002
+          ],
+          "payload_len": 8,
+          "payload": "VAEAANYBAAA="
+        },
+        {
+          "path": [
+            1008,
+            2003
+          ],
+          "payload_len": 4,
+          "payload": "BgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2004
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2005
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2006
+          ],
+          "payload_len": 4,
+          "payload": "GAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2007
+          ],
+          "payload_len": 4,
+          "payload": "iwQAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2011
+          ],
+          "payload_len": 28,
+          "payload": "szDUMPwwGv+ZUR93C/9qdfdTC/91MIowTDBqMA=="
+        },
+        {
+          "path": [
+            1008,
+            2008
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2009
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2010
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1008,
+            2012
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2013
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "MEIBO",
@@ -81,7 +656,122 @@
         "data_start_index": 30,
         "ref_name": "コピー：写真＋番号＋ふりがな",
         "direction": 1
-      }
+      },
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1008,
+            2001
+          ],
+          "payload_len": 8,
+          "payload": "HgAAAKYJAAA="
+        },
+        {
+          "path": [
+            1008,
+            2002
+          ],
+          "payload_len": 8,
+          "payload": "VAEAANYBAAA="
+        },
+        {
+          "path": [
+            1008,
+            2003
+          ],
+          "payload_len": 4,
+          "payload": "BgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2004
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2005
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2006
+          ],
+          "payload_len": 4,
+          "payload": "HgAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2007
+          ],
+          "payload_len": 4,
+          "payload": "iwQAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2011
+          ],
+          "payload_len": 28,
+          "payload": "szDUMPwwGv+ZUR93C/9qdfdTC/91MIowTDBqMA=="
+        },
+        {
+          "path": [
+            1008,
+            2008
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2009
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2010
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1008,
+            2012
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2013
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -92,11 +782,147 @@
         120
       ],
       "field_id": 111,
+      "v_align": 1,
       "font": {
         "name": "UD デジタル 教科書体 N-B",
         "size_pt": 18.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "HgAAAB4AAAAmAgAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "bwAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 85
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 32,
+          "payload": "VQBEACAAxzC4ML8w6zAgAFll0Xn4ZlNPIABOAC0AQgA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "tAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -107,11 +933,147 @@
         120
       ],
       "field_id": 102,
+      "v_align": 1,
       "font": {
         "name": "UD デジタル 教科書体 N-B",
         "size_pt": 18.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "sgIAAB4AAABIAwAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "ZgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 85
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 32,
+          "payload": "VQBEACAAxzC4ML8w6zAgAFll0Xn4ZlNPIABOAC0AQgA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "tAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -122,11 +1084,147 @@
         120
       ],
       "field_id": 101,
+      "v_align": 1,
       "font": {
         "name": "UD デジタル 教科書体 N-B",
         "size_pt": 18.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "JgIAAB4AAACyAgAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "ZQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 85
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 32,
+          "payload": "VQBEACAAxzC4ML8w6zAgAFll0Xn4ZlNPIABOAC0AQgA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "tAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     }
   ],
   "paper": {
@@ -142,5 +1240,128 @@
     "spacing_v_mm": 0.0,
     "paper_size": "A4",
     "orientation": "portrait"
-  }
+  },
+  "raw_tags": [
+    {
+      "path": [
+        1500
+      ],
+      "payload_len": 30,
+      "payload": "EDApWUVOD1wRMJlRH3cNVD98CP8NVE1SajBXMAn/"
+    },
+    {
+      "path": [
+        1503
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1504
+      ],
+      "payload_len": 4,
+      "payload": "AQAAAA=="
+    },
+    {
+      "path": [
+        1506
+      ],
+      "payload_len": 4,
+      "payload": "igQAAA=="
+    },
+    {
+      "path": [
+        1505
+      ],
+      "payload_len": 1661
+    },
+    {
+      "path": [
+        1505,
+        1000
+      ],
+      "payload_len": 1,
+      "payload": "Ag=="
+    },
+    {
+      "path": [
+        1505,
+        1001
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        1003
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        1004
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1006
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1002
+      ],
+      "payload_len": 1551
+    },
+    {
+      "path": [
+        1505,
+        2000
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        2001
+      ],
+      "payload_len": 8,
+      "payload": "jgMAACYCAAA="
+    },
+    {
+      "path": [
+        1505,
+        2002
+      ],
+      "payload_len": 8,
+      "payload": "AgAAAAUAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2003
+      ],
+      "payload_len": 8,
+      "payload": "AAAAAAAAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2004
+      ],
+      "payload_len": 8,
+      "payload": "jAAAAG4AAAA="
+    }
+  ]
 }

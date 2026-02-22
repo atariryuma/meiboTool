@@ -16,7 +16,122 @@
         "data_start_index": 0,
         "ref_name": "1nen",
         "direction": 1
-      }
+      },
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1008,
+            2001
+          ],
+          "payload_len": 8,
+          "payload": "UAAAAGQAAAA="
+        },
+        {
+          "path": [
+            1008,
+            2002
+          ],
+          "payload_len": 8,
+          "payload": "XgEAAKAPAAA="
+        },
+        {
+          "path": [
+            1008,
+            2003
+          ],
+          "payload_len": 4,
+          "payload": "CAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2004
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2005
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2006
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2007
+          ],
+          "payload_len": 4,
+          "payload": "lAQAAA=="
+        },
+        {
+          "path": [
+            1008,
+            2011
+          ],
+          "payload_len": 8,
+          "payload": "MQBuAGUAbgA="
+        },
+        {
+          "path": [
+            1008,
+            2008
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2009
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1008,
+            2010
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1008,
+            2012
+          ],
+          "payload_len": 1,
+          "payload": "AQ=="
+        },
+        {
+          "path": [
+            1008,
+            2013
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     }
   ],
   "paper": {
@@ -32,5 +147,128 @@
     "spacing_v_mm": 0.0,
     "paper_size": "A3",
     "orientation": "portrait"
-  }
+  },
+  "raw_tags": [
+    {
+      "path": [
+        1500
+      ],
+      "payload_len": 26,
+      "payload": "EDApWUVOD1wRMDEAdF4fdSh1OmfpMNkw6zA="
+    },
+    {
+      "path": [
+        1503
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1504
+      ],
+      "payload_len": 4,
+      "payload": "AQAAAA=="
+    },
+    {
+      "path": [
+        1506
+      ],
+      "payload_len": 4,
+      "payload": "lQQAAA=="
+    },
+    {
+      "path": [
+        1505
+      ],
+      "payload_len": 253
+    },
+    {
+      "path": [
+        1505,
+        1000
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        1001
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        1003
+      ],
+      "payload_len": 1,
+      "payload": "BA=="
+    },
+    {
+      "path": [
+        1505,
+        1004
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1006
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1002
+      ],
+      "payload_len": 143
+    },
+    {
+      "path": [
+        1505,
+        2000
+      ],
+      "payload_len": 1,
+      "payload": "AA=="
+    },
+    {
+      "path": [
+        1505,
+        2001
+      ],
+      "payload_len": 8,
+      "payload": "jgMAACYCAAA="
+    },
+    {
+      "path": [
+        1505,
+        2002
+      ],
+      "payload_len": 8,
+      "payload": "AgAAAAUAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2003
+      ],
+      "payload_len": 8,
+      "payload": "AAAAAAAAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2004
+      ],
+      "payload_len": 8,
+      "payload": "jAAAAG4AAAA="
+    }
+  ]
 }

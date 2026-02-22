@@ -14,12 +14,148 @@
         120
       ],
       "field_id": 1531,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "メイリオ",
         "size_pt": 18.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "AAAAAAAAAADcAAAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "+wUAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 61
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 8,
+          "payload": "4TCkMOowqjA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "tAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -30,12 +166,148 @@
         120
       ],
       "field_id": 108,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "メイリオ",
         "size_pt": 14.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "3AAAAAAAAAAwAgAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "bAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 61
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 8,
+          "payload": "4TCkMOowqjA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "jAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -46,12 +318,148 @@
         120
       ],
       "field_id": 610,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "メイリオ",
         "size_pt": 14.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "MAIAAAAAAADAAwAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "YgIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 61
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 8,
+          "payload": "4TCkMOowqjA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "jAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -62,11 +470,147 @@
         120
       ],
       "field_id": 604,
+      "v_align": 1,
       "font": {
         "name": "メイリオ",
         "size_pt": 12.0
       },
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "wAMAAAAAAADgBgAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "XAIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 61
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 8,
+          "payload": "4TCkMOowqjA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "eAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -77,12 +621,148 @@
         120
       ],
       "field_id": 113,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "メイリオ",
         "size_pt": 14.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "agkAAAAAAABkCgAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "cQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 61
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 8,
+          "payload": "4TCkMOowqjA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "jAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
       "type": "FIELD",
@@ -93,311 +773,423 @@
         120
       ],
       "field_id": 602,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "メイリオ",
         "size_pt": 14.0
       },
-      "h_align": 1,
-      "v_align": 1
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "4AYAAAAAAAA0CAAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "WgIAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 61
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 8,
+          "payload": "4TCkMOowqjA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "jAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
+      ]
     },
     {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
+      "type": "GROUP",
+      "rect": [
         1760,
-        0
-      ],
-      "line_end": [
-        2100,
-        0
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        1760,
-        120
-      ],
-      "line_end": [
-        2100,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        1760,
-        0
-      ],
-      "line_end": [
-        1760,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2100,
-        0
-      ],
-      "line_end": [
-        2100,
-        120
-      ]
-    },
-    {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2410,
-        0
-      ],
-      "line_end": [
-        2660,
-        0
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2410,
-        120
-      ],
-      "line_end": [
-        2660,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2410,
-        0
-      ],
-      "line_end": [
-        2410,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2660,
-        0
-      ],
-      "line_end": [
-        2660,
-        120
-      ]
-    },
-    {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        960,
-        0
-      ],
-      "line_end": [
-        1760,
-        0
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        960,
-        120
-      ],
-      "line_end": [
-        1760,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        960,
-        0
-      ],
-      "line_end": [
-        960,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        1760,
-        0
-      ],
-      "line_end": [
-        1760,
-        120
-      ]
-    },
-    {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        560,
-        0
-      ],
-      "line_end": [
-        960,
-        0
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        560,
-        120
-      ],
-      "line_end": [
-        960,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        560,
-        0
-      ],
-      "line_end": [
-        560,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        960,
-        0
-      ],
-      "line_end": [
-        960,
-        120
-      ]
-    },
-    {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        220,
-        0
-      ],
-      "line_end": [
-        560,
-        0
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        220,
-        120
-      ],
-      "line_end": [
-        560,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        220,
-        0
-      ],
-      "line_end": [
-        220,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        560,
-        0
-      ],
-      "line_end": [
-        560,
-        120
-      ]
-    },
-    {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
         0,
-        0
+        2100,
+        120
       ],
-      "line_end": [
-        220,
-        0
+      "style_1001": 0,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "4AYAAAAAAAA0CAAAeAAAAA=="
+        }
       ]
     },
     {
-      "type": "LINE",
-      "line_start": [
+      "type": "GROUP",
+      "rect": [
+        2410,
         0,
+        2660,
         120
       ],
-      "line_end": [
-        220,
-        120
+      "style_1001": 0,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "agkAAAAAAABkCgAAeAAAAA=="
+        }
       ]
     },
     {
-      "type": "LINE",
-      "line_start": [
+      "type": "GROUP",
+      "rect": [
+        960,
         0,
-        0
-      ],
-      "line_end": [
-        0,
+        1760,
         120
+      ],
+      "style_1001": 0,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "wAMAAAAAAADgBgAAeAAAAA=="
+        }
       ]
     },
     {
-      "type": "LINE",
-      "line_start": [
-        220,
-        0
+      "type": "GROUP",
+      "rect": [
+        560,
+        0,
+        960,
+        120
       ],
-      "line_end": [
+      "style_1001": 0,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "MAIAAAAAAADAAwAAeAAAAA=="
+        }
+      ]
+    },
+    {
+      "type": "GROUP",
+      "rect": [
+        220,
+        0,
+        560,
+        120
+      ],
+      "style_1001": 0,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "3AAAAAAAAAAwAgAAeAAAAA=="
+        }
+      ]
+    },
+    {
+      "type": "GROUP",
+      "rect": [
+        0,
+        0,
         220,
         120
+      ],
+      "style_1001": 0,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "AAAAAAAAAADcAAAAeAAAAA=="
+        }
       ]
     },
     {
@@ -409,61 +1201,193 @@
         120
       ],
       "field_id": 1529,
+      "h_align": 1,
+      "v_align": 1,
       "font": {
         "name": "メイリオ",
         "size_pt": 12.0
       },
-      "h_align": 1,
-      "v_align": 1
-    },
-    {
-      "type": "LINE"
-    },
-    {
-      "type": "LABEL"
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2100,
-        0
-      ],
-      "line_end": [
-        2410,
-        0
+      "style_1001": -1,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1004,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "NAgAAAAAAABqCQAAeAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3001
+          ],
+          "payload_len": 4,
+          "payload": "+QUAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3002
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3003
+          ],
+          "payload_len": 4,
+          "payload": "AQAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3005
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3006
+          ],
+          "payload_len": 0
+        },
+        {
+          "path": [
+            1004,
+            3004
+          ],
+          "payload_len": 61
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1000
+          ],
+          "payload_len": 8,
+          "payload": "4TCkMOowqjA="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "eAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1004
+          ],
+          "payload_len": 1,
+          "payload": "AA=="
+        },
+        {
+          "path": [
+            1004,
+            3004,
+            1005
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        }
       ]
     },
     {
-      "type": "LINE",
-      "line_start": [
+      "type": "GROUP",
+      "rect": [
         2100,
-        120
-      ],
-      "line_end": [
+        0,
         2410,
         120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2100,
-        0
       ],
-      "line_end": [
-        2100,
-        120
-      ]
-    },
-    {
-      "type": "LINE",
-      "line_start": [
-        2410,
-        0
-      ],
-      "line_end": [
-        2410,
-        120
+      "style_1001": 0,
+      "style_1002": 2,
+      "style_1003": -1,
+      "raw_tags": [
+        {
+          "path": [
+            1002,
+            1001
+          ],
+          "payload_len": 4,
+          "payload": "AAAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1002
+          ],
+          "payload_len": 4,
+          "payload": "AgAAAA=="
+        },
+        {
+          "path": [
+            1002,
+            1003
+          ],
+          "payload_len": 4,
+          "payload": "/////w=="
+        },
+        {
+          "path": [
+            1002,
+            2001
+          ],
+          "payload_len": 16,
+          "payload": "NAgAAAAAAABqCQAAeAAAAA=="
+        }
       ]
     }
   ],
@@ -480,5 +1404,128 @@
     "spacing_v_mm": 0.0,
     "paper_size": "A4",
     "orientation": "landscape"
-  }
+  },
+  "raw_tags": [
+    {
+      "path": [
+        1500
+      ],
+      "payload_len": 42,
+      "payload": "EDApWUVOD1wRMFJTbWnwUzNe6TDZMOswCP87IEpSZJZXMGowRDA7IAn/"
+    },
+    {
+      "path": [
+        1503
+      ],
+      "payload_len": 4,
+      "payload": "AQAAAA=="
+    },
+    {
+      "path": [
+        1504
+      ],
+      "payload_len": 4,
+      "payload": "AgAAAA=="
+    },
+    {
+      "path": [
+        1506
+      ],
+      "payload_len": 4,
+      "payload": "hQQAAA=="
+    },
+    {
+      "path": [
+        1505
+      ],
+      "payload_len": 1685
+    },
+    {
+      "path": [
+        1505,
+        1000
+      ],
+      "payload_len": 1,
+      "payload": "Ag=="
+    },
+    {
+      "path": [
+        1505,
+        1001
+      ],
+      "payload_len": 1,
+      "payload": "AQ=="
+    },
+    {
+      "path": [
+        1505,
+        1003
+      ],
+      "payload_len": 1,
+      "payload": "Aw=="
+    },
+    {
+      "path": [
+        1505,
+        1004
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1006
+      ],
+      "payload_len": 4,
+      "payload": "AAAAAA=="
+    },
+    {
+      "path": [
+        1505,
+        1002
+      ],
+      "payload_len": 1575
+    },
+    {
+      "path": [
+        1505,
+        2000
+      ],
+      "payload_len": 1,
+      "payload": "AQ=="
+    },
+    {
+      "path": [
+        1505,
+        2001
+      ],
+      "payload_len": 8,
+      "payload": "ZAoAAHgAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2002
+      ],
+      "payload_len": 8,
+      "payload": "AQAAAAEAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2003
+      ],
+      "payload_len": 8,
+      "payload": "AAAAAAAAAAA="
+    },
+    {
+      "path": [
+        1505,
+        2004
+      ],
+      "payload_len": 8,
+      "payload": "ZAAAAGQAAAA="
+    }
+  ]
 }
