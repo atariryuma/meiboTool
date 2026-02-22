@@ -34,7 +34,8 @@
       "font": {
         "name": "HGS教科書体",
         "size_pt": 72.0,
-        "bold": true
+        "bold": true,
+        "vertical": true
       },
       "h_align": 1
     },

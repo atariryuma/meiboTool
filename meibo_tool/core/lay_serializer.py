@@ -53,6 +53,8 @@ def _font_to_dict(f: FontInfo) -> dict:
         d['bold'] = True
     if f.italic:
         d['italic'] = True
+    if f.vertical:
+        d['vertical'] = True
     return d
 
 
@@ -91,6 +93,8 @@ def _object_to_dict(obj: LayoutObject) -> dict:
         d['suffix'] = obj.suffix
     if obj.table_columns:
         d['table_columns'] = [_table_column_to_dict(c) for c in obj.table_columns]
+    if obj.table_row_count:
+        d['table_row_count'] = obj.table_row_count
     if obj.meibo is not None:
         m = obj.meibo
         d['meibo'] = {
@@ -175,6 +179,7 @@ def _dict_to_font(data: dict) -> FontInfo:
         size_pt=data.get('size_pt', 10.0),
         bold=data.get('bold', False),
         italic=data.get('italic', False),
+        vertical=data.get('vertical', False),
     )
 
 
@@ -238,6 +243,8 @@ def _dict_to_object(d: dict) -> LayoutObject:
         obj.table_columns = [
             _dict_to_table_column(c) for c in d['table_columns']
         ]
+    if 'table_row_count' in d:
+        obj.table_row_count = d['table_row_count']
     if 'meibo' in d:
         m = d['meibo']
         obj.meibo = MeiboArea(

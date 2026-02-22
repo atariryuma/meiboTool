@@ -13,10 +13,54 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from core.lay_parser import parse_lay, parse_lay_multi
+from core.lay_parser import LayFile, parse_lay, parse_lay_multi
 from core.lay_serializer import load_layout, save_layout
 
 _DEFAULT_LAY_NAME = 'default_layouts.lay'
+
+# ── MEIBO ref_name エイリアス ──────────────────────────────────────────────────
+
+_SUZUKI_REF_ALIASES: dict[str, str] = {
+    'gakkyu': 'takara_simei',
+    'sirabe': 'takara_sirabe',
+    'sirabe_hira': 'takara_sirabe_hira',
+    '氏名（ふりがな）': 'takara_simei_furi',
+    '氏名（ひらがな）': 'takara_simei_hira',
+    '卒業台帳ラベル（長嶺）': '【天久小】卒業台帳ラベル（※削除しない※）',
+}
+
+
+def build_layout_registry(layout_dir: str) -> dict[str, LayFile]:
+    """layout_dir 内の全レイアウトを ref_name 解決用 dict に読み込む。
+
+    キー: lay.title とファイル名 stem の両方で登録。
+    エイリアス: gakkyu → takara_simei 等のスズキ校務参照名を解決。
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    registry: dict[str, LayFile] = {}
+    if not layout_dir or not os.path.isdir(layout_dir):
+        return registry
+    for fname in os.listdir(layout_dir):
+        if not fname.lower().endswith('.json'):
+            continue
+        stem = Path(fname).stem
+        try:
+            lay = load_layout(os.path.join(layout_dir, fname))
+            if lay.title:
+                registry[lay.title] = lay
+            if stem and stem != lay.title:
+                registry[stem] = lay
+        except Exception:
+            pass
+    # エイリアス解決
+    for alias, target in _SUZUKI_REF_ALIASES.items():
+        if alias not in registry and target in registry:
+            registry[alias] = registry[target]
+        elif alias not in registry:
+            logger.debug('ref_name エイリアス未解決: %s → %s', alias, target)
+    return registry
 
 
 def scan_layout_dir(layout_dir: str) -> list[dict[str, Any]]:

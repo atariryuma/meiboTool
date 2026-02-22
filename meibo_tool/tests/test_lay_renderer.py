@@ -9,9 +9,11 @@ import pytest
 
 from core.lay_parser import (
     FIELD_ID_MAP,
+    EmbeddedImage,
     FontInfo,
     LayFile,
     LayoutObject,
+    MeiboArea,
     ObjectType,
     PaperLayout,
     Rect,
@@ -19,12 +21,16 @@ from core.lay_parser import (
     new_field,
     new_label,
     new_line,
+    resolve_field_display,
 )
 from core.lay_renderer import (
     _contains_gaiji,
+    _meibo_page_capacity,
     canvas_to_model,
     fill_layout,
+    fill_meibo_layout,
     get_page_arrangement,
+    has_meibo,
     model_to_canvas,
     model_to_printer,
 )
@@ -262,11 +268,11 @@ class TestFillLayoutMixed:
             new_label(0, 0, 100, 30, text='氏名'),
             new_field(100, 0, 300, 30, field_id=108),
             new_line(0, 30, 300, 30),
-            new_label(0, 30, 100, 60, text='住所'),
+            new_label(0, 30, 100, 60, text='〒'),
             new_field(100, 30, 300, 60, field_id=603),
         ]
         lay = _make_layout(*objects)
-        data = {'氏名': '鈴木一郎', '都道府県': '沖縄県'}
+        data = {'氏名': '鈴木一郎', '郵便番号': '900-0005'}
         result = fill_layout(lay, data)
 
         assert len(result.objects) == 5
@@ -275,8 +281,8 @@ class TestFillLayoutMixed:
         assert result.objects[1].obj_type == ObjectType.LABEL  # FIELD → LABEL
         assert result.objects[1].text == '鈴木一郎'
         assert result.objects[2].obj_type == ObjectType.LINE   # 罫線そのまま
-        assert result.objects[3].text == '住所'
-        assert result.objects[4].text == '沖縄県'
+        assert result.objects[3].text == '〒'
+        assert result.objects[4].text == '900-0005'
 
     def test_multiple_students(self) -> None:
         """複数生徒で連続呼び出しが正しく動作する。"""
@@ -805,21 +811,35 @@ class TestFillLayoutGuardianAddress:
 
 
 class TestFillLayoutFiscalYear:
-    """年度1/年度2 の解決テスト。"""
+    """学年/組/年度 の解決テスト。"""
 
-    def test_nendo1_resolved(self) -> None:
-        """年度1 が fiscal_year から解決される。"""
-        obj = new_field(10, 20, 200, 50, field_id=101)  # 年度1
+    def test_gakunen_resolved(self) -> None:
+        """学年(101) が data_row から解決される。"""
+        obj = new_field(10, 20, 200, 50, field_id=101)  # 学年
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {'学年': '3'}, {})
+        assert result.objects[0].text == '3'
+
+    def test_kumi_resolved(self) -> None:
+        """組(102) が data_row から解決される。"""
+        obj = new_field(10, 20, 200, 50, field_id=102)  # 組
+        lay = _make_layout(obj)
+        result = fill_layout(lay, {'組': '2'}, {})
+        assert result.objects[0].text == '2'
+
+    def test_nendo_resolved(self) -> None:
+        """年度(134) が fiscal_year から解決される。"""
+        obj = new_field(10, 20, 200, 50, field_id=134)  # 年度
         lay = _make_layout(obj)
         result = fill_layout(lay, {}, {'fiscal_year': 2025})
         assert result.objects[0].text == '2025'
 
-    def test_nendo2_resolved(self) -> None:
-        """年度2 が fiscal_year から解決される。"""
-        obj = new_field(10, 20, 200, 50, field_id=102)  # 年度2
+    def test_nendo_wareki_resolved(self) -> None:
+        """年度和暦(110) が wareki 形式で解決される。"""
+        obj = new_field(10, 20, 200, 50, field_id=110)  # 年度和暦
         lay = _make_layout(obj)
-        result = fill_layout(lay, {}, {'fiscal_year': 2026})
-        assert result.objects[0].text == '2026'
+        result = fill_layout(lay, {}, {'fiscal_year': 2025})
+        assert '7年度' in result.objects[0].text  # 令和7年度
 
 
 class TestFillLayoutPageMeta:
@@ -870,3 +890,362 @@ class TestFillLayoutTransferDate:
         result = fill_layout(lay, data)
         # 氏名は DATE_KEYS に含まれないのでそのまま
         assert result.objects[0].text == '2025-04-01'
+
+
+# ── resolve_field_display テスト ──────────────────────────────────────────────
+
+
+class TestResolveFieldDisplay:
+    """FIELD_DISPLAY_MAP の表示名解決テスト。"""
+
+    def test_known_id_returns_display_name(self) -> None:
+        assert resolve_field_display(110) == '年度（和暦）'
+
+    def test_another_known_id(self) -> None:
+        assert resolve_field_display(106) == '番号(番無し)'
+
+    def test_unknown_id_falls_back_to_field_name(self) -> None:
+        # 未知ID は resolve_field_name の結果 = 'field_NNN'
+        assert resolve_field_display(99999) == 'field_99999'
+
+    def test_display_differs_from_internal(self) -> None:
+        """表示名と内部論理名が異なることを確認。"""
+        # 101: 内部='学年', 表示='学年' (同じ)
+        # 110: 内部='年度和暦', 表示='年度（和暦）'
+        from core.lay_parser import resolve_field_name
+        assert resolve_field_name(110) == '年度和暦'
+        assert resolve_field_display(110) == '年度（和暦）'
+
+
+# ── has_meibo / _meibo_page_capacity テスト ───────────────────────────────────
+
+
+def _make_meibo_object(
+    ref_name: str = 'test_ref',
+    row_count: int = 10,
+    data_start_index: int = 0,
+    direction: int = 0,
+) -> LayoutObject:
+    """MEIBO テスト用オブジェクトを作成する。"""
+    return LayoutObject(
+        obj_type=ObjectType.MEIBO,
+        meibo=MeiboArea(
+            origin_x=100,
+            origin_y=200,
+            cell_width=300,
+            cell_height=50,
+            row_count=row_count,
+            data_start_index=data_start_index,
+            ref_name=ref_name,
+            direction=direction,
+        ),
+    )
+
+
+class TestHasMeibo:
+    """has_meibo() 判定テスト。"""
+
+    def test_layout_without_meibo(self) -> None:
+        lay = _make_layout(new_label(0, 0, 100, 50, 'hello'))
+        assert has_meibo(lay) is False
+
+    def test_layout_with_meibo(self) -> None:
+        lay = _make_layout(_make_meibo_object())
+        assert has_meibo(lay) is True
+
+    def test_empty_layout(self) -> None:
+        lay = _make_layout()
+        assert has_meibo(lay) is False
+
+
+class TestMeiboPageCapacity:
+    """_meibo_page_capacity() テスト。"""
+
+    def test_no_meibo_returns_zero(self) -> None:
+        lay = _make_layout(new_label(0, 0, 100, 50, 'hello'))
+        assert _meibo_page_capacity(lay) == 0
+
+    def test_single_meibo(self) -> None:
+        lay = _make_layout(_make_meibo_object(row_count=20, data_start_index=0))
+        assert _meibo_page_capacity(lay) == 20
+
+    def test_two_meibos(self) -> None:
+        """掲示用名列表のように 2 つの MEIBO (0-19, 20-39)。"""
+        lay = _make_layout(
+            _make_meibo_object(row_count=20, data_start_index=0),
+            _make_meibo_object(row_count=20, data_start_index=20),
+        )
+        assert _meibo_page_capacity(lay) == 40
+
+
+# ── fill_meibo_layout テスト ──────────────────────────────────────────────────
+
+
+def _make_parts_layout() -> LayFile:
+    """テスト用パーツレイアウト（番号 + 氏名）。"""
+    return LayFile(
+        title='test_parts',
+        page_width=300,
+        page_height=50,
+        objects=[
+            new_field(0, 0, 100, 50, field_id=106),   # 出席番号
+            new_field(100, 0, 300, 50, field_id=108),  # 氏名
+        ],
+    )
+
+
+class TestFillMeiboLayout:
+    """fill_meibo_layout() テスト。"""
+
+    def _make_meibo_layout(self) -> LayFile:
+        """掲示用名列表風のテストレイアウト。"""
+        return LayFile(
+            title='テスト名列表',
+            page_width=840,
+            page_height=1188,
+            objects=[
+                new_field(400, 50, 500, 100, field_id=134),  # 年度 (top-level)
+                _make_meibo_object(
+                    ref_name='test_parts', row_count=3,
+                    data_start_index=0, direction=0,
+                ),
+                _make_meibo_object(
+                    ref_name='test_parts', row_count=3,
+                    data_start_index=3, direction=0,
+                ),
+            ],
+        )
+
+    def test_basic_fill(self) -> None:
+        """6 名分のデータで 1 ページ生成。"""
+        lay = self._make_meibo_layout()
+        parts = _make_parts_layout()
+        registry = {'test_parts': parts}
+        data_rows = [
+            {'出席番号': str(i + 1), '氏名': f'生徒{i + 1}'}
+            for i in range(6)
+        ]
+        opts = {'fiscal_year': 2025}
+        pages = fill_meibo_layout(lay, data_rows, opts, layout_registry=registry)
+        assert len(pages) == 1
+        # top-level FIELD (年度) が LABEL に変換されていること
+        labels = [o for o in pages[0].objects if o.obj_type == ObjectType.LABEL]
+        label_texts = [o.text for o in labels]
+        assert '2025' in label_texts
+        # 生徒名が含まれていること
+        assert '生徒1' in label_texts
+        assert '生徒6' in label_texts
+
+    def test_paging(self) -> None:
+        """capacity を超えるデータで複数ページ生成。"""
+        lay = self._make_meibo_layout()  # capacity=6
+        parts = _make_parts_layout()
+        registry = {'test_parts': parts}
+        data_rows = [
+            {'出席番号': str(i + 1), '氏名': f'生徒{i + 1}'}
+            for i in range(8)
+        ]
+        pages = fill_meibo_layout(lay, data_rows, layout_registry=registry)
+        assert len(pages) == 2
+        # ページ 2 には 2 名
+        page2_labels = [
+            o for o in pages[1].objects
+            if o.obj_type == ObjectType.LABEL and '生徒' in o.text
+        ]
+        assert len(page2_labels) == 2
+
+    def test_fewer_students_than_capacity(self) -> None:
+        """capacity 未満のデータで 1 ページ（空スロットあり）。"""
+        lay = self._make_meibo_layout()  # capacity=6
+        parts = _make_parts_layout()
+        registry = {'test_parts': parts}
+        data_rows = [
+            {'出席番号': '1', '氏名': '太郎'},
+        ]
+        pages = fill_meibo_layout(lay, data_rows, layout_registry=registry)
+        assert len(pages) == 1
+        labels = [
+            o for o in pages[0].objects
+            if o.obj_type == ObjectType.LABEL and o.text == '太郎'
+        ]
+        assert len(labels) == 1
+
+    def test_unresolved_ref_name_skipped(self) -> None:
+        """ref_name 未解決の MEIBO はスキップ（エラーにならない）。"""
+        lay = self._make_meibo_layout()
+        data_rows = [{'出席番号': '1', '氏名': 'テスト'}]
+        # registry を空にして ref_name 未解決を起こす
+        pages = fill_meibo_layout(lay, data_rows, layout_registry={})
+        assert len(pages) == 1
+        # top-level FIELD は変換されている
+        labels = [o for o in pages[0].objects if o.obj_type == ObjectType.LABEL]
+        assert len(labels) >= 1
+
+    def test_top_level_field_common_data(self) -> None:
+        """年度等の共通フィールドが正しく埋まる。"""
+        lay = self._make_meibo_layout()
+        parts = _make_parts_layout()
+        registry = {'test_parts': parts}
+        data_rows = [{'出席番号': '1', '氏名': 'テスト'}]
+        opts = {'fiscal_year': 2026, 'school_name': 'テスト校'}
+        pages = fill_meibo_layout(lay, data_rows, opts, layout_registry=registry)
+        labels = [o for o in pages[0].objects if o.obj_type == ObjectType.LABEL]
+        label_texts = [o.text for o in labels]
+        assert '2026' in label_texts
+
+
+# ── 写真フィールド差込テスト ────────────────────────────────────────────────
+
+
+class TestFillPhotoField:
+    """写真フィールド (field_id=400) の差込テスト。"""
+
+    def _make_photo_layout(self) -> LayFile:
+        """写真フィールドを含むテストレイアウト。"""
+        photo_field = new_field(10, 20, 200, 300, field_id=400)
+        name_field = new_field(10, 310, 200, 340, field_id=108)
+        return _make_layout(photo_field, name_field)
+
+    def test_photo_field_no_map_returns_empty_label(self) -> None:
+        """photo_map がない場合は空の LABEL を返す。"""
+        lay = self._make_photo_layout()
+        data = {'氏名': '山田太郎', '学年': '1', '組': '1', '出席番号': '1'}
+        result = fill_layout(lay, data)
+
+        photo_obj = result.objects[0]
+        assert photo_obj.obj_type == ObjectType.LABEL
+        assert photo_obj.text == ''
+
+    def test_photo_field_no_match_returns_empty_label(self) -> None:
+        """マッチしない場合は空の LABEL を返す。"""
+        lay = self._make_photo_layout()
+        data = {'氏名': '山田太郎', '学年': '1', '組': '1', '出席番号': '1'}
+        opts = {'_photo_map': {'2-1-01': '/photos/other.jpg'}}
+        result = fill_layout(lay, data, opts)
+
+        photo_obj = result.objects[0]
+        assert photo_obj.obj_type == ObjectType.LABEL
+        assert photo_obj.text == ''
+
+    def test_photo_field_converts_to_image(self, tmp_path) -> None:
+        """写真がマッチした場合 IMAGE に変換される。"""
+
+        from PIL import Image
+
+        # テスト画像作成
+        img = Image.new('RGB', (100, 150), (255, 0, 0))
+        photo_path = str(tmp_path / '1-1-01.jpg')
+        img.save(photo_path)
+
+        lay = self._make_photo_layout()
+        data = {'氏名': '山田太郎', '学年': '1', '組': '1', '出席番号': '1'}
+        opts = {'_photo_map': {'1-1-01': photo_path}}
+        result = fill_layout(lay, data, opts)
+
+        photo_obj = result.objects[0]
+        assert photo_obj.obj_type == ObjectType.IMAGE
+        assert photo_obj.image is not None
+        assert len(photo_obj.image.image_data) > 0
+        assert photo_obj.image.original_path == photo_path
+
+    def test_photo_field_rect_preserved(self, tmp_path) -> None:
+        """写真フィールドの座標が IMAGE に引き継がれる。"""
+        from PIL import Image
+
+        img = Image.new('RGB', (100, 150), (0, 255, 0))
+        photo_path = str(tmp_path / '1-1-01.jpg')
+        img.save(photo_path)
+
+        lay = self._make_photo_layout()
+        data = {'学年': '1', '組': '1', '出席番号': '1'}
+        opts = {'_photo_map': {'1-1-01': photo_path}}
+        result = fill_layout(lay, data, opts)
+
+        photo_obj = result.objects[0]
+        assert photo_obj.rect is not None
+        assert photo_obj.rect.left == 10
+        assert photo_obj.rect.top == 20
+
+    def test_non_photo_fields_unchanged(self, tmp_path) -> None:
+        """写真以外のフィールドは従来通り LABEL に変換される。"""
+        from PIL import Image
+
+        img = Image.new('RGB', (100, 150), (0, 0, 255))
+        photo_path = str(tmp_path / '1-1-01.jpg')
+        img.save(photo_path)
+
+        lay = self._make_photo_layout()
+        data = {'氏名': '山田太郎', '学年': '1', '組': '1', '出席番号': '1'}
+        opts = {'_photo_map': {'1-1-01': photo_path}}
+        result = fill_layout(lay, data, opts)
+
+        name_obj = result.objects[1]
+        assert name_obj.obj_type == ObjectType.LABEL
+        assert name_obj.text == '山田太郎'
+
+    def test_photo_in_mixed_layout(self) -> None:
+        """LABEL + 写真 FIELD + テキスト FIELD の混在。"""
+        label = new_label(0, 0, 100, 20, text='写真票')
+        photo = new_field(10, 30, 200, 200, field_id=400)
+        name = new_field(10, 210, 200, 230, field_id=108)
+        line = new_line(0, 250, 200, 250)
+        lay = _make_layout(label, photo, name, line)
+
+        data = {'氏名': '鈴木花子'}
+        result = fill_layout(lay, data)
+
+        assert result.objects[0].obj_type == ObjectType.LABEL
+        assert result.objects[0].text == '写真票'
+        assert result.objects[1].obj_type == ObjectType.LABEL  # 写真なし → 空LABEL
+        assert result.objects[1].text == ''
+        assert result.objects[2].obj_type == ObjectType.LABEL
+        assert result.objects[2].text == '鈴木花子'
+        assert result.objects[3].obj_type == ObjectType.LINE
+
+    def test_photo_field_corrupt_image(self, tmp_path) -> None:
+        """破損画像の場合は空の LABEL を返す。"""
+        corrupt_path = str(tmp_path / '1-1-01.jpg')
+        with open(corrupt_path, 'wb') as f:
+            f.write(b'not an image')
+
+        lay = self._make_photo_layout()
+        data = {'学年': '1', '組': '1', '出席番号': '1'}
+        opts = {'_photo_map': {'1-1-01': corrupt_path}}
+        result = fill_layout(lay, data, opts)
+
+        photo_obj = result.objects[0]
+        assert photo_obj.obj_type == ObjectType.LABEL
+        assert photo_obj.text == ''
+
+    def test_image_preserved_in_fill(self) -> None:
+        """既存の IMAGE オブジェクトは fill_layout で保持される。"""
+        img_obj = LayoutObject(
+            obj_type=ObjectType.IMAGE,
+            rect=Rect(10, 20, 200, 300),
+            image=EmbeddedImage(
+                rect=(10, 20, 200, 300),
+                image_data=b'fake-png-data',
+                original_path='/test.png',
+            ),
+        )
+        lay = _make_layout(img_obj)
+        result = fill_layout(lay, {})
+
+        assert result.objects[0].obj_type == ObjectType.IMAGE
+        assert result.objects[0].image.image_data == b'fake-png-data'
+
+    def test_photo_fill_with_name_match(self, tmp_path) -> None:
+        """氏名ベースでマッチする場合も IMAGE に変換される。"""
+        from PIL import Image
+
+        img = Image.new('RGB', (100, 150), (255, 255, 0))
+        photo_path = str(tmp_path / '山田太郎.jpg')
+        img.save(photo_path)
+
+        lay = self._make_photo_layout()
+        data = {'氏名': '山田 太郎', '学年': '1', '組': '1', '出席番号': '99'}
+        opts = {'_photo_map': {'山田太郎': photo_path}}
+        result = fill_layout(lay, data, opts)
+
+        photo_obj = result.objects[0]
+        assert photo_obj.obj_type == ObjectType.IMAGE

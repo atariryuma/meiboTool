@@ -2,8 +2,8 @@
   "format": "meibo_layout_v2",
   "title": "【天久小】卒業台帳",
   "version": 1600,
-  "page_width": 2100,
-  "page_height": 2970,
+  "page_width": 2970,
+  "page_height": 2100,
   "objects": [
     {
       "type": "LINE"
@@ -555,6 +555,6 @@
     "spacing_h_mm": 0.0,
     "spacing_v_mm": 0.0,
     "paper_size": "A4",
-    "orientation": "portrait"
+    "orientation": "landscape"
   }
 }

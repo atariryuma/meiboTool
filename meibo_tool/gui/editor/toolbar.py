@@ -62,7 +62,8 @@ class EditorToolbar(ctk.CTkFrame):
         # ── オブジェクト追加 ──
         for label, key in [
             ('+ ラベル', 'add_label'), ('+ フィールド', 'add_field'),
-            ('+ 罫線', 'add_line'), ('削除', 'delete'),
+            ('+ 罫線', 'add_line'), ('+ 画像', 'add_image'),
+            ('削除', 'delete'),
         ]:
             btn = ctk.CTkButton(
                 self, text=label, width=90, height=28,

@@ -254,6 +254,7 @@ class PropertiesPanel(ctk.CTkFrame):
             ObjectType.FIELD: 'フィールド',
             ObjectType.LINE: '罫線',
             ObjectType.GROUP: 'グループ',
+            ObjectType.IMAGE: '画像',
         }
         self._type_label.configure(
             text=type_names.get(obj.obj_type, '不明'),

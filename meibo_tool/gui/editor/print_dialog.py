@@ -24,6 +24,7 @@ class PrintDialog(ctk.CTkToplevel):
     def __init__(
         self, master: ctk.CTkBaseClass,
         layouts: list[LayFile],
+        layout_registry: dict[str, LayFile] | None = None,
     ) -> None:
         super().__init__(master)
         self.title('印刷')
@@ -32,6 +33,7 @@ class PrintDialog(ctk.CTkToplevel):
         self.grab_set()
 
         self._layouts = layouts
+        self._registry = layout_registry
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -133,7 +135,7 @@ class PrintDialog(ctk.CTkToplevel):
             with PrintJob(printer_name) as job:
                 job.start(f'名簿印刷 ({total}ページ)')
                 for i, lay in enumerate(self._layouts):
-                    job.print_page(lay)
+                    job.print_page(lay, layout_registry=self._registry)
                     progress = (i + 1) / total
                     self.after(0, self._update_progress, progress, i + 1, total)
 

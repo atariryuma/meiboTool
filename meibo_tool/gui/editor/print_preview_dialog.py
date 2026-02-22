@@ -26,6 +26,7 @@ class PrintPreviewDialog(ctk.CTkToplevel):
         self, master: ctk.CTkBaseClass,
         layouts: list[LayFile],
         on_print: Callable[[list[LayFile]], None] | None = None,
+        layout_registry: dict[str, LayFile] | None = None,
     ) -> None:
         super().__init__(master)
         self.title('印刷プレビュー')
@@ -35,6 +36,7 @@ class PrintPreviewDialog(ctk.CTkToplevel):
 
         self._layouts = layouts
         self._on_print = on_print
+        self._registry = layout_registry
         self._current_page = 0
         self._preview_images: list[PILImage.Image] = []
         self._tk_image: ctk.CTkImage | None = None
@@ -88,7 +90,9 @@ class PrintPreviewDialog(ctk.CTkToplevel):
     def _render_all_pages(self) -> None:
         """全ページを PIL 画像にレンダリングする。"""
         for lay in self._layouts:
-            img = render_layout_to_image(lay, dpi=150)
+            img = render_layout_to_image(
+                lay, dpi=150, layout_registry=self._registry,
+            )
             self._preview_images.append(img)
 
     def _show_page(self, idx: int) -> None:

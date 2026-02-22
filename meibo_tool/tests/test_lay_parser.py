@@ -31,6 +31,7 @@ from core.lay_parser import (
     Rect,
     TableColumn,
     _detect_paper,
+    new_image,
     parse_lay,
     parse_lay_bytes,
     parse_lay_multi,
@@ -495,6 +496,33 @@ class TestFieldIdMapExpanded:
         assert resolve_field_name(108) == '氏名'
         assert resolve_field_name(610) == '生年月日'
 
+    def test_corrected_field_ids(self):
+        """修正後の field_id マッピングを検証。"""
+        assert resolve_field_name(101) == '学年'
+        assert resolve_field_name(102) == '組'
+        assert resolve_field_name(110) == '年度和暦'
+        assert resolve_field_name(134) == '年度'
+
+
+class TestFieldDisplayMapCorrected:
+    """修正後の FIELD_DISPLAY_MAP テスト。"""
+
+    def test_display_101(self):
+        from core.lay_parser import resolve_field_display
+        assert resolve_field_display(101) == '学年'
+
+    def test_display_102(self):
+        from core.lay_parser import resolve_field_display
+        assert resolve_field_display(102) == '学級'
+
+    def test_display_110(self):
+        from core.lay_parser import resolve_field_display
+        assert resolve_field_display(110) == '年度（和暦）'
+
+    def test_display_134(self):
+        from core.lay_parser import resolve_field_display
+        assert resolve_field_display(134) == '年度'
+
 
 # ── マルチレイアウト .lay 実ファイルテスト ────────────────────────────────────
 
@@ -556,6 +584,54 @@ class TestMultiLayoutRealFile:
         desk_label = layouts[7]  # 机用氏名ラベル
         assert desk_label.paper.paper_size == 'A3'
         assert desk_label.paper.orientation == 'landscape'
+
+    def test_doc_flag2_landscape_shuryou(self, layouts: list[LayFile]):
+        """修了台帳: mode=0 + DOC_FLAG2=2 → A4 横 (2970×2100)。"""
+        daicho = layouts[18]
+        assert daicho.paper is not None
+        assert daicho.paper.mode == 0
+        assert daicho.paper.orientation == 'landscape'
+        assert daicho.page_width == 2970
+        assert daicho.page_height == 2100
+
+    def test_doc_flag2_landscape_sotsugyou(self, layouts: list[LayFile]):
+        """卒業台帳: mode=0 + DOC_FLAG2=2 → A4 横 (2970×2100)。"""
+        sotsugyou = layouts[21]
+        assert sotsugyou.paper is not None
+        assert sotsugyou.paper.mode == 0
+        assert sotsugyou.paper.orientation == 'landscape'
+        assert sotsugyou.page_width == 2970
+        assert sotsugyou.page_height == 2100
+
+    def test_doc_flag2_portrait_unchanged(self, layouts: list[LayFile]):
+        """家庭調査票: mode=0 + DOC_FLAG2=1 → A4 縦 (2100×2970) のまま。"""
+        main = layouts[0]
+        assert main.paper.mode == 0
+        assert main.paper.orientation == 'portrait'
+        assert main.page_width == 2100
+        assert main.page_height == 2970
+
+    def test_paper_size_flag_a3(self, layouts: list[LayFile]):
+        """1年生用机ラベル: mode=0 + paper_size_flag=0 → A3 縦 (2970×4200)。"""
+        label_1nen = layouts[10]
+        assert '1年生' in label_1nen.title
+        assert label_1nen.paper is not None
+        assert label_1nen.paper.mode == 0
+        assert label_1nen.paper.paper_size == 'A3'
+        assert label_1nen.paper.orientation == 'portrait'
+        assert label_1nen.page_width == 2970
+        assert label_1nen.page_height == 4200
+
+    def test_paper_size_flag_b4(self, layouts: list[LayFile]):
+        """複数学級名列表: mode=0 + paper_size_flag=1 → B4 横 (3640×2570)。"""
+        fukusu = layouts[17]
+        assert '複数学級' in fukusu.title
+        assert fukusu.paper is not None
+        assert fukusu.paper.mode == 0
+        assert fukusu.paper.paper_size == 'B4'
+        assert fukusu.paper.orientation == 'landscape'
+        assert fukusu.page_width == 3640
+        assert fukusu.page_height == 2570
 
     def test_table_found_in_shuryou_daicho(self, layouts: list[LayFile]):
         """修了台帳に TABLE オブジェクト (10カラム) が含まれる。"""
@@ -619,3 +695,26 @@ class TestLayoutObjectTableColumns:
         )
         assert len(obj.table_columns) == 1
         assert obj.table_columns[0].header == '氏名'
+
+
+# ── new_image ────────────────────────────────────────────────────────────────
+
+
+class TestNewImage:
+    """new_image() ヘルパーのテスト。"""
+
+    def test_creates_image_object(self) -> None:
+        obj = new_image(10, 20, 200, 300)
+        assert obj.obj_type == ObjectType.IMAGE
+        assert obj.image is not None
+
+    def test_rect_set_correctly(self) -> None:
+        obj = new_image(10, 20, 200, 300)
+        assert obj.rect == Rect(10, 20, 200, 300)
+        assert obj.image.rect == (10, 20, 200, 300)
+
+    def test_embedded_image_data(self) -> None:
+        data = b'\x89PNG\r\n\x1a\n...'
+        obj = new_image(0, 0, 100, 100, image_data=data, original_path='/test.png')
+        assert obj.image.image_data == data
+        assert obj.image.original_path == '/test.png'

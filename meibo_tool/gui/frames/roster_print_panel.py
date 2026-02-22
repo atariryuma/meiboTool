@@ -21,17 +21,19 @@ import customtkinter as ctk
 import pandas as pd
 from PIL import Image as PILImage
 
-from core.config import get_layout_dir
+from core.config import get_layout_dir, get_photo_dir
 from core.importer import import_file
 from core.lay_parser import LayFile
 from core.lay_renderer import (
-    calculate_page_arrangement,
     fill_layout,
+    fill_meibo_layout,
+    get_page_arrangement,
+    has_meibo,
     render_layout_to_image,
     tile_layouts,
 )
 from core.lay_serializer import load_layout
-from core.layout_registry import scan_layout_dir
+from core.layout_registry import build_layout_registry, scan_layout_dir
 from core.special_needs import (
     detect_regular_students,
     detect_special_needs_students,
@@ -73,6 +75,7 @@ class RosterPrintPanel(ctk.CTkFrame):
         self._df: pd.DataFrame | None = None
         self._filtered_df: pd.DataFrame | None = None
         self._render_generation = 0
+        self._registry = build_layout_registry(self._layout_dir)
 
         self._build_ui()
         self._refresh_layouts()
@@ -114,6 +117,8 @@ class RosterPrintPanel(ctk.CTkFrame):
         self._tree.column('fields', width=60)
         self._tree.grid(row=0, column=0, sticky='nsew')
         self._tree.bind('<<TreeviewSelect>>', self._on_layout_select)
+        # Treeview 上のマウスホイールが親 ScrollableFrame に伝播しないようにする
+        self._tree.bind('<MouseWheel>', self._on_tree_mousewheel)
 
         scrollbar = ttk.Scrollbar(
             tree_frame, orient='vertical', command=self._tree.yview,
@@ -211,9 +216,52 @@ class RosterPrintPanel(ctk.CTkFrame):
             variable=self._placement_var, value='integrated',
         ).grid(row=2, column=0, padx=(10, 5), pady=2, sticky='w')
 
+        # 写真管理セクション
+        photo_frame = ctk.CTkFrame(left, fg_color='transparent')
+        photo_frame.grid(row=7, column=0, sticky='ew', padx=5, pady=5)
+        photo_frame.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(
+            photo_frame, text='写真',
+            font=ctk.CTkFont(size=13, weight='bold'),
+        ).grid(row=0, column=0, columnspan=2, sticky='w', padx=3, pady=(0, 4))
+
+        photo_btn_row = ctk.CTkFrame(photo_frame, fg_color='transparent')
+        photo_btn_row.grid(
+            row=1, column=0, columnspan=2, sticky='ew', padx=3, pady=2,
+        )
+        ctk.CTkButton(
+            photo_btn_row, text='フォルダを開く', width=100,
+            command=self._on_open_photo_dir,
+        ).grid(row=0, column=0, padx=(0, 5))
+        ctk.CTkButton(
+            photo_btn_row, text='一括読込', width=80,
+            command=self._on_import_photos,
+        ).grid(row=0, column=1, padx=(0, 5))
+        ctk.CTkButton(
+            photo_btn_row, text='更新', width=50,
+            command=self._on_refresh_photo_status,
+        ).grid(row=0, column=2)
+
+        self._photo_status_label = ctk.CTkLabel(
+            photo_frame, text='写真フォルダ未スキャン',
+            text_color='gray', font=ctk.CTkFont(size=11),
+        )
+        self._photo_status_label.grid(
+            row=2, column=0, columnspan=2, sticky='w', padx=3, pady=(2, 0),
+        )
+        self._photo_unmatched_label = ctk.CTkLabel(
+            photo_frame, text='',
+            text_color='gray50', font=ctk.CTkFont(size=10),
+            wraplength=280, justify='left',
+        )
+        self._photo_unmatched_label.grid(
+            row=3, column=0, columnspan=2, sticky='w', padx=3, pady=(0, 2),
+        )
+
         # ボタンセクション
         btn_frame = ctk.CTkFrame(left, fg_color='transparent')
-        btn_frame.grid(row=7, column=0, sticky='ew', padx=5, pady=(5, 8))
+        btn_frame.grid(row=8, column=0, sticky='ew', padx=5, pady=(5, 8))
 
         ctk.CTkButton(
             btn_frame, text='プレビュー', width=120,
@@ -274,7 +322,11 @@ class RosterPrintPanel(ctk.CTkFrame):
         for item in self._tree.get_children():
             self._tree.delete(item)
 
-        self._layouts = scan_layout_dir(self._layout_dir)
+        all_layouts = scan_layout_dir(self._layout_dir)
+        # パーツレイアウト（MEIBO 参照用）は除外し、印刷用レイアウトのみ表示
+        self._layouts = [
+            m for m in all_layouts if '【' in (m.get('title') or '')
+        ]
         for i, meta in enumerate(self._layouts):
             self._tree.insert(
                 '', 'end', iid=str(i),
@@ -284,6 +336,11 @@ class RosterPrintPanel(ctk.CTkFrame):
                     meta.get('field_count', 0),
                 ),
             )
+
+    def _on_tree_mousewheel(self, event: tk.Event) -> str:
+        """Treeview 上のマウスホイールを処理し、親への伝播を止める。"""
+        self._tree.yview_scroll(-1 * (event.delta // 120), 'units')
+        return 'break'
 
     def _on_layout_select(self, _event: tk.Event) -> None:
         """Treeview でレイアウト選択時。"""
@@ -320,18 +377,21 @@ class RosterPrintPanel(ctk.CTkFrame):
             self._arrangement_label.configure(text='')
             return
 
-        cols, rows, per_page, scale = calculate_page_arrangement(
+        cols, rows, per_page, scale = get_page_arrangement(
             self._selected_lay,
         )
-        w_mm = self._selected_lay.page_width * 0.25
-        h_mm = self._selected_lay.page_height * 0.25
+        p = self._selected_lay.paper
+        unit_mm = p.unit_mm if p else 0.25
+        w_mm = self._selected_lay.page_width * unit_mm
+        h_mm = self._selected_lay.page_height * unit_mm
+        paper_name = p.paper_size if p and p.paper_size else 'A4'
 
         if per_page == 1:
-            text = f'{w_mm:.0f}×{h_mm:.0f}mm → A4に1名/ページ'
+            text = f'{w_mm:.0f}×{h_mm:.0f}mm → {paper_name}に1名/ページ'
         else:
             text = (
                 f'{w_mm:.0f}×{h_mm:.0f}mm'
-                f' → A4に{cols}×{rows}={per_page}名/ページ'
+                f' → {paper_name}に{cols}×{rows}={per_page}名/ページ'
             )
             if scale < 1.0:
                 text += f'（{scale:.0%}縮小）'
@@ -347,36 +407,62 @@ class RosterPrintPanel(ctk.CTkFrame):
         if self._selected_lay is None:
             return
 
-        cols, rows, per_page, scale = calculate_page_arrangement(
+        cols, rows, per_page, scale = get_page_arrangement(
             self._selected_lay,
         )
 
         df = self._filtered_df if self._filtered_df is not None else self._df
         if df is not None and not df.empty:
-            # データあり: 先頭 per_page 名分を差し込んでタイルプレビュー
             opts = self._get_options()
             opts['total_count'] = len(df)
-            sample = df.head(per_page)
-            filled: list[LayFile] = []
-            for i, (_idx, row) in enumerate(sample.iterrows()):
-                opts['page_number'] = i + 1
-                try:
-                    filled.append(
-                        fill_layout(self._selected_lay, row.to_dict(), opts),
-                    )
-                except Exception:
-                    filled.append(self._selected_lay)
 
-            if (per_page > 1 or scale < 1.0) and filled:
-                pages = tile_layouts(filled, cols, rows, scale=scale)
+            if has_meibo(self._selected_lay):
+                # MEIBO レイアウト: 先頭ページ分を差し込む
+                from core.lay_renderer import _meibo_page_capacity
+                cap = _meibo_page_capacity(self._selected_lay)
+                sample_rows = [
+                    row.to_dict()
+                    for _, row in df.head(cap).iterrows()
+                ]
+                meibo_pages = fill_meibo_layout(
+                    self._selected_lay, sample_rows, opts,
+                    layout_registry=self._registry,
+                )
+                preview_lay = meibo_pages[0] if meibo_pages else self._selected_lay
+            else:
+                # 通常レイアウト: 先頭 per_page 名分を差し込んでタイルプレビュー
+                sample = df.head(per_page)
+                filled: list[LayFile] = []
+                for i, (_idx, row) in enumerate(sample.iterrows()):
+                    opts['page_number'] = i + 1
+                    try:
+                        filled.append(
+                            fill_layout(self._selected_lay, row.to_dict(), opts),
+                        )
+                    except Exception:
+                        filled.append(self._selected_lay)
+
+                if (per_page > 1 or scale < 1.0) and filled:
+                    pages = tile_layouts(
+                        filled, cols, rows, scale=scale,
+                        paper=self._selected_lay.paper,
+                    )
+                    preview_lay = pages[0] if pages else self._selected_lay
+                elif filled:
+                    preview_lay = filled[0]
+                else:
+                    preview_lay = self._selected_lay
+        else:
+            # データなし: ラベルレイアウトはタイル配置して用紙全体を表示
+            if (per_page > 1 or scale < 1.0):
+                templates = [self._selected_lay] * per_page
+                pages = tile_layouts(
+                    templates, cols, rows, scale=scale,
+                    paper=self._selected_lay.paper,
+                )
                 preview_lay = pages[0] if pages else self._selected_lay
-            elif filled:
-                preview_lay = filled[0]
             else:
                 preview_lay = self._selected_lay
-        else:
-            # データなし: テンプレートのまま表示（タイルなし）
-            preview_lay = self._selected_lay
 
         # バックグラウンドでレンダリング（世代カウンターでキャンセル管理）
         self._render_generation += 1
@@ -390,7 +476,9 @@ class RosterPrintPanel(ctk.CTkFrame):
     def _render_worker(self, lay: LayFile, generation: int) -> None:
         """バックグラウンドでレイアウトをレンダリングする。"""
         try:
-            img = render_layout_to_image(lay, dpi=150)
+            img = render_layout_to_image(
+                lay, dpi=150, layout_registry=self._registry,
+            )
             if generation == self._render_generation and self.winfo_exists():
                 self.after(0, lambda: self._show_preview_image(img))
         except Exception:
@@ -521,7 +609,7 @@ class RosterPrintPanel(ctk.CTkFrame):
 
         # レイアウト選択済みならページ数も表示
         if self._selected_lay is not None:
-            _cols, _rows, per_page, _scale = calculate_page_arrangement(
+            _cols, _rows, per_page, _scale = get_page_arrangement(
                 self._selected_lay,
             )
             n_pages = math.ceil(total / max(1, per_page))
@@ -540,7 +628,84 @@ class RosterPrintPanel(ctk.CTkFrame):
         }
         with contextlib.suppress(ValueError):
             opts['fiscal_year'] = int(self._year_var.get())
+
+        # 写真マップ
+        from core.photo_manager import scan_photos
+
+        photo_dir = get_photo_dir(self._config)
+        if os.path.isdir(photo_dir):
+            opts['_photo_map'] = scan_photos(photo_dir)
+
         return opts
+
+    # ── 写真管理 ─────────────────────────────────────────────────────
+
+    def _on_open_photo_dir(self) -> None:
+        """写真フォルダをエクスプローラーで開く。"""
+        photo_dir = get_photo_dir(self._config)
+        try:
+            os.startfile(photo_dir)
+        except OSError:
+            mb.showwarning('エラー', f'フォルダを開けません:\n{photo_dir}')
+
+    def _on_import_photos(self) -> None:
+        """ソースフォルダから写真を一括コピーする。"""
+        src = fd.askdirectory(title='写真のコピー元フォルダを選択')
+        if not src:
+            return
+
+        from core.photo_manager import import_photos_from_folder
+
+        photo_dir = get_photo_dir(self._config)
+        copied, skipped = import_photos_from_folder(src, photo_dir)
+
+        msg = f'{copied} 枚の写真をコピーしました。'
+        if skipped:
+            msg += f'\n{len(skipped)} 枚は既存のためスキップ。'
+        mb.showinfo('写真読込完了', msg)
+
+        self._on_refresh_photo_status()
+
+    def _on_refresh_photo_status(self) -> None:
+        """写真マッチ状況を更新する。"""
+        from core.photo_manager import get_match_status, scan_photos
+
+        photo_dir = get_photo_dir(self._config)
+        photo_map = scan_photos(photo_dir)
+
+        df = self._filtered_df if self._filtered_df is not None else self._df
+        if df is None or df.empty:
+            n_photos = len(photo_map)
+            self._photo_status_label.configure(
+                text=f'写真フォルダ: {n_photos} 枚',
+                text_color='gray',
+            )
+            self._photo_unmatched_label.configure(text='')
+            return
+
+        matched, total, unmatched = get_match_status(df, photo_map)
+
+        if matched == total:
+            color = 'green'
+        elif matched > 0:
+            color = 'orange'
+        else:
+            color = 'gray'
+
+        self._photo_status_label.configure(
+            text=f'マッチ: {matched}/{total} 名',
+            text_color=color,
+        )
+
+        if unmatched:
+            names = ', '.join(unmatched[:5])
+            if len(unmatched) > 5:
+                names += f' 他{len(unmatched) - 5}名'
+            self._photo_unmatched_label.configure(
+                text=f'未マッチ: {names}',
+            )
+        else:
+            self._photo_unmatched_label.configure(text='')
 
     # ── 差込・印刷 ─────────────────────────────────────────────────────
 
@@ -562,14 +727,25 @@ class RosterPrintPanel(ctk.CTkFrame):
         filled: list[LayFile] = []
         errors: list[str] = []
 
-        for i, (_idx, row) in enumerate(merged.iterrows()):
-            opts['page_number'] = i + 1
+        if has_meibo(self._selected_lay):
+            # MEIBO レイアウト: 複数名を 1 ページにまとめる
+            data_rows = [row.to_dict() for _, row in merged.iterrows()]
             try:
-                filled.append(
-                    fill_layout(self._selected_lay, row.to_dict(), opts),
+                filled = fill_meibo_layout(
+                    self._selected_lay, data_rows, opts,
+                    layout_registry=self._registry,
                 )
             except Exception as e:
-                errors.append(f'行 {i + 1}: {e}')
+                errors.append(f'MEIBO 差込エラー: {e}')
+        else:
+            for i, (_idx, row) in enumerate(merged.iterrows()):
+                opts['page_number'] = i + 1
+                try:
+                    filled.append(
+                        fill_layout(self._selected_lay, row.to_dict(), opts),
+                    )
+                except Exception as e:
+                    errors.append(f'行 {i + 1}: {e}')
 
         if errors:
             msg = '\n'.join(errors[:10])
@@ -583,12 +759,15 @@ class RosterPrintPanel(ctk.CTkFrame):
         """差込済みレイアウトをタイル配置する（per_page > 1 の場合）。"""
         if not filled or self._selected_lay is None:
             return filled
-        cols, rows, per_page, scale = calculate_page_arrangement(
+        cols, rows, per_page, scale = get_page_arrangement(
             self._selected_lay,
         )
         if per_page <= 1 and scale >= 1.0:
             return filled
-        return tile_layouts(filled, cols, rows, scale=scale)
+        return tile_layouts(
+            filled, cols, rows, scale=scale,
+            paper=self._selected_lay.paper,
+        )
 
     def _on_preview(self) -> None:
         """プレビューボタン押下時。"""
@@ -610,6 +789,7 @@ class RosterPrintPanel(ctk.CTkFrame):
         PrintPreviewDialog(
             self.winfo_toplevel(), pages,
             on_print=self._do_print,
+            layout_registry=self._registry,
         )
 
     def _on_print(self) -> None:
@@ -629,9 +809,15 @@ class RosterPrintPanel(ctk.CTkFrame):
         pages = self._tile_for_printing(filled)
 
         from gui.editor.print_dialog import PrintDialog
-        PrintDialog(self.winfo_toplevel(), pages)
+        PrintDialog(
+            self.winfo_toplevel(), pages,
+            layout_registry=self._registry,
+        )
 
     def _do_print(self, layouts: list[LayFile]) -> None:
         """PrintPreviewDialog からの印刷コールバック。"""
         from gui.editor.print_dialog import PrintDialog
-        PrintDialog(self.winfo_toplevel(), layouts)
+        PrintDialog(
+            self.winfo_toplevel(), layouts,
+            layout_registry=self._registry,
+        )

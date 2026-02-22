@@ -141,7 +141,9 @@ class TestPrintJobMock:
 
             mock_win32['dc'].StartPage.assert_called_once()
             mock_win32['dc'].EndPage.assert_called_once()
-            mock_render.assert_called_once_with(lay, dpi=300, for_print=True)
+            mock_render.assert_called_once_with(
+                lay, dpi=300, for_print=True, layout_registry=None,
+            )
             mock_blit.assert_called_once_with(
                 mock_win32['dc'], mock_img, 300, 300,
             )

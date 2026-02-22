@@ -18,13 +18,16 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 
 from core.lay_parser import (
+    EmbeddedImage,
     FontInfo,
     LayFile,
     LayoutObject,
     ObjectType,
+    PaperLayout,
     Point,
     Rect,
     TableColumn,
+    resolve_field_display,
     resolve_field_name,
 )
 
@@ -133,6 +136,7 @@ class RenderBackend(ABC):
         h_align: int = 0, v_align: int = 0,
         color: str = '#000000',
         bold: bool = False, italic: bool = False,
+        vertical: bool = False,
     ) -> None:
         """テキストを描画する。"""
 
@@ -200,6 +204,7 @@ class CanvasBackend(RenderBackend):
         h_align: int = 0, v_align: int = 0,
         color: str = '#000000', tags: tuple[str, ...] = (),
         bold: bool = False, italic: bool = False,
+        vertical: bool = False,
     ) -> int | None:
         import tkinter.font as tkfont
 
@@ -218,8 +223,9 @@ class CanvasBackend(RenderBackend):
         slant = 'italic' if italic else 'roman'
 
         # ── 縦書き判定 ──
-        # 幅が狭くて高さがある矩形 + 改行なしテキスト → 縦書き
-        is_vertical = (
+        # font.vertical フラグが明示されていればそれを使う
+        # フォールバック: 幅が狭くて高さがある矩形 + 改行なしテキスト
+        is_vertical = vertical or (
             '\n' not in text
             and len(text) > 1
             and w < h * 0.5
@@ -388,6 +394,12 @@ class CanvasBackend(RenderBackend):
         try:
             from PIL import ImageTk
             img = Image.open(BytesIO(image_data))
+            # 透過画像を白背景に合成（Canvas は RGBA を正しく描画できない）
+            if img.mode != 'RGB':
+                rgba = img.convert('RGBA')
+                bg = Image.new('RGB', rgba.size, (255, 255, 255))
+                bg.paste(rgba, mask=rgba)
+                img = bg
             w = max(1, int(right - left))
             h = max(1, int(bottom - top))
             img = img.resize((w, h), Image.Resampling.LANCZOS)
@@ -449,6 +461,7 @@ class PILBackend(RenderBackend):
         h_align: int = 0, v_align: int = 0,
         color: str = '#000000',
         bold: bool = False, italic: bool = False,
+        vertical: bool = False,
         **kwargs: object,
     ) -> None:
         if not text:
@@ -456,8 +469,8 @@ class PILBackend(RenderBackend):
 
         text = text.replace('\r\n', '\n').replace('\r', '\n')
 
-        # 縦書き判定（CanvasBackend と同じロジック）
-        is_vertical = (
+        # 縦書き判定: font.vertical フラグ優先、フォールバックはヒューリスティック
+        is_vertical = vertical or (
             '\n' not in text
             and len(text) > 1
             and w < h * 0.5
@@ -598,13 +611,10 @@ class PILBackend(RenderBackend):
             img = Image.open(BytesIO(image_data))
             w = max(1, int(right - left))
             h = max(1, int(bottom - top))
+            # 透過画像（パレット/LA 等も含む）を RGBA に統一して合成
+            img = img.convert('RGBA')
             img = img.resize((w, h), Image.Resampling.LANCZOS)
-            if img.mode == 'RGBA':
-                self._img.paste(img, (int(left), int(top)), img)
-            else:
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                self._img.paste(img, (int(left), int(top)))
+            self._img.paste(img, (int(left), int(top)), img)
         except Exception:
             pass
 
@@ -618,10 +628,12 @@ class LayRenderer:
     def __init__(
         self, lay: LayFile, backend: RenderBackend,
         layout_registry: dict[str, LayFile] | None = None,
+        editor_mode: bool = True,
     ) -> None:
         self._lay = lay
         self._b = backend
         self._registry = layout_registry or {}
+        self._editor_mode = editor_mode
 
     def render_all(self, *, skip_page_outline: bool = False) -> None:
         """ページ外枠 + 全オブジェクトを描画する。
@@ -706,31 +718,43 @@ class LayRenderer:
                 obj.h_align, obj.v_align, _TEXT_COLOR,
                 tags=(tag, 'label_text'),
                 bold=obj.font.bold, italic=obj.font.italic,
+                vertical=obj.font.vertical,
             )
 
     def _render_field(self, obj: LayoutObject, tag: str) -> None:
-        """FIELD オブジェクトを描画する（薄い点線枠 + プレースホルダー）。"""
+        """FIELD オブジェクトを描画する。
+
+        editor_mode=True: 薄い背景 + 点線枠 + フィールド名表示
+        editor_mode=False: 背景なし + ○ 表示（プレビュー/印刷用）
+        """
         if obj.rect is None:
             return
         r = obj.rect
         px1, py1 = self._b._to_px(r.left, r.top)
         px2, py2 = self._b._to_px(r.right, r.bottom)
 
-        # 薄い背景 + 点線枠（編集時の目印）
-        self._b.draw_rect(
-            px1, py1, px2, py2,
-            fill=_FIELD_BG, outline=_FIELD_OUTLINE, width=1,
-            tags=(tag, 'field'),
-        )
+        if self._editor_mode:
+            # エディター: 薄い背景 + 点線枠 + フィールド名
+            self._b.draw_rect(
+                px1, py1, px2, py2,
+                fill=_FIELD_BG, outline=_FIELD_OUTLINE, width=1,
+                tags=(tag, 'field'),
+            )
+            name = resolve_field_display(obj.field_id)
+            display = f'{obj.prefix}{name}{obj.suffix}'
+            color = _FIELD_TEXT_COLOR
+        else:
+            # プレビュー: 背景なし + ○○○ 表示
+            display = f'{obj.prefix}○○○{obj.suffix}'
+            color = _TEXT_COLOR
 
-        name = resolve_field_name(obj.field_id)
-        display = f'{obj.prefix}{{{{{name}}}}}{obj.suffix}'
         self._b.draw_text(
             px1, py1, px2 - px1, py2 - py1,
             display, obj.font.name, obj.font.size_pt,
-            obj.h_align, obj.v_align, _FIELD_TEXT_COLOR,
+            obj.h_align, obj.v_align, color,
             tags=(tag, 'field_text'),
             bold=obj.font.bold, italic=obj.font.italic,
+            vertical=obj.font.vertical,
         )
 
     def _render_line(self, obj: LayoutObject, tag: str) -> None:
@@ -764,24 +788,35 @@ class LayRenderer:
         cols = obj.table_columns
         total_width = sum(c.width for c in cols) or 1
 
-        # ヘッダー行の高さ: フォントサイズベースまたはテーブル高さの一定割合
+        # フォントサイズ（パーサーで解析済み）
         font_size = obj.font.size_pt if obj.font.size_pt > 0 else 9.0
-        header_h = min(table_h * 0.08, font_size * 2.5)
-        if header_h < 10:
-            header_h = min(table_h * 0.15, 20)
 
-        # データ行高さ = ヘッダーと同じ
-        data_row_h = header_h
-        n_data_rows = max(1, int((table_h - header_h) / data_row_h))
+        # 行数: パーサーで取得した明示的行数を使用
+        # 0x0BBB タグに格納された行数（ヘッダー行を含む場合と含まない場合がある）
+        if obj.table_row_count > 0:
+            n_data_rows = obj.table_row_count
+            data_row_h = table_h / (n_data_rows + 1)
+            header_h = data_row_h
+        else:
+            # フォールバック: フォントサイズベースのヒューリスティック
+            header_h = min(table_h * 0.08, font_size * 2.5)
+            if header_h < 10:
+                header_h = min(table_h * 0.15, 20)
+            data_row_h = header_h
+            n_data_rows = max(1, int((table_h - header_h) / data_row_h))
 
-        # 最初のデータ行のみ薄いピンク背景を描画（テキストより先に描画）
-        if n_data_rows > 0:
-            self._b.draw_rect(
-                px1, py1 + header_h, px2,
-                min(py1 + header_h + data_row_h, py2),
-                fill=_TABLE_DATA_BG, outline='', width=0,
-                tags=(tag, 'table_data_bg'),
-            )
+        # 全データ行に薄いピンク背景を描画（エディターモードのみ）
+        if self._editor_mode:
+            for row_i in range(n_data_rows):
+                data_y = py1 + header_h + row_i * data_row_h
+                if data_y + data_row_h > py2:
+                    break
+                self._b.draw_rect(
+                    px1, data_y, px2,
+                    min(data_y + data_row_h, py2),
+                    fill=_TABLE_DATA_BG, outline='', width=0,
+                    tags=(tag, 'table_data_bg'),
+                )
 
         # 外枠
         self._b.draw_rect(
@@ -820,17 +855,25 @@ class LayRenderer:
                     tags=(tag, 'table_vline'),
                 )
 
-            # データ行のプレースホルダー（最初の行のみ）
-            data_y = py1 + header_h
-            field_name = resolve_field_name(col.field_id)
-            self._b.draw_text(
-                col_x, data_y, col_w, data_row_h,
-                f'{{{{{field_name}}}}}',
-                '', font_size * 0.9,
-                h_align=col.h_align, v_align=1,
-                color=_TABLE_DATA_TEXT,
-                tags=(tag, 'table_data_text'),
-            )
+            # 全データ行にプレースホルダーを表示
+            if self._editor_mode:
+                display_name = resolve_field_display(col.field_id)
+                data_color = _TABLE_DATA_TEXT
+            else:
+                display_name = '○○○'
+                data_color = _TEXT_COLOR
+            for row_i in range(n_data_rows):
+                data_y = py1 + header_h + row_i * data_row_h
+                if data_y + data_row_h > py2:
+                    break
+                self._b.draw_text(
+                    col_x, data_y, col_w, data_row_h,
+                    display_name,
+                    '', font_size * 0.9,
+                    h_align=col.h_align, v_align=1,
+                    color=data_color,
+                    tags=(tag, 'table_data_text'),
+                )
 
             col_x += col_w
 
@@ -853,12 +896,12 @@ class LayRenderer:
         if ref_lay is None:
             return
         for i in range(meibo.row_count):
-            if meibo.direction == 0:  # 横並び
-                dx = meibo.origin_x + i * meibo.cell_width
-                dy = meibo.origin_y
-            else:  # 縦並び
+            if meibo.direction == 0:  # 縦並び (vertical)
                 dx = meibo.origin_x
                 dy = meibo.origin_y + i * meibo.cell_height
+            else:  # 横並び (horizontal)
+                dx = meibo.origin_x + i * meibo.cell_width
+                dy = meibo.origin_y
             for ref_obj in ref_lay.objects:
                 offset_obj = _offset_object(ref_obj, dx, dy)
                 if offset_obj.obj_type == ObjectType.LABEL:
@@ -894,6 +937,7 @@ class LayRenderer:
 def render_layout_to_image(
     lay: LayFile, dpi: int = 150, *, for_print: bool = False,
     layout_registry: dict[str, LayFile] | None = None,
+    editor_mode: bool = False,
 ) -> Image.Image:
     """LayFile を PIL 画像にレンダリングする。
 
@@ -905,6 +949,8 @@ def render_layout_to_image(
         dpi: 画像解像度 (default 150)
         for_print: True の場合、ページ外枠を描画しない（印刷用）。
         layout_registry: MEIBO 参照解決用の {名前: LayFile} dict。
+        editor_mode: True の場合、フィールドに背景色 + 名前表示（エディター用）。
+            False の場合、背景なし + ○ 表示（プレビュー/印刷用）。
 
     Returns:
         PIL.Image.Image (RGB)
@@ -915,7 +961,10 @@ def render_layout_to_image(
     h = max(1, int(lay.page_height * scale))
     img = Image.new('RGB', (w, h), (255, 255, 255))
     backend = PILBackend(img, dpi, unit_mm=unit_mm)
-    renderer = LayRenderer(lay, backend, layout_registry=layout_registry)
+    renderer = LayRenderer(
+        lay, backend, layout_registry=layout_registry,
+        editor_mode=editor_mode,
+    )
     renderer.render_all(skip_page_outline=for_print)
     return img
 
@@ -1051,6 +1100,17 @@ def calculate_page_arrangement(
     return 1, 1, 1, scale
 
 
+# 用紙サイズ (mm) — PaperLayout の paper_size から用紙寸法を得るためのテーブル
+_TILE_PAPER_MM: dict[str, tuple[int, int]] = {
+    'A3': (297, 420),
+    'A4': (210, 297),
+    'A5': (148, 210),
+    'B4': (257, 364),
+    'B5': (182, 257),
+    'はがき': (100, 148),
+}
+
+
 def tile_layouts(
     layouts: list[LayFile],
     cols: int,
@@ -1058,19 +1118,23 @@ def tile_layouts(
     paper_width: int = A4_WIDTH,
     paper_height: int = A4_HEIGHT,
     scale: float = 1.0,
+    paper: PaperLayout | None = None,
 ) -> list[LayFile]:
     """複数のレイアウトを1ページにタイル配置した LayFile のリストを返す。
 
     各レイアウトを用紙上のグリッドに配置し、中央揃えする。
     既に per_page == 1 かつ scale == 1.0 の場合は元のリストをそのまま返す。
 
+    PaperLayout が指定された場合、用紙サイズ・余白・間隔を PaperLayout から取得する。
+
     Args:
         layouts: 差込済みの個別レイアウト
         cols: 列数
         rows: 行数
-        paper_width: 用紙幅（モデル座標単位）
-        paper_height: 用紙高さ（モデル座標単位）
+        paper_width: 用紙幅（モデル座標単位、paper 未指定時のフォールバック）
+        paper_height: 用紙高さ（モデル座標単位、paper 未指定時のフォールバック）
         scale: 縮小率（1.0 = 等倍）
+        paper: PaperLayout（ラベルモードの場合、余白・間隔を使用）
 
     Returns:
         タイル配置された page LayFile のリスト
@@ -1082,18 +1146,44 @@ def tile_layouts(
     cell_w = int(layouts[0].page_width * scale)
     cell_h = int(layouts[0].page_height * scale)
 
-    # カード間ガター (モデル座標単位)
-    _MAX_GUTTER = 20
-    spare_x = paper_width - cols * cell_w
-    spare_y = paper_height - rows * cell_h
-    gutter_x = min(_MAX_GUTTER, spare_x // cols) if cols > 1 and spare_x > 0 else 0
-    gutter_y = min(_MAX_GUTTER, spare_y // rows) if rows > 1 and spare_y > 0 else 0
+    # PaperLayout からラベル配置情報を取得
+    if paper is not None and paper.mode == 1:
+        unit_mm = paper.unit_mm or 0.1
+        # 用紙サイズをレイアウト座標単位に変換
+        short_mm, long_mm = _TILE_PAPER_MM.get(
+            paper.paper_size, (210, 297),
+        )
+        if paper.orientation == 'landscape':
+            pw_mm, ph_mm = long_mm, short_mm
+        else:
+            pw_mm, ph_mm = short_mm, long_mm
+        paper_width = int(pw_mm / unit_mm)
+        paper_height = int(ph_mm / unit_mm)
+        margin_x = int(paper.margin_left_mm / unit_mm)
+        margin_y = int(paper.margin_top_mm / unit_mm)
+        gutter_x = int(paper.spacing_h_mm / unit_mm)
+        gutter_y = int(paper.spacing_v_mm / unit_mm)
+    else:
+        # フォールバック: 中央揃え
+        _MAX_GUTTER = 20
+        spare_x = paper_width - cols * cell_w
+        spare_y = paper_height - rows * cell_h
+        gutter_x = min(_MAX_GUTTER, spare_x // cols) if cols > 1 and spare_x > 0 else 0
+        gutter_y = min(_MAX_GUTTER, spare_y // rows) if rows > 1 and spare_y > 0 else 0
+        total_w = cols * cell_w + (cols - 1) * gutter_x
+        total_h = rows * cell_h + (rows - 1) * gutter_y
+        margin_x = (paper_width - total_w) // 2
+        margin_y = (paper_height - total_h) // 2
 
-    # 中央揃えマージン（ガター分を含む）
-    total_w = cols * cell_w + (cols - 1) * gutter_x
-    total_h = rows * cell_h + (rows - 1) * gutter_y
-    margin_x = (paper_width - total_w) // 2
-    margin_y = (paper_height - total_h) // 2
+    # ページ用の PaperLayout（unit_mm を保持するために mode=0 で作成）
+    page_paper = None
+    if paper is not None:
+        page_paper = PaperLayout(
+            mode=0,
+            unit_mm=paper.unit_mm,
+            paper_size=paper.paper_size,
+            orientation=paper.orientation,
+        )
 
     pages: list[LayFile] = []
     for page_start in range(0, len(layouts), per_page):
@@ -1104,6 +1194,7 @@ def tile_layouts(
             page_width=paper_width,
             page_height=paper_height,
             objects=[],
+            paper=page_paper,
         )
 
         for i, lay in enumerate(page_items):
@@ -1234,6 +1325,168 @@ def _contains_gaiji(text: str) -> bool:
 # ── データ差込 ───────────────────────────────────────────────────────────────
 
 
+def _resolve_field_value(
+    key: str, data_row: dict, options: dict,
+) -> str:
+    """フィールド論理名からデータ値を解決する。
+
+    fill_layout / fill_meibo_layout 共通のデータ解決ロジック。
+    """
+    from utils.address import build_address, build_guardian_address
+    from utils.date_fmt import DATE_KEYS, format_date
+    from utils.wareki import to_wareki
+
+    original_key = key
+    mode = options.get('name_display', 'furigana')
+
+    _NAME_KANA_KEYS = frozenset({'氏名かな', '正式氏名かな'})
+    _NAME_KANJI_KEYS = frozenset({'氏名', '正式氏名'})
+    _KANJI_TO_KANA = {'氏名': '氏名かな', '正式氏名': '正式氏名かな'}
+
+    # 特殊キー
+    if key == '年度':
+        return str(options.get('fiscal_year', ''))
+    if key == '年度和暦':
+        fy = options.get('fiscal_year', 2025)
+        return to_wareki(fy, 4, 1).replace('年', '年度')
+    if key == '学校名':
+        return options.get('school_name', '')
+    if key == '担任名':
+        return options.get('teacher_name', '')
+    if key == '住所':
+        return build_address(data_row)
+    if key == '保護者住所':
+        return build_guardian_address(data_row)
+    if key == 'ページ番号':
+        return str(options.get('page_number', ''))
+    if key == '人数合計':
+        return str(options.get('total_count', ''))
+
+    # name_display モード
+    if mode == 'kanji' and key in _NAME_KANA_KEYS:
+        return ''
+    if mode == 'kana':
+        if key in _NAME_KANA_KEYS:
+            return ''
+        if key in _NAME_KANJI_KEYS:
+            key = _KANJI_TO_KANA[key]
+
+    v = data_row.get(key, '')
+    if v is None:
+        return ''
+    s = str(v).strip()
+    if s.lower() == 'nan':
+        return ''
+    if original_key in DATE_KEYS:
+        return format_date(s)
+    return s
+
+
+_PHOTO_FIELD_ID = 400
+
+
+def _fill_photo_field(
+    obj: LayoutObject, data_row: dict, options: dict,
+) -> LayoutObject:
+    """写真フィールドを IMAGE オブジェクトに変換する。"""
+    photo_map = options.get('_photo_map')
+    if not photo_map:
+        return LayoutObject(
+            obj_type=ObjectType.LABEL, rect=obj.rect,
+            text='', font=obj.font,
+        )
+
+    from core.photo_manager import load_photo_bytes, match_photo_to_student
+
+    photo_path = match_photo_to_student(data_row, photo_map)
+    if photo_path is None:
+        return LayoutObject(
+            obj_type=ObjectType.LABEL, rect=obj.rect,
+            text='', font=obj.font,
+        )
+
+    # フィールドの rect からアスペクト比を計算
+    target_rect = None
+    if obj.rect is not None:
+        w = abs(obj.rect.right - obj.rect.left)
+        h = abs(obj.rect.bottom - obj.rect.top)
+        if w > 0 and h > 0:
+            target_rect = (w, h)
+
+    image_data = load_photo_bytes(photo_path, target_rect=target_rect)
+    if image_data is None:
+        return LayoutObject(
+            obj_type=ObjectType.LABEL, rect=obj.rect,
+            text='', font=obj.font,
+        )
+
+    return LayoutObject(
+        obj_type=ObjectType.IMAGE,
+        rect=obj.rect,
+        image=EmbeddedImage(
+            rect=(
+                obj.rect.left, obj.rect.top,
+                obj.rect.right, obj.rect.bottom,
+            ) if obj.rect else (0, 0, 0, 0),
+            image_data=image_data,
+            original_path=photo_path,
+        ),
+    )
+
+
+def _fill_field_object(
+    obj: LayoutObject, data_row: dict, options: dict,
+) -> LayoutObject:
+    """FIELD オブジェクトをデータで埋めた LABEL に変換する。
+    写真フィールド (field_id=400) は IMAGE に変換する。
+    """
+    if obj.field_id == _PHOTO_FIELD_ID:
+        return _fill_photo_field(obj, data_row, options)
+    logical_name = resolve_field_name(obj.field_id)
+    value = _resolve_field_value(logical_name, data_row, options)
+    text = obj.prefix + value + obj.suffix
+    if _contains_gaiji(text):
+        filled_font = FontInfo(
+            name='IPAmj明朝',
+            size_pt=obj.font.size_pt,
+            bold=obj.font.bold,
+            italic=obj.font.italic,
+        )
+    else:
+        filled_font = obj.font
+    return LayoutObject(
+        obj_type=ObjectType.LABEL,
+        rect=obj.rect,
+        text=text,
+        font=filled_font,
+        h_align=obj.h_align,
+        v_align=obj.v_align,
+    )
+
+
+def _fill_table_object(
+    obj: LayoutObject, data_row: dict, options: dict,
+) -> LayoutObject:
+    """TABLE オブジェクトの各カラムをデータで埋める。"""
+    filled_cols = []
+    for col in obj.table_columns:
+        logical_name = resolve_field_name(col.field_id)
+        value = _resolve_field_value(logical_name, data_row, options)
+        filled_cols.append(TableColumn(
+            field_id=col.field_id,
+            width=col.width,
+            h_align=col.h_align,
+            header=value if value else col.header,
+        ))
+    return LayoutObject(
+        obj_type=ObjectType.TABLE,
+        rect=obj.rect,
+        font=obj.font,
+        table_columns=filled_cols,
+        table_row_count=obj.table_row_count,
+    )
+
+
 def fill_layout(
     lay: LayFile, data_row: dict, options: dict | None = None,
 ) -> LayFile:
@@ -1249,106 +1502,13 @@ def fill_layout(
     Returns:
         差込済み LayFile（コピー）
     """
-    from utils.address import build_address, build_guardian_address
-    from utils.date_fmt import DATE_KEYS, format_date
-    from utils.wareki import to_wareki
-
-    options = options or {}
-    mode = options.get('name_display', 'furigana')
-
-    # name_display モード用
-    _NAME_KANA_KEYS = frozenset({'氏名かな', '正式氏名かな'})
-    _NAME_KANJI_KEYS = frozenset({'氏名', '正式氏名'})
-    _KANJI_TO_KANA = {'氏名': '氏名かな', '正式氏名': '正式氏名かな'}
-
-    def _resolve(key: str) -> str:
-        """フィールド論理名からデータ値を解決する。"""
-        original_key = key
-
-        # 特殊キー
-        if key in ('年度', '年度1', '年度2'):
-            return str(options.get('fiscal_year', ''))
-        if key == '年度和暦':
-            fy = options.get('fiscal_year', 2025)
-            return to_wareki(fy, 4, 1).replace('年', '年度')
-        if key == '学校名':
-            return options.get('school_name', '')
-        if key == '担任名':
-            return options.get('teacher_name', '')
-        if key == '住所':
-            return build_address(data_row)
-        if key == '保護者住所':
-            return build_guardian_address(data_row)
-        if key == 'ページ番号':
-            return str(options.get('page_number', ''))
-        if key == '人数合計':
-            return str(options.get('total_count', ''))
-
-        # name_display モード
-        if mode == 'kanji' and key in _NAME_KANA_KEYS:
-            return ''
-        if mode == 'kana':
-            if key in _NAME_KANA_KEYS:
-                return ''
-            if key in _NAME_KANJI_KEYS:
-                key = _KANJI_TO_KANA[key]
-
-        v = data_row.get(key, '')
-        if v is None:
-            return ''
-        s = str(v).strip()
-        if s.lower() == 'nan':
-            return ''
-        if original_key in DATE_KEYS:
-            return format_date(s)
-        return s
-
+    opts = options or {}
     filled_objects: list[LayoutObject] = []
     for obj in lay.objects:
         if obj.obj_type == ObjectType.FIELD:
-            logical_name = resolve_field_name(obj.field_id)
-            value = _resolve(logical_name)
-            text = obj.prefix + value + obj.suffix
-            # 外字（IVS 異体字・CJK拡張漢字）を含む場合のみ IPAmj明朝 に上書き
-            # それ以外はレイアウトの元フォントをそのまま使う
-            if _contains_gaiji(text):
-                filled_font = FontInfo(
-                    name='IPAmj明朝',
-                    size_pt=obj.font.size_pt,
-                    bold=obj.font.bold,
-                    italic=obj.font.italic,
-                )
-            else:
-                filled_font = obj.font
-            filled_obj = LayoutObject(
-                obj_type=ObjectType.LABEL,
-                rect=obj.rect,
-                text=text,
-                font=filled_font,
-                h_align=obj.h_align,
-                v_align=obj.v_align,
-            )
-            filled_objects.append(filled_obj)
+            filled_objects.append(_fill_field_object(obj, data_row, opts))
         elif obj.obj_type == ObjectType.TABLE:
-            # TABLE: 各カラムの field_id で1行分のデータを解決した
-            # テーブルカラムを生成する（ヘッダー → データ値に置換）
-            filled_cols = []
-            for col in obj.table_columns:
-                logical_name = resolve_field_name(col.field_id)
-                value = _resolve(logical_name)
-                filled_cols.append(TableColumn(
-                    field_id=col.field_id,
-                    width=col.width,
-                    h_align=col.h_align,
-                    header=value if value else col.header,
-                ))
-            filled_obj = LayoutObject(
-                obj_type=ObjectType.TABLE,
-                rect=obj.rect,
-                font=obj.font,
-                table_columns=filled_cols,
-            )
-            filled_objects.append(filled_obj)
+            filled_objects.append(_fill_table_object(obj, data_row, opts))
         else:
             filled_objects.append(obj)
 
@@ -1360,3 +1520,136 @@ def fill_layout(
         objects=filled_objects,
         paper=lay.paper,
     )
+
+
+def _meibo_page_capacity(lay: LayFile) -> int:
+    """MEIBO レイアウトの 1 ページあたりの生徒収容数を返す。
+
+    MEIBO がなければ 0 を返す。
+    """
+    cap = 0
+    for obj in lay.objects:
+        if obj.obj_type == ObjectType.MEIBO and obj.meibo:
+            cap = max(cap, obj.meibo.data_start_index + obj.meibo.row_count)
+    return cap
+
+
+def has_meibo(lay: LayFile) -> bool:
+    """レイアウトに MEIBO オブジェクトが含まれるか判定する。"""
+    return any(o.obj_type == ObjectType.MEIBO and o.meibo for o in lay.objects)
+
+
+def fill_meibo_layout(
+    lay: LayFile,
+    data_rows: list[dict],
+    options: dict | None = None,
+    layout_registry: dict[str, LayFile] | None = None,
+) -> list[LayFile]:
+    """MEIBO 付きレイアウトに複数名分のデータを差し込む。
+
+    MEIBO オブジェクトを展開し、各セルに生徒データを差込んだ
+    LABEL/LINE オブジェクトに変換する。ページ容量を超える生徒は
+    次ページに配置される。
+
+    Args:
+        lay: MEIBO オブジェクトを含むレイアウト
+        data_rows: 全生徒データ dict のリスト
+        options: fill_layout と同じオプション
+        layout_registry: MEIBO ref_name 解決用レジストリ
+
+    Returns:
+        ページごとの差込済み LayFile リスト
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    opts = options or {}
+    registry = layout_registry or {}
+
+    capacity = _meibo_page_capacity(lay)
+    if capacity <= 0:
+        # MEIBO なし — 通常の fill_layout にフォールバック
+        if data_rows:
+            return [fill_layout(lay, data_rows[0], opts)]
+        return []
+
+    pages: list[LayFile] = []
+    total = len(data_rows)
+
+    for page_start in range(0, max(total, 1), capacity):
+        page_data = data_rows[page_start:page_start + capacity]
+        # 共通データ（年度、学校名等）は先頭行から取得
+        common_row = page_data[0] if page_data else {}
+        page_opts = {**opts, 'page_number': (page_start // capacity) + 1}
+
+        filled_objects: list[LayoutObject] = []
+
+        for obj in lay.objects:
+            if obj.obj_type == ObjectType.FIELD:
+                filled_objects.append(
+                    _fill_field_object(obj, common_row, page_opts),
+                )
+            elif obj.obj_type == ObjectType.TABLE:
+                filled_objects.append(
+                    _fill_table_object(obj, common_row, page_opts),
+                )
+            elif obj.obj_type == ObjectType.MEIBO and obj.meibo:
+                meibo = obj.meibo
+                ref_lay = registry.get(meibo.ref_name)
+                if ref_lay is None:
+                    logger.warning(
+                        'MEIBO ref_name 未解決: %s', meibo.ref_name,
+                    )
+                    continue
+
+                # MEIBO セルを展開
+                for i in range(meibo.row_count):
+                    student_idx = meibo.data_start_index + i
+                    if meibo.direction == 0:  # 縦並び (vertical)
+                        dx = meibo.origin_x
+                        dy = meibo.origin_y + i * meibo.cell_height
+                    else:  # 横並び (horizontal)
+                        dx = meibo.origin_x + i * meibo.cell_width
+                        dy = meibo.origin_y
+
+                    if student_idx < len(page_data):
+                        student_row = page_data[student_idx]
+                        # パーツレイアウトの各オブジェクトをデータ差込
+                        for ref_obj in ref_lay.objects:
+                            offset_obj = _offset_object(ref_obj, dx, dy)
+                            if offset_obj.obj_type == ObjectType.FIELD:
+                                filled_objects.append(
+                                    _fill_field_object(
+                                        offset_obj, student_row, page_opts,
+                                    ),
+                                )
+                            elif offset_obj.obj_type == ObjectType.TABLE:
+                                filled_objects.append(
+                                    _fill_table_object(
+                                        offset_obj, student_row, page_opts,
+                                    ),
+                                )
+                            else:
+                                filled_objects.append(offset_obj)
+                    else:
+                        # 生徒データなし — 罫線やラベル（枠線）のみ配置
+                        for ref_obj in ref_lay.objects:
+                            if ref_obj.obj_type in (
+                                ObjectType.LINE, ObjectType.LABEL,
+                            ):
+                                filled_objects.append(
+                                    _offset_object(ref_obj, dx, dy),
+                                )
+            else:
+                filled_objects.append(obj)
+
+        pages.append(LayFile(
+            title=lay.title,
+            version=lay.version,
+            page_width=lay.page_width,
+            page_height=lay.page_height,
+            objects=filled_objects,
+            paper=lay.paper,
+        ))
+
+    return pages

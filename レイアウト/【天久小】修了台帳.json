@@ -2,8 +2,8 @@
   "format": "meibo_layout_v2",
   "title": "【天久小】修了台帳",
   "version": 1600,
-  "page_width": 2100,
-  "page_height": 2970,
+  "page_width": 2970,
+  "page_height": 2100,
   "objects": [
     {
       "type": "TABLE",
@@ -13,7 +13,10 @@
         2860,
         2040
       ],
-      "text": "Ϩ\n\u0000ＭＳ 明朝ϩ\u0004\u0000\u0000\u0000Ϫ\u0004\u0000i\u0000ϫ\u0004\u0000\u0000\u0000Ϭ\u0001\u0000Ѓ\u0000\u0000\u0000�",
+      "font": {
+        "name": "ＭＳ 明朝",
+        "size_pt": 10.5
+      },
       "table_columns": [
         {
           "field_id": 137,
@@ -67,7 +70,8 @@
           "width": 15,
           "header": "在校兄弟"
         }
-      ]
+      ],
+      "table_row_count": 40
     },
     {
       "type": "FIELD",
@@ -172,6 +176,6 @@
     "spacing_h_mm": 0.0,
     "spacing_v_mm": 0.0,
     "paper_size": "A4",
-    "orientation": "portrait"
+    "orientation": "landscape"
   }
 }

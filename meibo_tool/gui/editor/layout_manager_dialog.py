@@ -70,6 +70,15 @@ class LayoutManagerDialog(ctk.CTkToplevel):
             tree_frame, columns=columns, show='headings',
             selectmode='browse',
         )
+        # 破棄後に after コールバックから focus が呼ばれても TclError にならないようにする
+        # after 登録時に safe 版が参照されるよう、作成直後にラップする
+        _orig_focus = self._tree.focus
+        def _safe_focus(*args: object, **kwargs: object) -> str:
+            try:
+                return _orig_focus(*args, **kwargs)
+            except tk.TclError:
+                return ''
+        self._tree.focus = _safe_focus  # type: ignore[assignment]
         self._tree.heading('title', text='タイトル')
         self._tree.heading('page_size', text='用紙サイズ')
         self._tree.heading('objects', text='オブジェクト数')
@@ -259,7 +268,4 @@ class LayoutManagerDialog(ctk.CTkToplevel):
         """Treeview のイベントバインドを解除してから破棄する。"""
         with contextlib.suppress(tk.TclError, AttributeError):
             self._tree.unbind('<Double-1>')
-        # 破棄後に focus が呼ばれても TclError にならないようにする
-        with contextlib.suppress(AttributeError):
-            self._tree.focus = lambda *_a, **_kw: ''
         super().destroy()

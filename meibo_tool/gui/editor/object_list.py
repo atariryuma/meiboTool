@@ -16,7 +16,7 @@ from core.lay_parser import (
     LayFile,
     LayoutObject,
     ObjectType,
-    resolve_field_name,
+    resolve_field_display,
 )
 
 # ── 定数 ─────────────────────────────────────────────────────────────────────
@@ -139,8 +139,7 @@ class ObjectListPanel(ctk.CTkFrame):
             text = obj.text
             return text[:12] + '…' if len(text) > 12 else text
         if obj.obj_type == ObjectType.FIELD:
-            name = resolve_field_name(obj.field_id)
-            return f'{{{{{name}}}}}'
+            return resolve_field_display(obj.field_id)
         if obj.obj_type == ObjectType.LINE:
             return '—'
         return ''

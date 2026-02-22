@@ -76,20 +76,20 @@ _GEO_UNIT_MM = 0.1  # ジオメトリタグの座標単位 (0.1mm = 10 units/mm)
 FIELD_ID_MAP: dict[int, str] = {
     # 基本情報（スズキ校務 → C4th 対応）
     100: '生徒コード',       # スズキ校務: Googleアカウント = C4th: 生徒コード
-    101: '年度1',
-    102: '年度2',
-    103: '在籍',
+    101: '学年',
+    102: '組',
+    103: '出席番号',          # 旧: '在籍' → スズキ校務「在籍」= 番号（出席番号）
     104: '学年',
     105: '組',
     106: '出席番号',
     107: '性別',
     108: '氏名',
     109: '氏名かな',
-    110: '出席番号2',
+    110: '年度和暦',
     111: '学校名',            # options.school_name から解決
     113: '担任名',            # options.teacher_name から解決
     133: '行番号',
-    134: '年度和暦',
+    134: '年度',
     137: '転出日',
     138: 'ページ番号',
     204: '人数合計',
@@ -97,9 +97,9 @@ FIELD_ID_MAP: dict[int, str] = {
     # 連絡先・住所
     601: '在校兄弟',
     602: '保護者名',
-    603: '都道府県',
-    604: '市区町村',
-    607: '町番地',
+    603: '郵便番号',          # 旧: '都道府県' → レイアウトでは〒prefix付き郵便番号
+    604: '住所',              # 旧: '市区町村' → レイアウトでは結合済みフル住所
+    607: '電話番号1',         # 旧: '町番地' → レイアウトでは電話番号
     608: '緊急連絡先',
     610: '生年月日',
     612: '部活動・学童',
@@ -143,6 +143,74 @@ FIELD_ID_MAP: dict[int, str] = {
 def resolve_field_name(field_id: int) -> str:
     """フィールドIDを論理名に変換する。未知IDは 'field_NNN' を返す。"""
     return FIELD_ID_MAP.get(field_id, f'field_{field_id}')
+
+
+# ── フィールド表示名マップ ─────────────────────────────────────────────────────
+
+FIELD_DISPLAY_MAP: dict[int, str] = {
+    100: 'Googleアカウント',
+    101: '学年',
+    102: '学級',
+    103: '番号',
+    104: '学年',
+    105: '組',
+    106: '番号(番無し)',
+    107: '性別',
+    108: '氏名',
+    109: '氏名かな',
+    110: '年度（和暦）',
+    111: '学校名',
+    113: '担任名',
+    133: '行番号',
+    134: '年度',
+    137: '転出日',
+    138: 'ページ番号',
+    204: '人数合計',
+    400: '写真',
+    601: '在校兄弟',
+    602: '保護者名',
+    603: '郵便番号',
+    604: '住所',
+    607: '電話番号',
+    608: '緊急連絡先',
+    610: '生年月日',
+    612: '部活動・学童',
+    613: 'PTA役員',
+    682: '保護者名かな',
+    683: '保護者住所',
+    685: '公簿名',
+    686: '公簿名かな',
+    1500: '評定1',
+    1501: '家庭環境',
+    1502: '評定2',
+    1504: '学級配慮',
+    1505: '不適児童',
+    1506: '欠席',
+    1508: 'ピアノ',
+    1510: '要準要保護',
+    1511: '家庭環境メモ',
+    1513: '配慮児童',
+    1514: '不適児童メモ',
+    1515: '新学級1',
+    1517: 'リーダー',
+    1518: '問題行動種別',
+    1519: '問題行動具体',
+    1523: 'アレルギー',
+    1529: '進学先',
+    1531: '証書番号',
+    1534: '習い事',
+    1535: '引継事項1年',
+    1536: '引継事項2年',
+    1537: '引継事項3年',
+    1538: '引継事項4年',
+    1539: '引継事項5年',
+    1542: '健康面',
+}
+
+
+def resolve_field_display(field_id: int) -> str:
+    """フィールドIDをプレースホルダー表示名に変換する。"""
+    return FIELD_DISPLAY_MAP.get(field_id, resolve_field_name(field_id))
 
 
 # ── データクラス ─────────────────────────────────────────────────────────────
@@ -190,6 +258,7 @@ class FontInfo:
     size_pt: float = 10.0
     bold: bool = False
     italic: bool = False
+    vertical: bool = False
 
 
 @dataclass
@@ -332,6 +401,7 @@ class LayoutObject:
     prefix: str = ''
     suffix: str = ''
     table_columns: list[TableColumn] = field(default_factory=list)
+    table_row_count: int = 0
     meibo: MeiboArea | None = None
     image: EmbeddedImage | None = None
 
@@ -407,6 +477,22 @@ def new_line(x1: int, y1: int, x2: int, y2: int) -> LayoutObject:
     )
 
 
+def new_image(
+    left: int, top: int, right: int, bottom: int,
+    image_data: bytes = b'', original_path: str = '',
+) -> LayoutObject:
+    """新しい IMAGE オブジェクトを生成する。"""
+    return LayoutObject(
+        obj_type=ObjectType.IMAGE,
+        rect=Rect(left, top, right, bottom),
+        image=EmbeddedImage(
+            rect=(left, top, right, bottom),
+            image_data=image_data,
+            original_path=original_path,
+        ),
+    )
+
+
 # ── TLV パース ───────────────────────────────────────────────────────────────
 
 
@@ -449,6 +535,9 @@ def _iter_tlv(data: bytes, start: int = 0,
 # ── フォントパース ───────────────────────────────────────────────────────────
 
 
+_TAG_FONT_VERTICAL = 0x03EB  # 1003 (フォントブロック内: 縦書きフラグ)
+
+
 def _parse_font(payload: bytes) -> FontInfo:
     """タグ 0x0BBC (3004) のフォントブロックをパースする。"""
     info = FontInfo()
@@ -463,6 +552,8 @@ def _parse_font(payload: bytes) -> FontInfo:
         elif tag == _TAG_FONT_SIZE and len(data) == 4:
             tenths = struct.unpack_from('<I', data)[0]
             info.size_pt = tenths / 10.0
+        elif tag == _TAG_FONT_VERTICAL and len(data) >= 4:
+            info.vertical = struct.unpack_from('<I', data)[0] != 0
     return info
 
 
@@ -547,6 +638,28 @@ def _parse_table_columns(payload: bytes) -> list[TableColumn]:
     return columns
 
 
+def _parse_table_body_font(payload: bytes) -> FontInfo:
+    """TABLE の 0x0BB9 (TEXT) タグからテーブル本文フォントを解析する。
+
+    TABLE コンテキストでは 0x0BB9 はテキストではなく、
+    ネスト TLV でフォント定義（名前・サイズ・スタイル・縦書き）を格納する。
+    """
+    info = FontInfo()
+    for tag, data in _iter_tlv(payload):
+        if tag == _TAG_FONT_NAME and len(data) >= 2:
+            info.name = data.decode('utf-16-le', errors='replace').rstrip('\x00')
+        elif tag == _TAG_FONT_STYLE and len(data) >= 4:
+            style = struct.unpack_from('<I', data)[0]
+            info.bold = bool(style & 1)
+            info.italic = bool(style & 2)
+        elif tag == _TAG_FONT_SIZE and len(data) >= 4:
+            raw = struct.unpack_from('<I', data)[0]
+            info.size_pt = raw / 10.0
+        elif tag == _TAG_FONT_VERTICAL and len(data) >= 4:
+            info.vertical = struct.unpack_from('<I', data)[0] != 0
+    return info
+
+
 def _parse_table_object(payload: bytes) -> LayoutObject:
     """TABLE オブジェクト (0x03EF) をパースする。"""
     obj = LayoutObject(obj_type=ObjectType.TABLE)
@@ -559,16 +672,14 @@ def _parse_table_object(payload: bytes) -> LayoutObject:
         elif tag == _TAG_FONT:
             # TABLE 内の 0x0BBC はカラム定義として扱う
             pass  # _parse_table_columns で一括処理
-        elif tag == _TAG_TEXT and len(data) >= 2:
-            obj.text = data.decode('utf-16-le', errors='replace')
+        elif tag == _TAG_TEXT and len(data) >= 6:
+            # TABLE コンテキスト: 0x0BB9 はネスト TLV のフォント定義
+            obj.font = _parse_table_body_font(data)
+        elif tag == _TAG_VALIGN and len(data) >= 4:
+            # TABLE コンテキスト: 0x0BBB = 行数
+            obj.table_row_count = struct.unpack_from('<I', data)[0]
 
     obj.table_columns = _parse_table_columns(payload)
-
-    # テーブルのフォント情報（全体フォント）を取得
-    for tag, data in _iter_tlv(payload):
-        if tag == _TAG_GEO_PROP3 and len(data) == 4:
-            # テーブルフォントサイズ候補
-            pass
 
     return obj
 
@@ -663,15 +774,17 @@ def _parse_object_list(payload: bytes) -> list[LayoutObject]:
 
 def _parse_content_block(
     payload: bytes,
-) -> tuple[list[LayoutObject], int, int, PaperLayout | None]:
+) -> tuple[list[LayoutObject], int, int, PaperLayout | None, int | None]:
     """タグ 1505 のメインコンテンツブロックをパースする。
 
     Returns:
-        (objects, page_width, page_height, paper_layout)
+        (objects, page_width, page_height, paper_layout, paper_size_flag)
+        paper_size_flag: コンテンツレベル 0x03E8 (0=A3, 2=A4, 4=はがき, None=不明)
     """
     objects: list[LayoutObject] = []
     page_w, page_h = 840, 1188
     found_object_list = False
+    paper_size_flag: int | None = None
 
     # ジオメトリタグ値 (生値)
     geo_mode: int | None = None
@@ -681,7 +794,10 @@ def _parse_content_block(
     geo_margin: tuple[int, int] | None = None  # (left, top)
 
     for tag, data in _iter_tlv(payload):
-        if tag == _TAG_OBJ_CONTAINER and not found_object_list:
+        if tag == _TAG_OBJ_STYLE and len(data) >= 1 and paper_size_flag is None:
+            # 0x03E8: コンテンツレベル用紙サイズ (0=A3, 2=A4, 4=はがき)
+            paper_size_flag = data[0]
+        elif tag == _TAG_OBJ_CONTAINER and not found_object_list:
             # 最初の tag-1002 ブロック = オブジェクトリスト
             objects = _parse_object_list(data)
             found_object_list = True
@@ -738,7 +854,7 @@ def _parse_content_block(
             if paper_h_units > page_h:
                 page_h = paper_h_units
 
-    return objects, page_w, page_h, paper
+    return objects, page_w, page_h, paper, paper_size_flag
 
 
 # ── トップレベルパース ───────────────────────────────────────────────────────
@@ -751,17 +867,46 @@ def _parse_layout_from_tlv(
 
     entries は (tag, payload) のリスト。
     タイトル (0x05DC) とコンテンツ (0x05E1) を含む。
+    DOC_FLAG2 (0x05E0) により mode=0 レイアウトの向きを判定する。
     """
     lay = LayFile()
+    doc_flag2: int | None = None  # 1=portrait, 2=landscape
+    paper_size_flag: int | None = None  # 0=A3, 2=A4, 4=はがき
+
     for tag, payload in entries:
         if tag == _TAG_DOC_TITLE and len(payload) >= 2:
             lay.title = payload.decode('utf-16-le', errors='replace')
+        elif tag == _TAG_DOC_FLAG2 and len(payload) >= 4:
+            doc_flag2 = struct.unpack_from('<I', payload)[0]
         elif tag == _TAG_DOC_CONTENT:
-            objs, pw, ph, paper = _parse_content_block(payload)
+            objs, pw, ph, paper, psf = _parse_content_block(payload)
             lay.objects = objs
             lay.page_width = pw
             lay.page_height = ph
             lay.paper = paper
+            paper_size_flag = psf
+
+    # mode=0 レイアウトの用紙サイズ・向きを DOC_FLAG2 + paper_size_flag から決定
+    # paper_size_flag: 0=A3, 1=B4, 2=A4(デフォルト), 3=B5, 4=はがき
+    # DOC_FLAG2: 1=portrait, 2=landscape
+    _PSF_TO_PAPER: dict[int, str] = {0: 'A3', 1: 'B4', 2: 'A4', 3: 'B5'}
+    if lay.paper is not None and lay.paper.mode == 0:
+        is_landscape = (doc_flag2 == 2)
+        paper_name = _PSF_TO_PAPER.get(
+            paper_size_flag if paper_size_flag is not None else 2, 'A4',
+        )
+        if paper_name != 'A4' or is_landscape:
+            short, long = _PAPER_SIZES.get(paper_name, (210, 297))
+            lay.paper.paper_size = paper_name
+            if is_landscape:
+                lay.paper.orientation = 'landscape'
+                lay.page_width = int(long / _GEO_UNIT_MM)
+                lay.page_height = int(short / _GEO_UNIT_MM)
+            else:
+                lay.paper.orientation = 'portrait'
+                lay.page_width = int(short / _GEO_UNIT_MM)
+                lay.page_height = int(long / _GEO_UNIT_MM)
+
     return lay
 
 

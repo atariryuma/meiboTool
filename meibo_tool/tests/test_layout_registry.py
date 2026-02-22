@@ -26,6 +26,7 @@ from core.lay_parser import (
 )
 from core.lay_serializer import save_layout
 from core.layout_registry import (
+    build_layout_registry,
     delete_layout,
     import_json_file,
     import_lay_file,
@@ -368,3 +369,68 @@ class TestV2MetaData:
         save_layout(lay, str(tmp_path / 'table.json'))
         results = scan_layout_dir(str(tmp_path))
         assert results[0]['object_count'] == 2
+
+
+# ── build_layout_registry テスト ──────────────────────────────────────────
+
+
+class TestBuildLayoutRegistry:
+    """build_layout_registry() のテスト。"""
+
+    def test_empty_dir(self, tmp_path):
+        registry = build_layout_registry(str(tmp_path))
+        assert registry == {}
+
+    def test_nonexistent_dir(self, tmp_path):
+        registry = build_layout_registry(str(tmp_path / 'no_such'))
+        assert registry == {}
+
+    def test_registers_by_title(self, tmp_path):
+        _make_layout_json(str(tmp_path / 'file1.json'), title='帳票タイトルA')
+        registry = build_layout_registry(str(tmp_path))
+        assert '帳票タイトルA' in registry
+
+    def test_registers_by_stem(self, tmp_path):
+        _make_layout_json(str(tmp_path / 'my_layout.json'), title='異なるタイトル')
+        registry = build_layout_registry(str(tmp_path))
+        assert 'my_layout' in registry
+        assert '異なるタイトル' in registry
+
+    def test_stem_equals_title_no_duplicate(self, tmp_path):
+        """stem == title のとき重複エントリにならない。"""
+        _make_layout_json(str(tmp_path / 'same.json'), title='same')
+        registry = build_layout_registry(str(tmp_path))
+        assert 'same' in registry
+        # 値は同一オブジェクト
+        assert registry['same'].title == 'same'
+
+    def test_alias_gakkyu(self, tmp_path):
+        """'gakkyu' エイリアスが 'takara_simei' に解決される。"""
+        _make_layout_json(str(tmp_path / 'takara_simei.json'), title='takara_simei')
+        registry = build_layout_registry(str(tmp_path))
+        assert 'gakkyu' in registry
+        assert registry['gakkyu'] is registry['takara_simei']
+
+    def test_alias_sirabe(self, tmp_path):
+        """'sirabe' エイリアスが 'takara_sirabe' に解決される。"""
+        _make_layout_json(str(tmp_path / 'takara_sirabe.json'), title='takara_sirabe')
+        registry = build_layout_registry(str(tmp_path))
+        assert 'sirabe' in registry
+
+    def test_alias_unresolved_without_target(self, tmp_path):
+        """ターゲットが無いエイリアスは登録されない。"""
+        _make_layout_json(str(tmp_path / 'unrelated.json'), title='無関係')
+        registry = build_layout_registry(str(tmp_path))
+        assert 'gakkyu' not in registry
+
+    def test_multiple_layouts(self, tmp_path):
+        _make_layout_json(str(tmp_path / 'a.json'), title='レイアウトA')
+        _make_layout_json(str(tmp_path / 'b.json'), title='レイアウトB')
+        _make_layout_json(str(tmp_path / 'c.json'), title='レイアウトC')
+        registry = build_layout_registry(str(tmp_path))
+        assert 'レイアウトA' in registry
+        assert 'レイアウトB' in registry
+        assert 'レイアウトC' in registry
+        assert 'a' in registry
+        assert 'b' in registry
+        assert 'c' in registry

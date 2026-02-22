@@ -2,8 +2,8 @@
   "format": "meibo_layout_v2",
   "title": "【天久小】1年生用机ラベル",
   "version": 1600,
-  "page_width": 2100,
-  "page_height": 2970,
+  "page_width": 2970,
+  "page_height": 4200,
   "objects": [
     {
       "type": "MEIBO",
@@ -30,7 +30,7 @@
     "margin_top_mm": 11.0,
     "spacing_h_mm": 0.0,
     "spacing_v_mm": 0.0,
-    "paper_size": "A4",
+    "paper_size": "A3",
     "orientation": "portrait"
   }
 }

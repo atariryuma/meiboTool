@@ -277,7 +277,10 @@ class PrintJob:
         self._dc.StartDoc(doc_name)
         self._started = True
 
-    def print_page(self, lay: LayFile) -> None:
+    def print_page(
+        self, lay: LayFile,
+        layout_registry: dict[str, LayFile] | None = None,
+    ) -> None:
         """1 ページ分のレイアウトを印刷する。
 
         PILBackend で高解像度画像を生成し、StretchDIBits で DC に転送する。
@@ -291,7 +294,10 @@ class PrintJob:
 
         # プリンター解像度で PIL 画像を生成（ページ外枠はスキップ）
         dpi = min(self._dpi_x, self._dpi_y)
-        img = render_layout_to_image(lay, dpi=dpi, for_print=True)
+        img = render_layout_to_image(
+            lay, dpi=dpi, for_print=True,
+            layout_registry=layout_registry,
+        )
 
         # PIL Image → GDI DC に転送
         _blit_pil_image(self._dc, img, self._dpi_x, self._dpi_y)
