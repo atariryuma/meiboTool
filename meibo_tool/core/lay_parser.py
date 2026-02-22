@@ -259,6 +259,8 @@ class FontInfo:
     bold: bool = False
     italic: bool = False
     vertical: bool = False
+    underline: bool = False
+    strikethrough: bool = False
 
 
 @dataclass
@@ -584,9 +586,7 @@ def _should_keep_raw_payload(parent_path: tuple[int, ...], tag: int) -> bool:
         _TAG_OBJ_FIELD,
     ) and tag == _TAG_FONT:
         return False
-    if parent_path and parent_path[0] == _TAG_OBJ_TABLE and tag in (_TAG_FONT, _TAG_TEXT):
-        return False
-    return True
+    return not (parent_path and parent_path[0] == _TAG_OBJ_TABLE and tag in (_TAG_FONT, _TAG_TEXT))
 
 
 def _decode_style_tag(tag: int, data: bytes) -> tuple[str, int] | None:
@@ -632,9 +632,11 @@ def _parse_font(
             info.name = data.decode('utf-16-le', errors='replace')
         elif tag == _TAG_FONT_STYLE and len(data) == 4:
             style = struct.unpack_from('<I', data)[0]
-            # bit 0 = bold, bit 1 = italic (推定)
+            # bit 0 = bold, bit 1 = italic, bit 2 = underline, bit 3 = strikethrough (推定)
             info.bold = bool(style & 0x01)
             info.italic = bool(style & 0x02)
+            info.underline = bool(style & 0x04)
+            info.strikethrough = bool(style & 0x08)
         elif tag == _TAG_FONT_SIZE and len(data) == 4:
             tenths = struct.unpack_from('<I', data)[0]
             info.size_pt = tenths / 10.0

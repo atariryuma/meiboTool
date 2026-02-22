@@ -56,6 +56,10 @@ def _font_to_dict(f: FontInfo) -> dict:
         d['italic'] = True
     if f.vertical:
         d['vertical'] = True
+    if f.underline:
+        d['underline'] = True
+    if f.strikethrough:
+        d['strikethrough'] = True
     return d
 
 
@@ -190,6 +194,8 @@ def _dict_to_font(data: dict) -> FontInfo:
         bold=data.get('bold', False),
         italic=data.get('italic', False),
         vertical=data.get('vertical', False),
+        underline=data.get('underline', False),
+        strikethrough=data.get('strikethrough', False),
     )
 
 

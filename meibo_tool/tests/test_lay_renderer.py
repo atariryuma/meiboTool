@@ -24,9 +24,9 @@ from core.lay_parser import (
     resolve_field_display,
 )
 from core.lay_renderer import (
-    _normalize_text,
     _contains_gaiji,
     _meibo_page_capacity,
+    _normalize_text,
     _should_render_vertical_text,
     canvas_to_model,
     fill_layout,

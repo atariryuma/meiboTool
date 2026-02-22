@@ -125,7 +125,7 @@
   - base64 ペイロード保持
 
 ### レンダラー ✅
-- [x] `core/lay_renderer.py` — Canvas/PILBackend 描画エンジン
+- [x] `core/lay_renderer.py` — PILBackend 描画エンジン
   - 縦書き/複数行テキスト/幅ベース自動折り返し
   - `fill_layout()` — MEIBO 展開 + FIELD データ差込
   - `render_layout_to_image()` — PIL Image 生成

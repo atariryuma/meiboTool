@@ -77,18 +77,6 @@ class TestPILBackendPrimitives:
         arr = np.array(img)
         assert (arr == 255).all()
 
-    def test_draw_text_kwargs_absorb_tags(self):
-        """tags パラメータがエラーにならないことを確認。"""
-        img = Image.new('RGB', (200, 100), (255, 255, 255))
-        backend = PILBackend(img, dpi=150)
-        # tags= は Canvas 専用だが、PILBackend は **kwargs で吸収する
-        backend.draw_text(
-            10, 10, 180, 80, 'ABC',
-            font_name='', font_size=14.0,
-            tags=('obj_0', 'label_text'),
-        )
-        # エラーが出なければ OK
-
 
 # ── render_layout_to_image テスト ─────────────────────────────────────────────
 
@@ -226,8 +214,8 @@ class TestPILTextModes:
         # 内部は塗りつぶされない
         assert (arr[inside_y, inside_x] == 255).all()
 
-    def test_single_line_long_label_prefers_wrap_over_shrink(self):
-        """長い1行 LABEL は自動縮小より折り返しを優先する。"""
+    def test_single_line_long_label_wraps_instead_of_truncating(self):
+        """長い1行 LABEL は折り返して複数行で描画される。"""
         lay = LayFile(objects=[
             LayoutObject(
                 obj_type=ObjectType.LABEL,

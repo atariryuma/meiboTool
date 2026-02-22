@@ -50,7 +50,7 @@ meibo_tool/
   │   ├── generator.py                  # テンプレートへのデータ差込（Grid/List/Individual）
   │   ├── importer.py                   # C4th Excel/CSV データ読込（ヘッダー自動検出）
   │   ├── lay_parser.py                 # .lay バイナリパーサー（TLV 再帰パース）
-  │   ├── lay_renderer.py              # Canvas/PILBackend 描画 + fill_layout
+  │   ├── lay_renderer.py              # PILBackend 描画 + fill_layout
   │   ├── lay_serializer.py            # LayFile ↔ JSON 保存/読込
   │   ├── layout_registry.py           # レイアウトライブラリ管理（scan/import/delete/rename）
   │   ├── mapper.py                     # C4th カラム名マッピング + resolve_name_fields
@@ -745,12 +745,11 @@ LayFile ↔ JSON の保存/読込。以下をラウンドトリップ保証:
 
 ### 8.5 レンダラー（core/lay_renderer.py）
 
-2つの描画バックエンド:
+PILBackend に統一された描画バックエンド:
 
 | バックエンド | 用途 | 出力 |
 | ------------ | ---- | ---- |
-| CanvasBackend | GUI プレビュー・レイアウトエディター | tk.Canvas オブジェクト |
-| PILBackend | 印刷プレビュー・画像生成 | PIL Image |
+| PILBackend | エディター・印刷プレビュー・画像生成 | PIL Image |
 
 **主要関数:**
 

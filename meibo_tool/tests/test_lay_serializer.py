@@ -257,6 +257,28 @@ class TestBoldItalicRoundTrip:
         font_dict = d['objects'][0].get('font', {})
         assert 'bold' not in font_dict
         assert 'italic' not in font_dict
+        assert 'underline' not in font_dict
+        assert 'strikethrough' not in font_dict
+
+    @pytest.mark.parametrize(
+        ('underline', 'strikethrough'),
+        [(True, False), (False, True), (True, True)],
+    )
+    def test_underline_strikethrough_preserved(self, underline: bool, strikethrough: bool):
+        lay = LayFile(objects=[
+            LayoutObject(
+                obj_type=ObjectType.LABEL,
+                rect=Rect(0, 0, 100, 30),
+                text='装飾',
+                font=FontInfo(
+                    'ＭＳ ゴシック', 12.0,
+                    underline=underline, strikethrough=strikethrough,
+                ),
+            ),
+        ])
+        restored = dict_to_layfile(layfile_to_dict(lay))
+        assert restored.objects[0].font.underline is underline
+        assert restored.objects[0].font.strikethrough is strikethrough
 
 
 # ── アトミック書き込みテスト ──────────────────────────────────────────────────

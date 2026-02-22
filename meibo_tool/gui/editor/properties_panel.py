@@ -334,7 +334,7 @@ class PropertiesPanel(ctk.CTkFrame):
             with contextlib.suppress(ValueError):
                 obj.field_id = int(field_str.split(':')[0].strip())
 
-        # フォント（bold/italic を維持）
+        # フォント（bold/italic/underline/strikethrough を維持）
         font_name = self._font_name_var.get()
         font_size = self._safe_float(
             self._font_size_var.get(), obj.font.size_pt,
@@ -343,6 +343,8 @@ class PropertiesPanel(ctk.CTkFrame):
             font_name, font_size,
             bold=obj.font.bold, italic=obj.font.italic,
             vertical=obj.font.vertical,
+            underline=obj.font.underline,
+            strikethrough=obj.font.strikethrough,
         )
 
         # 揃え

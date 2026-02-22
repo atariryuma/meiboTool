@@ -169,7 +169,7 @@ App (CTk) — 2カラムレイアウト
 | `generator.py` | Grid/List/Individual ジェネレーター + 性別ソート | ✅ 29 |
 | `importer.py` | ヘッダー自動検出付き Excel/CSV 読込 | ✅ 26 |
 | `lay_parser.py` | .lay バイナリパーサー（TLV 再帰 + FontInfo + raw_tags） | ✅ 74 |
-| `lay_renderer.py` | Canvas/PILBackend 描画 + fill_layout + MEIBO 展開 | ✅ 101 |
+| `lay_renderer.py` | PILBackend 描画 + fill_layout + MEIBO 展開 | ✅ 101 |
 | `lay_serializer.py` | LayFile ↔ JSON 保存/読込（ラウンドトリップ保証） | ✅ 44 |
 | `layout_registry.py` | レイアウトライブラリ管理（scan/import/delete/rename） | ✅ 43 |
 | `mapper.py` | C4th カラム名マッピング + resolve_name_fields | ✅ 12 |
@@ -235,7 +235,7 @@ App (CTk) — 2カラムレイアウト
 
 ### 開発環境の状態
 
-- テスト: **773 件全パス**（`venv/Scripts/python.exe -m pytest`）
+- テスト: **776 件全パス**（`venv/Scripts/python.exe -m pytest`）
 - テストファイル: 32 ファイル
 - リント: ruff クリーン（`venv/Scripts/python.exe -m ruff check meibo_tool/`）
 - Git: master ブランチ

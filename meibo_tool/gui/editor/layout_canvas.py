@@ -1,16 +1,18 @@
 """インタラクティブ レイアウト Canvas
 
-LayFile のオブジェクトを描画し、選択・移動・リサイズの
+LayFile のオブジェクトを PIL でレンダリングし、選択・移動・リサイズの
 マウスインタラクションを処理する。
 """
 
 from __future__ import annotations
 
 import dataclasses
+import math
 import tkinter as tk
 from collections.abc import Callable
 
 import customtkinter as ctk
+from PIL import ImageTk
 
 from core.lay_parser import (
     LayFile,
@@ -19,11 +21,9 @@ from core.lay_parser import (
     Rect,
 )
 from core.lay_renderer import (
-    CanvasBackend,
-    LayRenderer,
     canvas_to_model,
-    clear_selection_handles,
-    draw_selection_handles,
+    model_to_canvas,
+    render_layout_to_image,
 )
 
 # ── 定数 ─────────────────────────────────────────────────────────────────────
@@ -33,6 +33,28 @@ _MIN_SCALE = 0.15       # ズーム最小 (≈25%)
 _MAX_SCALE = 1.2        # ズーム最大 (≈200%)
 _SCALE_STEP = 0.05      # ズーム増分
 _HANDLE_HIT = 8         # ハンドルヒット判定半径 (px)
+_HANDLE_SIZE = 5        # ハンドル矩形の半径 (px)
+_SELECT_OUTLINE = '#1A73E8'
+_HANDLE_COLOR = '#1A73E8'
+_LINE_HIT_THRESHOLD = 5  # LINE ヒット判定距離 (モデル単位)
+
+
+def _point_near_line(
+    mx: int, my: int,
+    p1: Point, p2: Point,
+    threshold: int = _LINE_HIT_THRESHOLD,
+) -> bool:
+    """点 (mx, my) が線分 (p1, p2) の近傍にあるか判定する。"""
+    dx = p2.x - p1.x
+    dy = p2.y - p1.y
+    length_sq = dx * dx + dy * dy
+    if length_sq == 0:
+        return math.hypot(mx - p1.x, my - p1.y) <= threshold
+
+    t = max(0.0, min(1.0, ((mx - p1.x) * dx + (my - p1.y) * dy) / length_sq))
+    proj_x = p1.x + t * dx
+    proj_y = p1.y + t * dy
+    return math.hypot(mx - proj_x, my - proj_y) <= threshold
 
 
 class LayoutCanvas(ctk.CTkFrame):
@@ -56,7 +78,7 @@ class LayoutCanvas(ctk.CTkFrame):
         self._scale = 0.5
         self._selected_idx: int = -1
         self._layout_registry: dict[str, LayFile] = {}
-        self._backend: CanvasBackend | None = None  # PhotoImage GC 防止
+        self._photo_image: ImageTk.PhotoImage | None = None  # GC 防止
 
         # ドラッグ状態
         self._dragging = False
@@ -122,21 +144,23 @@ class LayoutCanvas(ctk.CTkFrame):
         if self._lay is None:
             return
 
-        backend = self._make_backend()
-        self._backend = backend  # PhotoImage GC 防止
-        renderer = LayRenderer(
-            self._lay, backend,
+        # PIL でレンダリング → PhotoImage として Canvas に配置
+        unit_mm = self._lay.paper.unit_mm if self._lay.paper else 0.25
+        dpi = max(1, int(self._scale * 25.4 / unit_mm))
+        img = render_layout_to_image(
+            self._lay, dpi=dpi,
             layout_registry=self._layout_registry,
+            editor_mode=True,
         )
-        renderer.render_all()
+        self._photo_image = ImageTk.PhotoImage(img)
+        self._canvas.create_image(
+            _CANVAS_MARGIN, _CANVAS_MARGIN,
+            image=self._photo_image, anchor='nw',
+        )
 
-        # 選択中なら再描画
+        # 選択中ならハンドルをオーバーレイ
         if 0 <= self._selected_idx < len(self._lay.objects):
-            draw_selection_handles(
-                self._canvas,
-                self._lay.objects[self._selected_idx],
-                backend,
-            )
+            self._draw_selection_handles(self._lay.objects[self._selected_idx])
 
         self._update_scroll_region()
 
@@ -183,12 +207,6 @@ class LayoutCanvas(ctk.CTkFrame):
 
     # ── 内部メソッド ─────────────────────────────────────────────────────
 
-    def _make_backend(self) -> CanvasBackend:
-        return CanvasBackend(
-            self._canvas, self._scale,
-            offset_x=_CANVAS_MARGIN, offset_y=_CANVAS_MARGIN,
-        )
-
     def _update_scroll_region(self) -> None:
         if self._lay is None:
             return
@@ -201,18 +219,19 @@ class LayoutCanvas(ctk.CTkFrame):
         if self._lay is None:
             return -1
 
-        items = self._canvas.find_overlapping(
-            cx - 3, cy - 3, cx + 3, cy + 3,
+        mx, my = canvas_to_model(
+            cx, cy, self._scale,
+            _CANVAS_MARGIN, _CANVAS_MARGIN,
         )
 
-        for item in reversed(items):
-            tags = self._canvas.gettags(item)
-            for t in tags:
-                if t.startswith('obj_'):
-                    try:
-                        return int(t[4:])
-                    except ValueError:
-                        pass
+        for i in reversed(range(len(self._lay.objects))):
+            obj = self._lay.objects[i]
+            if obj.rect:
+                r = obj.rect
+                if r.left <= mx <= r.right and r.top <= my <= r.bottom:
+                    return i
+            if obj.line_start and obj.line_end and _point_near_line(mx, my, obj.line_start, obj.line_end):
+                return i
         return -1
 
     def _find_handle_at(self, cx: float, cy: float) -> str | None:
@@ -227,6 +246,61 @@ class LayoutCanvas(ctk.CTkFrame):
                 if t.startswith('handle_'):
                     return t[7:]  # 'nw', 'se', etc.
         return None
+
+    def _draw_selection_handles(self, obj: LayoutObject) -> None:
+        """選択オブジェクトの周囲にリサイズハンドルを Canvas 上にオーバーレイ描画する。"""
+        self._canvas.delete('handles')
+
+        if obj.rect is not None:
+            r = obj.rect
+            px1, py1 = model_to_canvas(
+                r.left, r.top, self._scale,
+                _CANVAS_MARGIN, _CANVAS_MARGIN,
+            )
+            px2, py2 = model_to_canvas(
+                r.right, r.bottom, self._scale,
+                _CANVAS_MARGIN, _CANVAS_MARGIN,
+            )
+        elif obj.line_start is not None and obj.line_end is not None:
+            px1, py1 = model_to_canvas(
+                obj.line_start.x, obj.line_start.y, self._scale,
+                _CANVAS_MARGIN, _CANVAS_MARGIN,
+            )
+            px2, py2 = model_to_canvas(
+                obj.line_end.x, obj.line_end.y, self._scale,
+                _CANVAS_MARGIN, _CANVAS_MARGIN,
+            )
+        else:
+            return
+
+        # 選択枠
+        self._canvas.create_rectangle(
+            px1 - 1, py1 - 1, px2 + 1, py2 + 1,
+            outline=_SELECT_OUTLINE, width=2, dash=(4, 4),
+            tags=('handles',),
+        )
+
+        # 8 ハンドル (矩形) / LINE は 2 ハンドル
+        hs = _HANDLE_SIZE
+        if obj.rect is not None:
+            cx_h, cy_h = (px1 + px2) / 2, (py1 + py2) / 2
+            handle_positions = {
+                'nw': (px1, py1), 'n': (cx_h, py1), 'ne': (px2, py1),
+                'w': (px1, cy_h), 'e': (px2, cy_h),
+                'sw': (px1, py2), 's': (cx_h, py2), 'se': (px2, py2),
+            }
+        else:
+            handle_positions = {
+                'start': (px1, py1),
+                'end': (px2, py2),
+            }
+
+        for name, (hx, hy) in handle_positions.items():
+            self._canvas.create_rectangle(
+                hx - hs, hy - hs, hx + hs, hy + hs,
+                fill=_HANDLE_COLOR, outline='white', width=1,
+                tags=('handles', f'handle_{name}'),
+            )
 
     # ── マウスイベント ───────────────────────────────────────────────────
 
@@ -277,8 +351,6 @@ class LayoutCanvas(ctk.CTkFrame):
                 self._drag_orig_obj.line_end = Point(
                     obj.line_end.x, obj.line_end.y,
                 )
-        else:
-            clear_selection_handles(self._canvas)
 
         self.refresh()
 

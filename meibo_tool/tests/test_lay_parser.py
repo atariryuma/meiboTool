@@ -266,11 +266,18 @@ class TestFontInfo:
         assert f.size_pt == 10.0
         assert f.bold is False
         assert f.italic is False
+        assert f.underline is False
+        assert f.strikethrough is False
 
     def test_bold_italic(self):
         f = FontInfo(bold=True, italic=True)
         assert f.bold is True
         assert f.italic is True
+
+    def test_underline_strikethrough(self):
+        f = FontInfo(underline=True, strikethrough=True)
+        assert f.underline is True
+        assert f.strikethrough is True
 
 
 # ── PaperLayout テスト ──────────────────────────────────────────────────────
